@@ -27,7 +27,7 @@ export function installLoot(game) {
 
 /** Ordinary folk and foes can be searched (not crewmates, quest people, Sea Kings…). */
 function lootable(a) {
-  if (!a || a.isPlayer || a.faction === 'player' || a.seaCreature || a.look?.race === 'seaking' || a.look?.race === 'kraken') return false;
+  if (!a || a.isPlayer || a.faction === 'player' || a.seaCreature || a.look?.race === 'seaking' || a.look?.race === 'kraken' || a.dugong) return false;
   if (a.controller?.kind === 'follower' || a.crewId || a.summonedBy || a.spar) return false;
   if (a.talk || a.recoverAfter || a.canCarry || a.def?.duel) return false;
   return true;

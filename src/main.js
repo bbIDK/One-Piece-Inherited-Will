@@ -1,4 +1,5 @@
 // Entry point: boot the world, show the title, run the loop.
+import { installDugongs } from './game/dugongs.js';
 import { takeOff } from './game/flight.js';
 import { installQuestGivers } from './game/questgivers.js';
 import { installSurvival } from './game/survival.js';
@@ -302,6 +303,7 @@ async function start() {
   installBuildings(game);
   installTownLife(game);
   installSeaLife(game);
+  installDugongs(game);
   installForaging(game);
   installSurvival(game);
   installContent(game);

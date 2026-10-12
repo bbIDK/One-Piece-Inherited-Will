@@ -338,6 +338,14 @@ export class Actor extends Entity {
     if (att && att.isPlayer) this.provoked = true;
     if (this.controller && this.controller.onHurt) this.controller.onHurt(this, att, game);
     if (game.onDamage) game.onDamage(this, att, n, h);
+    // (someone who gives up before they go down: a Kung-Fu Dugong bowing to its new master)
+    if (this.onYield && this.hp <= (this.yieldHp ?? 1)) {
+      this.hp = Math.max(1, this.yieldHp ?? 1);
+      const f = this.onYield;
+      this.onYield = null;
+      f(this, att, game);
+      return;
+    }
     if (this.hp <= 0) {
       // (how it ended: a Devil Fruit power, a Haki blow, a house coming down on them, or far more than it took — someone who
       // was only ever a bystander doesn't get up from that: see reputation.js)

@@ -3801,6 +3801,49 @@
     }
   });
 
+  // src/game/entity.js
+  var nextId = 1;
+  var Entity = class {
+    constructor(o = {}) {
+      this.id = nextId++;
+      this.x = o.x ?? 0;
+      this.y = o.y ?? 0;
+      this.vx = 0;
+      this.vy = 0;
+      this.r = o.r ?? 0.3;
+      this.alive = true;
+      this.kind = o.kind || "entity";
+      this.faction = o.faction || "neutral";
+      this.world = o.world || null;
+    }
+    update() {
+    }
+    remove() {
+      this.alive = false;
+    }
+  };
+  var HOSTILITY = {
+    player: /* @__PURE__ */ new Set(["pirate", "bandit", "beast", "seaking", "baroque", "cp", "marine_hostile", "zombie", "rival"]),
+    marine: /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "revolutionary"]),
+    pirate: /* @__PURE__ */ new Set(["player", "marine", "civilian_target", "rival"]),
+    bandit: /* @__PURE__ */ new Set(["player", "civilian_target"]),
+    beast: /* @__PURE__ */ new Set(["player", "civilian", "marine", "pirate", "bandit"]),
+    seaking: /* @__PURE__ */ new Set(["player", "marine", "pirate"]),
+    baroque: /* @__PURE__ */ new Set(["player", "marine"]),
+    cp: /* @__PURE__ */ new Set(["player"]),
+    zombie: /* @__PURE__ */ new Set(["player", "marine"]),
+    rival: /* @__PURE__ */ new Set(["player", "pirate"]),
+    civilian: /* @__PURE__ */ new Set(),
+    neutral: /* @__PURE__ */ new Set()
+  };
+  function hostile(a, b) {
+    if (!a || !b || a === b) return false;
+    if (a.faction === "player" && b.aggroPlayer) return true;
+    if (b.faction === "player" && a.aggroPlayer) return true;
+    const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
+    return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
+  }
+
   // src/core/math.js
   var TAU = Math.PI * 2;
   var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -3853,3335 +3896,6 @@
   function mixHex(a, b, t) {
     const A2 = hexToRgb(a), B5 = hexToRgb(b);
     return rgbToHex(lerp(A2[0], B5[0], t), lerp(A2[1], B5[1], t), lerp(A2[2], B5[2], t));
-  }
-
-  // src/core/rng.js
-  function hashString(str2) {
-    let h2 = 2166136261 >>> 0;
-    for (let i = 0; i < str2.length; i++) {
-      h2 ^= str2.charCodeAt(i);
-      h2 = Math.imul(h2, 16777619);
-    }
-    return h2 >>> 0;
-  }
-  function hash2i(x, y, seed = 0) {
-    let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 2246822519) | 0;
-    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
-    h2 ^= h2 >>> 16;
-    return h2 >>> 0;
-  }
-  var hash2 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
-  function hash01(a, b = 0, c = 0) {
-    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
-    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
-    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
-  }
-  var RNG = class _RNG {
-    constructor(seed = 1) {
-      this.s = (typeof seed === "string" ? hashString(seed) : seed >>> 0) || 2654435769;
-    }
-    next() {
-      let t = this.s = this.s + 1831565813 >>> 0;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    }
-    range(a, b) {
-      return a + (b - a) * this.next();
-    }
-    int(a, b) {
-      return a + Math.floor(this.next() * (b - a + 1));
-    }
-    chance(p) {
-      return this.next() < p;
-    }
-    pick(arr) {
-      return arr[Math.floor(this.next() * arr.length)];
-    }
-    sign() {
-      return this.next() < 0.5 ? -1 : 1;
-    }
-    gauss() {
-      const u = 1 - this.next(), v = this.next();
-      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-    }
-    shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(this.next() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-    /** Pick from [{weight, ...}] or [[item, weight]] lists. */
-    weighted(list, weightKey = "weight") {
-      let total = 0;
-      for (const e of list) total += Array.isArray(e) ? e[1] : e[weightKey];
-      let r4 = this.next() * total;
-      for (const e of list) {
-        r4 -= Array.isArray(e) ? e[1] : e[weightKey];
-        if (r4 <= 0) return Array.isArray(e) ? e[0] : e;
-      }
-      const last2 = list[list.length - 1];
-      return Array.isArray(last2) ? last2[0] : last2;
-    }
-    fork(salt) {
-      return new _RNG(hashString(String(salt)) ^ Math.floor(this.next() * 4294967296));
-    }
-  };
-
-  // src/data/races.js
-  var RARITY = {
-    common: { label: "Common", color: "#b2bec3" },
-    uncommon: { label: "Uncommon", color: "#55efc4" },
-    rare: { label: "Rare", color: "#74b9ff" },
-    epic: { label: "Epic", color: "#a29bfe" },
-    legendary: { label: "Legendary", color: "#fdcb6e" }
-  };
-  var RACES = {
-    human: {
-      name: "Human",
-      rarity: "common",
-      weight: 52,
-      desc: "The most numerous people of the Blue Planet. Adaptable, stubborn, and capable of anything \u2014 the Pirate King himself was human.",
-      origin: "Born on any island of the four Blues.",
-      stats: { str: 0, agi: 0, end: 0, vit: 0, wil: 1 },
-      lives: 3,
-      traits: ["Adaptable: trainers teach you 15% cheaper", "Stubborn Will: +1 Willpower"],
-      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
-      swim: 1,
-      hpMul: 1,
-      jump: 7.6,
-      charge: 1.6,
-      leap: 1
-    },
-    fishman: {
-      name: "Fish-Man",
-      rarity: "uncommon",
-      weight: 13,
-      desc: "Born with ten times the strength of a human and the sea in their blood. Many followed Arlong to the East Blue.",
-      origin: "Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.",
-      stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
-      lives: 3,
-      traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water \u2014 and, swimming hard, on forward like a dolphin"],
-      spawnSeas: ["east_blue"],
-      spawnTowns: ["cocoyasi"],
-      swim: 3,
-      hpMul: 1.1,
-      gills: true,
-      jump: 7.4,
-      charge: 1.65,
-      leap: 1.35
-    },
-    mink: {
-      name: "Mink",
-      rarity: "uncommon",
-      weight: 12,
-      desc: "The Warrior Beast Tribe. Every Mink is born a fighter and can channel Electro through their fur.",
-      origin: "Born among wandering Mink traders who settled in the wilds of the South Blue.",
-      stats: { str: 1, agi: 4, end: 1, vit: 0, wil: 0 },
-      lives: 3,
-      traits: ["Electro: bare-handed basic attacks crackle, and now and then shock (innate)", "Keen senses: a dodge leaves you untouchable a little longer", "Sulong: in a fight under the full moon, at night, you become a battle beast (hidden)", "Springy: jumps high, and a charged leap goes higher still"],
-      spawnSeas: ["south_blue"],
-      spawnTowns: ["torino_village", "karate_dojo_town"],
-      swim: 1,
-      hpMul: 1,
-      electro: true,
-      jump: 8.6,
-      charge: 1.7,
-      leap: 1
-    },
-    skypiean: {
-      name: "Skypiean",
-      rarity: "uncommon",
-      weight: 10,
-      desc: "A winged people of the White Sea. You fell from the clouds as a child and washed ashore at Lvneel, homeland of Noland the Liar.",
-      origin: "Fell from a sky island; raised in Lvneel (North Blue).",
-      stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
-      lives: 3,
-      traits: ["Mantra: once their sixth sense awakens, it grows twice as fast", "Light-footed: dodge travels 30% further", "Dial-savvy: dials hit 25% harder", "Little wings: not for flying \u2014 no Skypiean can"],
-      spawnSeas: ["north_blue"],
-      spawnTowns: ["lvneel_town"],
-      swim: 0.9,
-      hpMul: 0.95,
-      jump: 8.6,
-      charge: 1.55,
-      leap: 1
-    },
-    buccaneer: {
-      name: "Buccaneer",
-      rarity: "epic",
-      weight: 2.2,
-      desc: "A giant-framed race hunted almost to extinction. Bartholomew Kuma was born to your people in the South Blue.",
-      origin: "Born in the Sorbet Kingdom (South Blue).",
-      stats: { str: 5, agi: -2, end: 5, vit: 4, wil: 0 },
-      lives: 3,
-      traits: ["Huge frame: +35% HP", "Unshakable: light blows can't stagger you, and knockback barely moves you", "Slow: -8% move speed"],
-      spawnSeas: ["south_blue"],
-      spawnTowns: ["sorbet_town"],
-      swim: 0.9,
-      hpMul: 1.35,
-      scale: 1.3,
-      jump: 6.6,
-      charge: 1.85,
-      leap: 1
-    },
-    three_eye: {
-      name: "Three-Eye Tribe",
-      rarity: "legendary",
-      weight: 0.8,
-      desc: "A vanishingly rare people whose third eye may one day hear the Voice of All Things.",
-      origin: "Born among the scholars sheltering in the ruins of Ohara (West Blue).",
-      stats: { str: 0, agi: 1, end: 0, vit: 0, wil: 6 },
-      lives: 3,
-      traits: ["Third Eye: Observation Haki from birth", "Voice of All Things: once the Third Eye has grown (Observation 20), reads Poneglyphs without an archaeologist"],
-      spawnSeas: ["west_blue"],
-      spawnTowns: ["ohara_camp"],
-      swim: 1,
-      hpMul: 1,
-      jump: 7.4,
-      charge: 1.65,
-      leap: 1
-    },
-    lunarian: {
-      name: "Lunarian",
-      rarity: "legendary",
-      weight: 0.5,
-      desc: 'A people of the "Land of Gods" atop the Red Line, believed extinct. Black wings, white hair, and a flame that never goes out.',
-      origin: "Washed up alone on an uncharted islet in one of the Blues.",
-      stats: { str: 2, agi: 1, end: 5, vit: 5, wil: 2 },
-      lives: 4,
-      traits: ["Ignition: bare blows can set foes alight, and while the flame on your back burns, harm done to you is halved \u2014 the sea puts it out, and it lights again once you're dry", "Tremendous vitality: +1 life", "Wings: fly (Space again in the air) \u2014 and a dodge is a wing-beat that carries you further, even over water"],
-      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
-      spawnIslet: true,
-      swim: 1,
-      hpMul: 1.15,
-      jump: 8.2,
-      charge: 1.6,
-      leap: 1,
-      flight: { style: "wings", gauge: 22, speed: 10, climb: 6, ceiling: 40, sea: 3.5, refill: 6, color: "#ff7043" }
-    }
-  };
-  var RACE_IDS = Object.keys(RACES);
-  var RETIRED = { longarm: { arms: 1.8 }, longleg: { legs: 1.9 } };
-  function liveRace(rec) {
-    if (!rec || !RETIRED[rec.race]) return rec;
-    const was = RETIRED[rec.race];
-    rec.race = "human";
-    const L3 = rec.look;
-    if (L3) {
-      if (L3.race) L3.race = "human";
-      for (const k of Object.keys(was)) if (L3[k] === was[k]) delete L3[k];
-    }
-    return rec;
-  }
-  function rollRace(rng4, boosts = {}) {
-    const list = RACE_IDS.map((id) => [id, RACES[id].weight * (boosts[id] || 1)]);
-    return rng4.weighted(list);
-  }
-  var HUMAN_SKIN = ["#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"];
-  var HAIR = ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#2ecc71", "#2980b9", "#e84393", "#dfe6e9", "#8e44ad", "#16a085"];
-  var TOPS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#b2bec3", "#a0522d"];
-  var BOTTOMS = ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#2f3542"];
-  var HAIRSTYLES = ["short", "short", "spiky", "messy", "crop", "crop", "sidefringe", "slick", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald", "pompadour"];
-  var FISHMAN_KINDS = [
-    { id: "shark", name: "Saw Shark", skin: "#7fa7c9" },
-    { id: "great_white", name: "Great White Shark", skin: "#9fb4c7" },
-    { id: "whale_shark", name: "Whale Shark", skin: "#4a69bd" },
-    { id: "octopus", name: "Octopus", skin: "#e17b77" },
-    { id: "sea_bream", name: "Sea Bream", skin: "#f3a683" },
-    { id: "manta", name: "Manta Ray", skin: "#546de5" },
-    { id: "sunfish", name: "Sunfish", skin: "#c7ecee" },
-    { id: "goldfish", name: "Goldfish", skin: "#f5b041" }
-  ];
-  var MINK_KINDS = [
-    { id: "cat", name: "Cat", ears: "pointy", fur: "#f0932b", tail: "thin" },
-    { id: "dog", name: "Dog", ears: "pointy", fur: "#dfe6e9", tail: "fluffy", muzzle: true },
-    { id: "rabbit", name: "Rabbit", ears: "long", fur: "#f5f6fa", tail: "fluffy" },
-    { id: "bear", name: "Bear", ears: "round", fur: "#6d4c41", tail: null, muzzle: true },
-    { id: "fox", name: "Fox", ears: "pointy", fur: "#e67e22", tail: "fluffy", muzzle: true },
-    { id: "lion", name: "Lion", ears: "round", fur: "#f6b93b", tail: "thin", muzzle: true },
-    { id: "panda", name: "Panda", ears: "round", fur: "#f5f6fa", tail: null },
-    { id: "jaguar", name: "Jaguar", ears: "round", fur: "#e1b12c", tail: "thin" },
-    { id: "wolf", name: "Wolf", ears: "pointy", fur: "#7f8fa6", tail: "fluffy", muzzle: true }
-  ];
-  var W = (s) => s.split(" ").map((t) => {
-    const [k, w] = t.split(":");
-    return [k, +w || 1];
-  });
-  var DRESS = {
-    civilian: {
-      m: { top: W("tee:4 shirt:3 open:1 striped:1 vest:0.5"), bottom: W("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W("belt:3 none:3 sash:1"), shoes: W("shoes:3 sandals:3 boots:2") },
-      f: { top: W("tee:3 tank:2 shirt:2 dress:3 crop:1"), bottom: W("skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1"), waist: W("none:3 belt:2 sash:1"), shoes: W("shoes:3 sandals:3 boots:1") }
-    },
-    pirate: {
-      m: { top: W("striped:3 open:3 vest:2 tee:2 bare:1"), bottom: W("baggy:4 capri:2 shorts:2 trousers:2"), waist: W("sash:5 belt:3"), shoes: W("boots:5 sandals:2") },
-      f: { top: W("crop:3 tank:2 open:1 striped:1 bikini:1"), bottom: W("trousers:2 shorts:2 capri:2 skirt:1 baggy:1"), waist: W("sash:4 belt:3"), shoes: W("boots:5 sandals:2") }
-    },
-    bandit: {
-      m: { top: W("vest:3 open:2 bare:1"), bottom: W("baggy:4 trousers:2 capri:1"), waist: W("sash:4 belt:2"), shoes: W("boots:3 sandals:2") },
-      f: { top: W("crop:2 tank:2 vest:1"), bottom: W("trousers:2 baggy:2 shorts:1"), waist: W("sash:3 belt:2"), shoes: W("boots:3 sandals:1") }
-    },
-    marine: {
-      m: { top: W("shirt:1"), bottom: W("trousers:1"), waist: W("belt:1"), shoes: W("boots:1") },
-      f: { top: W("shirt:1"), bottom: W("trousers:3 skirt:1"), waist: W("belt:1"), shoes: W("boots:1") }
-    },
-    officer: {
-      m: { top: W("jacket:2 shirt:1"), bottom: W("trousers:2 slim:1"), waist: W("belt:1"), shoes: W("boots:1 shoes:1") },
-      f: { top: W("jacket:2 shirt:1"), bottom: W("slim:2 skirt:1"), waist: W("belt:1"), shoes: W("boots:1 shoes:1") }
-    },
-    agent: {
-      m: { top: W("jacket:1"), bottom: W("slim:1"), waist: W("belt:1"), shoes: W("shoes:1") },
-      f: { top: W("jacket:2 shirt:1"), bottom: W("slim:2 skirt:1"), waist: W("belt:1"), shoes: W("shoes:2 boots:1") }
-    },
-    swordsman: {
-      m: { top: W("kimono:3 open:2 tee:1"), bottom: W("hakama:3 baggy:1 trousers:1"), waist: W("obi:2 sash:2"), shoes: W("geta:2 sandals:2 boots:1") },
-      f: { top: W("kimono:3 tank:1"), bottom: W("hakama:2 slim:1"), waist: W("obi:2 sash:1"), shoes: W("geta:1 sandals:2 boots:1") }
-    },
-    wano: {
-      m: { top: W("kimono:6 open:1"), bottom: W("hakama:4 baggy:1 capri:1"), waist: W("obi:4 sash:1"), shoes: W("geta:3 sandals:3") },
-      f: { top: W("kimono:6 dress:1"), bottom: W("longskirt:3 hakama:2"), waist: W("obi:4 none:1"), shoes: W("geta:3 sandals:2") }
-    },
-    desert: {
-      m: { top: W("shirt:3 open:2 vest:1 kimono:1"), bottom: W("baggy:4 trousers:2"), waist: W("sash:4 belt:1"), shoes: W("sandals:4 boots:1") },
-      f: { top: W("dress:2 crop:2 shirt:1"), bottom: W("longskirt:2 baggy:2 skirt:1"), waist: W("sash:3 none:1"), shoes: W("sandals:4") }
-    },
-    snow: {
-      m: { top: W("coat:3 shirt:2 jacket:1"), bottom: W("trousers:3 baggy:1"), waist: W("belt:2 none:1"), shoes: W("boots:1") },
-      f: { top: W("coat:3 shirt:1 dress:1"), bottom: W("trousers:2 longskirt:1 slim:1"), waist: W("belt:1 none:1"), shoes: W("boots:1") }
-    },
-    sky: {
-      m: { top: W("tee:2 open:2 vest:1"), bottom: W("baggy:3 shorts:2 capri:1"), waist: W("sash:3 none:1"), shoes: W("sandals:4 bare:1") },
-      f: { top: W("dress:2 tank:2 crop:2"), bottom: W("skirt:2 longskirt:2 baggy:1"), waist: W("sash:2 none:2"), shoes: W("sandals:4") }
-    },
-    fishman: {
-      m: { top: W("open:3 bare:2 vest:1 shirt:1"), bottom: W("shorts:3 baggy:2 trousers:1"), waist: W("sash:2 belt:2 none:1"), shoes: W("sandals:3 bare:2 boots:1") },
-      f: { top: W("crop:2 tank:2 bikini:2 dress:1"), bottom: W("skirt:2 shorts:2 longskirt:1"), waist: W("none:2 sash:1"), shoes: W("sandals:3 bare:1") }
-    }
-  };
-  var SASH = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"];
-  var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
-  var STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
-  var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
-  var FRAME_ROLL = {
-    m: {
-      civilian: W("average:5 lean:2 slim:2 heavy:2 stocky:2 lanky:1 athletic:1"),
-      pirate: W("average:3 lean:2 athletic:2 brawny:2 heavy:2 stocky:2 lanky:1"),
-      bandit: W("average:2 lean:2 brawny:2 heavy:2 stocky:2 lanky:1"),
-      marine: W("average:3 athletic:4 lean:2 brawny:1 stocky:1"),
-      officer: W("average:3 athletic:3 brawny:1 heavy:1 slim:1"),
-      agent: W("athletic:3 slim:2 lean:2 average:2"),
-      swordsman: W("lean:3 athletic:3 average:2 slim:1 lanky:1"),
-      wano: W("average:3 lean:2 athletic:2 stocky:1 heavy:1 brawny:1"),
-      desert: W("average:3 lean:3 slim:2 heavy:1 lanky:1"),
-      snow: W("average:3 heavy:2 stocky:2 brawny:1 lean:1"),
-      sky: W("average:3 slim:2 lean:2 lanky:1"),
-      fishman: W("athletic:3 brawny:3 average:2 heavy:1 stocky:1")
-    },
-    f: {
-      civilian: W("average:4 slim:2 curvy:2 petite:2 heavy:1"),
-      fighter: W("average:3 athletic:3 slim:2 curvy:2 petite:1"),
-      other: W("average:4 slim:2 curvy:2 petite:1 heavy:1 athletic:1")
-    }
-  };
-  var FIGHTERS = /* @__PURE__ */ new Set(["pirate", "bandit", "marine", "officer", "agent", "swordsman"]);
-  var FRAME_MUS = { average: 0.55, lean: 0.75, athletic: 1, slim: 0.45, brawny: 1.2, heavy: 0.3, lanky: 0.28, stocky: 0.8 };
-  function dress(look, rng4, role = "civilian", over = {}) {
-    if (role === "beast") {
-      Object.assign(look, { fem: false, topStyle: "bare", bottomStyle: "slim", waist: "none", shoeStyle: "bare", muscle: 0.8 });
-      return look;
-    }
-    const set = DRESS[role] || DRESS.civilian;
-    const fem = over.fem ?? rng4.chance(FEM_ROLES[role] ?? 0.45);
-    const T5 = set[fem ? "f" : "m"];
-    look.fem = fem;
-    const legacyTop = over.openShirt !== void 0 || over.noSleeves || over.sleeve || over.vest;
-    if (!over.topStyle && !legacyTop) look.topStyle = rng4.weighted(T5.top);
-    if (!over.bottomStyle) look.bottomStyle = rng4.weighted(T5.bottom);
-    if (!over.waist) look.waist = rng4.weighted(T5.waist);
-    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng4.weighted(T5.shoes);
-    if (!over.top2) look.top2 = look.topStyle === "striped" ? rng4.pick(LIGHT) : look.topStyle === "jacket" ? rng4.pick(["#f5f5f5", "#f5f5f5", "#90caf9", "#fce4ec"]) : void 0;
-    if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng4.pick(SASH);
-    if (look.topStyle === "jacket" && !over.tie && rng4.chance(0.5)) look.tie = rng4.pick(["#212121", "#c62828", "#1e3a8a"]);
-    if (look.topStyle === "coat" && !over.coat) look.coat = rng4.pick(["#5d4037", "#37474f", "#6d4c41", "#1b5e20", "#4a148c", "#263238"]);
-    if (over.frame === void 0 && !((over.bulk ?? look.bulk ?? 1) > 1.1)) {
-      let set2 = fem ? FRAME_ROLL.f[role === "civilian" ? "civilian" : FIGHTERS.has(role) ? "fighter" : "other"] : FRAME_ROLL.m[role] || FRAME_ROLL.m.civilian;
-      if (look.legs > 1.2) set2 = set2.filter(([k]) => k !== "lanky" && k !== "stocky" && k !== "petite");
-      look.frame = rng4.weighted(set2);
-    }
-    if (fem) {
-      if (!over.hair && rng4.chance(0.75)) look.hair = rng4.pick(["long", "long", "wavy", "ponytail", "bun", "bob", "twintails", "braid", "short", "curly", "sidefringe"]);
-      if (!over.eyeShape) look.eyeShape = rng4.pick(["soft", "round", "round", "sharp"]);
-      look.bust = +(0.8 + rng4.next() * 0.45).toFixed(2);
-    } else if (over.muscle === void 0) {
-      const m = (FRAME_MUS[look.frame] ?? 0.55) + (rng4.next() - 0.5) * 0.4;
-      look.muscle = +Math.min(1.2, Math.max(0.15, m)).toFixed(2);
-    }
-    if (over.frown === void 0 && rng4.chance(STERN[role] ?? 0.15)) look.frown = true;
-    return look;
-  }
-  function makeLook(raceId, seed, overrides = {}) {
-    const rng4 = new RNG(seed);
-    const race = RACES[raceId] || RACES.human;
-    const look = {
-      race: raceId,
-      seed: rng4.int(0, 1e3),
-      skin: rng4.pick(HUMAN_SKIN),
-      hairColor: rng4.pick(HAIR),
-      hair: rng4.pick(HAIRSTYLES),
-      top: rng4.pick(TOPS),
-      bottom: rng4.pick(BOTTOMS),
-      shoes: rng4.pick(["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878"]),
-      // (most eyes are dark, as in the manga; a few are coloured)
-      eyeColor: rng4.pick(["#222", "#222", "#3b2a1a", "#3b2a1a", "#4a3426", "#2b2f3a", "#1e3799", "#27ae60"]),
-      scale: race.scale || 1,
-      hat: null,
-      openShirt: rng4.chance(0.25)
-    };
-    if (raceId === "fishman") {
-      const k = rng4.pick(FISHMAN_KINDS);
-      look.skin = k.skin;
-      look.fin = true;
-      look.gills = true;
-      look.kind = k.name;
-      look.grin = rng4.chance(0.5);
-      look.sharpTeeth = true;
-      look.hairColor = rng4.pick(["#1e1e1e", "#2c3e50", "#16a085", "#8e44ad"]);
-    } else if (raceId === "mink") {
-      const k = rng4.pick(MINK_KINDS);
-      look.ears = k.ears;
-      look.fur = k.fur;
-      look.tail = k.tail;
-      look.muzzle = k.muzzle;
-      look.kind = k.name;
-      look.furFace = rng4.chance(0.6);
-      look.skin = k.fur;
-      look.hairColor = k.fur;
-      look.hand = k.fur;
-    } else if (raceId === "skypiean") {
-      look.wings = "sky";
-      look.hairColor = rng4.pick(["#f5f6fa", "#fdcb6e", "#dfe6e9", "#74b9ff", "#f7d794"]);
-      look.top = rng4.pick(["#f5f6fa", "#dff9fb", "#f6e58d"]);
-    } else if (raceId === "buccaneer") {
-      look.bulk = 1.25;
-      look.skin = rng4.pick(["#c68642", "#a0643a", "#7a4a2a"]);
-    } else if (raceId === "three_eye") {
-      look.thirdEye = true;
-      look.eyeColor = "#8e44ad";
-    } else if (raceId === "lunarian") {
-      look.wings = "lunar";
-      look.backFlame = true;
-      look.skin = rng4.pick(["#7a4a2a", "#5c3a21", "#8d5524"]);
-      look.hairColor = "#f5f6fa";
-      look.hair = rng4.pick(["long", "spiky", "short"]);
-    }
-    const { role, ...over } = overrides;
-    dress(look, rng4, role || (raceId === "fishman" ? "fishman" : raceId === "skypiean" ? "sky" : "civilian"), over);
-    if (look.race === "buccaneer" || look.race === "giant") look.fem = over.fem ?? look.fem;
-    return Object.assign(look, over);
-  }
-  function raceLabel(look) {
-    const r4 = RACES[look.race] || RACES.human;
-    return look.kind ? `${r4.name} (${look.kind})` : r4.name;
-  }
-
-  // src/world/constants.js
-  var POS_SCALE = 6;
-  var SIZE_SCALE = 2.25;
-  var chart = (v) => Math.round(v * POS_SCALE);
-  var csize = (v) => Math.round(v * SIZE_SCALE);
-  var W2 = chart(4096);
-  var H = chart(2048);
-  var EQ = chart(1024);
-  var GL_HALF = chart(400);
-  var CB = chart(100);
-  var RL_HALF = chart(46);
-  var RM_X = chart(2048);
-  var MG_X = 0;
-  var POLAR = chart(26);
-  var GL_TOP = EQ - GL_HALF;
-  var GL_BOTTOM = EQ + GL_HALF;
-  var CB_TOP = GL_TOP - CB;
-  var CB_BOTTOM = GL_BOTTOM + CB;
-  var REGION = {
-    EAST_BLUE: 1,
-    NORTH_BLUE: 2,
-    WEST_BLUE: 3,
-    SOUTH_BLUE: 4,
-    PARADISE: 5,
-    NEW_WORLD: 6,
-    CALM_NORTH: 7,
-    CALM_SOUTH: 8,
-    RED_LINE: 9,
-    POLAR: 10
-  };
-  var REGION_INFO = {
-    [REGION.EAST_BLUE]: { id: "east_blue", name: "East Blue", danger: 1, color: "#4fb3e8", sea: true },
-    [REGION.NORTH_BLUE]: { id: "north_blue", name: "North Blue", danger: 2, color: "#5a8fd6", sea: true },
-    [REGION.WEST_BLUE]: { id: "west_blue", name: "West Blue", danger: 2, color: "#4a9fc9", sea: true },
-    [REGION.SOUTH_BLUE]: { id: "south_blue", name: "South Blue", danger: 2, color: "#3fc1c9", sea: true },
-    [REGION.PARADISE]: { id: "paradise", name: "Grand Line \u2014 Paradise", danger: 4, color: "#2aa198", sea: true },
-    [REGION.NEW_WORLD]: { id: "new_world", name: "Grand Line \u2014 New World", danger: 7, color: "#6c5ce7", sea: true },
-    [REGION.CALM_NORTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
-    [REGION.CALM_SOUTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
-    [REGION.RED_LINE]: { id: "red_line", name: "Red Line", danger: 5, color: "#b33939", sea: false },
-    [REGION.POLAR]: { id: "polar", name: "Polar Sea", danger: 3, color: "#dfe6e9", sea: true }
-  };
-  var SEA_IDS = {
-    east_blue: REGION.EAST_BLUE,
-    north_blue: REGION.NORTH_BLUE,
-    west_blue: REGION.WEST_BLUE,
-    south_blue: REGION.SOUTH_BLUE,
-    paradise: REGION.PARADISE,
-    new_world: REGION.NEW_WORLD,
-    calm_belt: REGION.CALM_NORTH,
-    red_line: REGION.RED_LINE
-  };
-  var wrapX = (x) => (x % W2 + W2) % W2;
-  var RMX = 900;
-  var RMY = 3300;
-  function regionAt(x, y) {
-    x = wrapX(x);
-    if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
-    if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W2 - RL_HALF) return REGION.RED_LINE;
-    const ey = (y - EQ) / RMY;
-    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
-    const east = x > RM_X;
-    if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
-    if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
-    if (y >= GL_BOTTOM && y < CB_BOTTOM) return REGION.CALM_SOUTH;
-    if (y < EQ) return east ? REGION.EAST_BLUE : REGION.NORTH_BLUE;
-    return east ? REGION.SOUTH_BLUE : REGION.WEST_BLUE;
-  }
-  var isCalmBelt = (r4) => r4 === REGION.CALM_NORTH || r4 === REGION.CALM_SOUTH;
-  var isGrandLine = (r4) => r4 === REGION.PARADISE || r4 === REGION.NEW_WORLD;
-  var isBlue = (r4) => r4 >= REGION.EAST_BLUE && r4 <= REGION.SOUTH_BLUE;
-
-  // src/world/reverseMountain.js
-  var RM = {
-    x: RM_X,
-    y: EQ,
-    rx: 900,
-    // the massif's reach across the Red Line (the coast bulges out this far)…
-    ry: 3300,
-    // …and along it (past the Calm Belt, into the Blues)
-    top: 160,
-    // water level of the summit pool, metres above the sea
-    poolR: 56,
-    // (room for the greatest ships to turn out into the torrent)
-    halfW: 17,
-    // half the width of a canal (a great galleon rides it with room either side)
-    climb: 740,
-    // the last stretch of each canal, where it climbs the mountain
-    drop: 620,
-    // the torrent down to Paradise
-    cone: { rx: 760, ry: 1250, h: 110 },
-    // the mountain standing on the Red Line
-    upSpeed: 20,
-    // m/s of the currents up the mountain…
-    downSpeed: 28
-    // …and of the torrent down
-  };
-  var UP_PTS = [[780, 3460], [440, 3390], [236, 3285], [205, 3e3], [192, 2400], [182, 1800], [168, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
-  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
-  var CANALS = [
-    { id: "east_blue", sx: 1, sy: -1 },
-    { id: "north_blue", sx: -1, sy: -1 },
-    { id: "west_blue", sx: -1, sy: 1 },
-    { id: "south_blue", sx: 1, sy: 1 },
-    { id: "exit", exit: true }
-  ];
-  var STEP = 4;
-  var CELL = 32;
-  function catmull(pts, step2) {
-    const out = [];
-    const P6 = [pts[0], ...pts, pts[pts.length - 1]];
-    for (let i = 1; i < P6.length - 2; i++) {
-      const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
-      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-      const n = Math.max(1, Math.ceil(len / step2));
-      for (let k = 0; k < n; k++) {
-        const t = k / n, t2 = t * t, t3 = t2 * t;
-        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
-      }
-    }
-    out.push(pts[pts.length - 1]);
-    return out;
-  }
-  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
-  function build() {
-    for (const c of CANALS) {
-      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
-      const raw = catmull(pts, STEP);
-      const n = raw.length;
-      c.x = new Float32Array(n);
-      c.y = new Float32Array(n);
-      c.s = new Float32Array(n);
-      c.lv = new Float32Array(n);
-      c.fx = new Float32Array(n);
-      c.fy = new Float32Array(n);
-      let s = 0;
-      for (let i = 0; i < n; i++) {
-        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
-        c.x[i] = RM.x + raw[i][0];
-        c.y[i] = RM.y + raw[i][1];
-        c.s[i] = s;
-      }
-      c.len = s;
-      for (let i = 0; i < n; i++) {
-        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
-        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
-        c.fx[i] = dx / d;
-        c.fy[i] = dy / d;
-        const si = c.s[i];
-        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
-      }
-    }
-    const grid2 = /* @__PURE__ */ new Map();
-    CANALS.forEach((c, ci) => {
-      for (let i = 0; i < c.x.length; i++) {
-        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
-        let l = grid2.get(k);
-        if (!l) grid2.set(k, l = []);
-        l.push(ci, i);
-      }
-    });
-    RM.grid = grid2;
-  }
-  build();
-  function canalLevel(c, s) {
-    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
-    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
-  }
-  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
-  var POOL_CURL = 0.2;
-  function canalAt(x, y, reach3 = 40, out = HIT) {
-    const dxs = x - RM.x, dys = y - RM.y;
-    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 3500) return null;
-    const pd = Math.hypot(dxs, dys);
-    if (pd < RM.poolR) {
-      out.canal = CANALS[4];
-      out.i = 0;
-      out.d = 0;
-      out.s = 0;
-      out.level = RM.top;
-      out.pool = true;
-      const c2 = pd > 1e-3 ? dxs / pd : 1;
-      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
-      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
-      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
-      const f = Math.hypot(out.fx, out.fy) || 1;
-      out.fx /= f;
-      out.fy /= f;
-      out.side = 0;
-      return out;
-    }
-    let best = -1, bc = 0, bd = reach3 * reach3;
-    const r4 = Math.ceil(reach3 / CELL);
-    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
-    for (let j = -r4; j <= r4; j++) {
-      for (let i = -r4; i <= r4; i++) {
-        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
-        if (!l) continue;
-        for (let k = 0; k < l.length; k += 2) {
-          const c2 = CANALS[l[k]], si = l[k + 1];
-          const ex = x - c2.x[si], ey = y - c2.y[si];
-          const d2 = ex * ex + ey * ey;
-          if (d2 < bd) {
-            bd = d2;
-            best = si;
-            bc = l[k];
-          }
-        }
-      }
-    }
-    if (best < 0) return null;
-    const c = CANALS[bc];
-    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
-    const ax = x - px2, ay = y - py2;
-    const along2 = ax * c.fx[best] + ay * c.fy[best];
-    s = Math.max(0, Math.min(c.len, s + along2));
-    const side = ax * -c.fy[best] + ay * c.fx[best];
-    out.canal = c;
-    out.i = best;
-    out.s = s;
-    out.d = Math.abs(side);
-    out.side = side;
-    out.level = canalLevel(c, s);
-    out.fx = c.fx[best];
-    out.fy = c.fy[best];
-    out.pool = false;
-    return out;
-  }
-  function coneAt(x, y) {
-    const C3 = RM.cone;
-    const r4 = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
-    if (r4 >= 1) return 0;
-    const k = 1 - r4;
-    return C3.h * k * k * (3 - 2 * k);
-  }
-  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
-
-  // src/world/deform.js
-  var MAX = 8;
-  var DEFORM = { list: [], pads: [], now: 0, world: null, seq: 0 };
-  var KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
-  function addDeform(o) {
-    const d = {
-      kind: KINDS[o.kind] || 1,
-      x: o.x,
-      y: o.y,
-      r: o.r || 12,
-      amp: o.amp ?? 2,
-      ang: o.ang || 0,
-      w: o.w || 2,
-      rise: o.rise ?? 0.35,
-      hold: o.hold ?? 4,
-      fall: o.fall ?? 3,
-      wob: o.wob || 0,
-      t0: DEFORM.now + (o.delay || 0),
-      id: ++DEFORM.seq
-    };
-    d.c = Math.cos(d.ang);
-    d.s = Math.sin(d.ang);
-    DEFORM.list.push(d);
-    while (DEFORM.list.length > MAX) DEFORM.list.shift();
-    return d;
-  }
-  function tickDeform(now3, world) {
-    if (world && DEFORM.world && world !== DEFORM.world || now3 < DEFORM.now - 1) DEFORM.list.length = 0;
-    DEFORM.now = now3;
-    if (world) DEFORM.world = world;
-    if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now3 - d.t0 < d.rise + d.hold + d.fall && d.t0 - now3 < 30);
-    if (DEFORM.pads.length) DEFORM.pads = DEFORM.pads.filter((d) => now3 < d.end && d.t0 - now3 < 30);
-  }
-  function addIcePad(x, y, r4, hold = 8) {
-    const P6 = DEFORM.pads;
-    P6.push({ x, y, r: r4, t0: DEFORM.now, end: DEFORM.now + hold });
-    while (P6.length > 80) P6.shift();
-  }
-  var sst = (a, b, x) => {
-    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-  function envelope(d, now3 = DEFORM.now) {
-    const t = now3 - d.t0;
-    if (t < 0) return 0;
-    let e;
-    if (t < d.rise) e = sst(0, 1, t / d.rise);
-    else if (t < d.rise + d.hold) e = 1;
-    else e = 1 - sst(0, 1, (t - d.rise - d.hold) / d.fall);
-    if (d.wob && t < d.rise + 1.2) e *= 1 + d.wob * Math.sin(t * 38) * Math.exp(-t * 2.2);
-    return e;
-  }
-  function shapeAt(kind, lx, ly, r4, amp, c, s, w) {
-    const dd = Math.hypot(lx, ly), q2 = dd / r4;
-    if (kind === 1) {
-      if (q2 >= 1) return 0;
-      const fade2 = 1 - sst(0.55, 1, q2);
-      return amp * ((lx * c + ly * s) / r4) * fade2;
-    }
-    if (kind === 2) {
-      if (q2 >= 1.5) return 0;
-      const bowl = q2 < 1 ? -amp * (1 - q2 * q2) : 0;
-      return bowl + amp * 0.3 * Math.exp(-(((q2 - 1) / 0.18) ** 2));
-    }
-    if (kind === 3) {
-      const u = lx * c + ly * s, v = -lx * s + ly * c;
-      if (u < -w || u > r4 + w) return 0;
-      const run = sst(-w, w * 0.5, u) * (1 - sst(r4 - w * 1.5, r4 + w, u));
-      return -amp * Math.exp(-((v / w) ** 2)) * run + amp * 0.18 * Math.exp(-(((Math.abs(v) - w * 1.3) / (w * 0.5)) ** 2)) * run;
-    }
-    if (kind === 5) return 0;
-    if (kind === 4) {
-      if (q2 >= 1) return 0;
-      return amp * (1 - sst(0, 1, q2));
-    }
-    return 0;
-  }
-  var ICE_TOP = 0.32;
-  function iceCover(x, y) {
-    const L3 = DEFORM.list;
-    const w = DEFORM.world;
-    for (const d of DEFORM.pads) {
-      const left = d.end - DEFORM.now, k = Math.min(1, left / 1.5);
-      const lx = w?.dx ? w.dx(d.x, x) : x - d.x;
-      if (Math.hypot(lx, y - d.y) < d.r * k) return true;
-    }
-    if (!L3.length) return false;
-    for (const d of L3) {
-      if (d.kind !== 5) continue;
-      const e = envelope(d);
-      if (e < 0.25) continue;
-      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
-      const th = Math.atan2(ly, lx);
-      const rag = 1 + 0.07 * Math.sin(th * 7 + d.id) + 0.04 * Math.sin(th * 17 + d.id * 3);
-      if (Math.hypot(lx, ly) < d.r * rag * Math.min(1, e * 1.3)) return true;
-    }
-    return false;
-  }
-  function deformAt(x, y, sea = false) {
-    const L3 = DEFORM.list;
-    if (!L3.length) return 0;
-    const w = DEFORM.world;
-    let h2 = 0;
-    for (const d of L3) {
-      if (sea && d.kind !== 1) continue;
-      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
-      const R5 = d.kind === 3 ? d.r + d.w * 2 : d.r * 1.5;
-      if (Math.abs(lx) > R5 + 2 || Math.abs(ly) > R5 + 2) continue;
-      const e = envelope(d);
-      if (e) h2 += e * shapeAt(d.kind, lx, ly, d.r, d.amp, d.c, d.s, d.w);
-    }
-    return h2;
-  }
-
-  // src/render3d/swell.js
-  var SWELL_GLSL = (
-    /* glsl */
-    `
-  float sHash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
-  float sNoise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
-  }
-  // two octaves, rotated against each other (no grid-aligned blobs)
-  float sFbm(vec2 p) {
-    float a = sNoise(p);
-    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
-    return a * 0.64 + sNoise(p) * 0.36;
-  }
-  // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
-  float swells(vec2 p, float t, float d, out vec2 slope) {
-    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
-    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
-    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
-    // bent crests (a little everywhere, and long slow curves)
-    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
-    // wave groups
-    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
-    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
-    float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
-    float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
-    // (the cross swell strong in some stretches of sea, gone in others)
-    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
-    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
-    // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
-    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
-    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
-    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
-    return h / 2.6;
-  }
-`
-  );
-  var fract = (v) => v - Math.floor(v);
-  function sHash(x, y) {
-    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
-    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
-    a += d;
-    b += d;
-    c += d;
-    return fract((a + b) * c);
-  }
-  function sNoise(x, y) {
-    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
-    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
-    return top + (bot - top) * uy;
-  }
-  function sFbm(x, y) {
-    const a = sNoise(x, y);
-    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
-    return a * 0.64 + sNoise(px2, py2) * 0.36;
-  }
-  var sst2 = (a, b, x) => {
-    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-  function swells(x, y, t, d = 0) {
-    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
-    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
-    const g0 = (0.36 + 0.45 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst2(160, 320, d));
-    const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst2(150, 300, d));
-    const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst2(45, 100, d));
-    const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst2(25, 55, d));
-    const g4 = (0.7 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) + 0.15) * 0.8 * (1 - sst2(160, 320, d));
-    const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
-    const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
-    const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
-    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
-    const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
-    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
-    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
-  }
-  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
-  var LIQUID = new Float32Array(256).fill(0.15);
-  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
-  LIQUID[3] = 0.5;
-  LIQUID[9] = 0;
-  function calmPoints(world) {
-    if (!world?.reverseMountain) return [];
-    if (world.calmPts) return world.calmPts;
-    const out = [];
-    for (const c of CANALS) {
-      if (c.i0 === void 0) continue;
-      const land2 = c.exit ? c.i1 - 3 : c.i0 + 3;
-      const j = Math.max(0, Math.min(c.x.length - 1, land2 + (c.exit ? 12 : -12)));
-      out.push([c.x[j], c.y[j], 170]);
-    }
-    return world.calmPts = out;
-  }
-  function calmAt(w, x, y) {
-    let k = 1;
-    for (const [cx, cy, r4] of calmPoints(w)) k = Math.min(k, sst2(r4 * 0.45, r4, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
-    return k;
-  }
-  var S = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
-  function setSwell(t, amp, world, ox, oy) {
-    S.t = t;
-    S.amp = amp;
-    S.world = world;
-    S.ox = ox;
-    S.oy = oy;
-  }
-  function swellAt(x, y, t = S.t) {
-    const w = S.world;
-    if (!w || !S.amp) return 0;
-    const dx = w.dx ? w.dx(S.ox, x) : x - S.ox, dy = y - S.oy;
-    const d = Math.hypot(dx, dy);
-    if (d > 320) return 0;
-    const k = w.type(Math.floor(x), Math.floor(y));
-    const liquid = LIQUID[k < 16 ? k : 255];
-    if (!liquid) return 0;
-    const shore = 0.35 + 0.65 * sst2(0.5, -7, w.sd ? w.sd(x, y) : -32);
-    const tilt = DEFORM.list.length ? deformAt(x, y, true) * sst2(-1.5, -8, w.sd ? w.sd(x, y) : -32) : 0;
-    return swells(x, y, t, d) * S.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1) + tilt;
-  }
-  var swellOn = () => !!(S.world && S.amp > 0.01);
-
-  // src/game/boatFeel.js
-  var BOAT_FEEL = {
-    // ---- steering (the helm you hold with A / D)
-    helmIn: 0.32,
-    // s for the helm to go hard over when you steer (eased in and out, no snap)
-    helmOut: 0.2,
-    // s for it to come back amidships when you let go
-    turnLag: 0.1,
-    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
-    turnLagPerM: 32e-4,
-    // … and that much more per metre of her length (a big ship swings more slowly)
-    turnRate: 1,
-    // × each class's top turning rate (1 = as the ship tables have it)
-    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
-    wheelMax: 2.2,
-    // radians the wheel is turned hard over (about a third of a turn)
-    wheelSpeed: 14,
-    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
-    standTilt: 0.5,
-    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
-    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
-    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
-    rideRate: 6.5,
-    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
-    rideRatePerM: -0.055,
-    // … less per metre of her length (a long hull is heavier, slower to answer)
-    rideDamp: 0.9,
-    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
-    rideLead: 1,
-    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
-    pitchMax: 0.22,
-    // radians she pitches at most (bow up or down)
-    rollMax: 0.26,
-    // radians she rolls at most
-    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
-    speedSmooth: 0.45,
-    // s over which a change in her driving force builds up (under sail)
-    speedSmoothOars: 0.12
-    // … under oars (each stroke still surges her on)
-  };
-
-  // src/world/hull.js
-  var clamp01 = (x) => Math.max(0, Math.min(1, x));
-  var smooth2 = (a, b, x) => {
-    const t = clamp01((x - a) / (b - a));
-    return t * t * (3 - 2 * t);
-  };
-  var BIG_SHIP = 8;
-  var dimsCache = /* @__PURE__ */ new Map();
-  function shipDims(def) {
-    if (def._dims) return def._dims;
-    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
-    let d = dimsCache.get(key2);
-    if (!d) {
-      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
-      dimsCache.set(key2, d);
-    }
-    Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
-    return d;
-  }
-  function smallDims(def) {
-    const L3 = def.length, B5 = def.beam;
-    const open = L3 < 3.5;
-    const D4 = B5 * 0.42;
-    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
-    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
-    const castle2 = L3 >= 5.5, fore = L3 >= 6.8;
-    const hq = castle2 ? 0.85 + (L3 - 5.5) * 0.1 : 0;
-    const hf = fore ? 0.5 : 0;
-    const tq = castle2 ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
-    const masts = def.masts ?? 1;
-    const mastH = masts ? 1.2 + L3 * 0.75 : 0;
-    let helmX = -L3 * 0.42;
-    const d = {
-      L: L3,
-      B: B5,
-      D: D4,
-      open,
-      deckY: deckY2,
-      bulH,
-      castle: castle2,
-      fore,
-      hq,
-      hf,
-      tq,
-      tf: tf2,
-      masts,
-      mastH,
-      helmX,
-      yq: deckY2 + hq,
-      yf: deckY2 + hf,
-      helmFloor: castle2 ? deckY2 + hq : deckY2,
-      big: false,
-      poop: false,
-      hp: 0,
-      tp: 0,
-      sheer: 0.16 * B5,
-      walk: 0.94,
-      stairs: [],
-      solids: []
-    };
-    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L3 : L3 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
-    d.mastR = 0.05 + L3 * 0.011;
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
-    if (!open) {
-      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
-      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
-      d.helmX = helmX = Math.max(-L3 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
-      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
-    }
-    if (def.oarsOnly) {
-      const seatT = 0.44, lockT = seatT + 0.4 / L3;
-      d.row = {
-        seatT,
-        seatU: xAt(d, seatT),
-        seatH: 0.3,
-        // (the top of the thwart, over the floor)
-        lockT,
-        lockU: xAt(d, lockT),
-        lockV: hbAt(lockT, B5) * 0.965,
-        lockH: topAt(d, lockT) + 0.04,
-        inboard: 0.56,
-        outboard: 1.5
-      };
-      d.helmX = helmX = d.row.seatU;
-    }
-    return d;
-  }
-  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
-  var ease = (k) => k * k * (3 - 2 * k);
-  function oarStroke(ph, pull = 1) {
-    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
-    let a, b, f;
-    if (ph < 0.08) {
-      const k = ease(ph / 0.08);
-      a = ca;
-      b = liftB + (dipB - liftB) * k;
-      f = 0;
-    } else if (ph < 0.52) {
-      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
-      b = dipB;
-      f = 0;
-    } else if (ph < 0.6) {
-      const k = ease((ph - 0.52) / 0.08);
-      a = fa;
-      b = dipB + (liftB - dipB) * k;
-      f = k;
-    } else {
-      const k = (ph - 0.6) / 0.4;
-      a = fa + (ca - fa) * ease(k);
-      b = liftB + Math.sin(k * Math.PI) * 0.05;
-      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
-    }
-    if (pull < 0) a = ca + fa - a;
-    return { a, b, f };
-  }
-  function rowLean(ship) {
-    const o = ship.oars;
-    if (!o) return 0;
-    const k = clamp01((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
-    return -0.08 + 0.44 * k;
-  }
-  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
-  function oarPoints(d, side, a, b) {
-    const r4 = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
-    const px2 = r4.lockU, py2 = r4.lockH, pz2 = side * r4.lockV;
-    return {
-      lock: [px2, py2, pz2],
-      dir: [ox, oy, oz],
-      grip: [px2 - ox * r4.inboard, py2 - oy * r4.inboard, pz2 - oz * r4.inboard],
-      tip: [px2 + ox * r4.outboard, py2 + oy * r4.outboard, pz2 + oz * r4.outboard]
-    };
-  }
-  function bigDims(def) {
-    const L3 = def.length, B5 = def.beam;
-    const D4 = B5 * 0.45;
-    const narrow = B5 < 7;
-    const large = L3 >= 44, mid = !narrow && !large;
-    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
-    const bulH = 1.1;
-    const fore = L3 >= 24;
-    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
-    const poop = large, hp = poop ? hq - 0.2 : 0;
-    const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
-    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
-    const masts = Math.max(1, Math.min(4, def.masts || 3));
-    const tHelm = poop ? tp - 2.2 / L3 : narrow ? 0.08 : 0.1;
-    const d = {
-      L: L3,
-      B: B5,
-      D: D4,
-      open: false,
-      big: true,
-      narrow,
-      deckY: deckY2,
-      bulH,
-      castle: true,
-      fore,
-      poop,
-      hq,
-      hf,
-      hp,
-      tq,
-      tf: tf2,
-      tp,
-      masts,
-      mastH: narrow ? L3 * 0.95 + 3 : L3 + 4,
-      helmX: -L3 / 2 + tHelm * L3,
-      yq,
-      yf,
-      yp,
-      helmFloor: poop ? yp : yq,
-      sheer: Math.min(1.3, 0.4 + L3 * 0.016),
-      walk: 0.86
-    };
-    d.bowY = fore ? yf : deckY2 + 0.9;
-    d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L3);
-    d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
-    d.wheelU = d.helmX + 0.9;
-    const bu = d.wheelU + 1.45;
-    d.binnacleU = !narrow && !poop && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
-    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
-    const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
-    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
-    d.stairs = [];
-    const flight = (ta, tb, ha, hb, la, lb) => {
-      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
-      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
-    };
-    flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
-    if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
-    if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
-    const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
-    const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
-    d.mainT0 = mainT0;
-    d.mainT1 = mainT1;
-    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
-    d.holdY = holdY;
-    const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
-    let h0 = 0.06, h1 = 0.94;
-    while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
-    while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
-    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
-    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
-    const rise = deckY2 - holdY;
-    let comp = null;
-    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
-      for (let k = 0; k < 160 && !comp; k++) {
-        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
-        const t0 = tc - cRun / L3 / 2, t1 = tc + cRun / L3 / 2;
-        if (t0 < mainT0 + 0.5 / L3 || t1 > mainT1 - 1.8 / L3 || t0 < h0 + 1.8 / L3 || t1 > h1 - 0.3 / L3) continue;
-        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
-      }
-      if (comp) break;
-    }
-    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L3, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L3, ladder: true };
-    const cw = comp.ladder ? 0.9 : 1.3;
-    d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
-    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
-    d.hatchT = (comp.t0 + comp.t1) / 2;
-    const freeT = (want2, len, pad2) => {
-      for (let k = 0; k < 80; k++) {
-        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
-        const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
-        if (tc - len / L3 / 2 < mainT0 + 0.3 / L3 || tc + len / L3 / 2 > mainT1 - 0.3 / L3) continue;
-        if (!clearU(u0, u1, pad2)) continue;
-        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
-        return tc;
-      }
-      return null;
-    };
-    d.capstanT = L3 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
-    const bl2 = Math.min(6, L3 * 0.14), bt = L3 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
-    if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
-    else d.boat = bt !== null ? { u0: (bt - 0.5) * L3 - bl2 / 2, u1: (bt - 0.5) * L3 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
-    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
-    d.gunScale = gs;
-    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L3, t1: mainT1 - 1.5 / L3, lid: 0.42, open: 1.4, deck: true }];
-    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L3), t1: Math.min(0.86, h1 - 0.8 / L3), lid: 0.6, open: 1.05 });
-    const perSide = Math.ceil((def.cannons || 0) / 2);
-    const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L3 : null;
-    const centre = (u) => {
-      let w = 0;
-      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
-      if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
-      if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
-      if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
-      return w;
-    };
-    const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
-    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
-    const fitsGun = (t) => {
-      const u = (t - 0.5) * L3, reach3 = 0.5 * gs;
-      return [u - reach3, u, u + reach3].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
-    };
-    const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
-    const cand = [];
-    for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L3) if (fitsGun(t)) cand.push(t);
-    const pick6 = [], gap = (1.4 * gs + 0.35) / L3;
-    for (let i = 0; i < want && cand.length; i++) {
-      const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
-      let best = null;
-      for (const t of cand) if (pick6.every((q2) => Math.abs(q2 - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
-      if (best !== null) pick6.push(best);
-    }
-    pick6.sort((a, b) => a - b);
-    d.guns = [];
-    for (const t of pick6) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L3, v: s * offAt(t), s });
-    top.ts = pick6;
-    top.n = pick6.length;
-    for (const r4 of rows) if (!r4.deck) r4.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r4.t1 - r4.t0) * L3 / 1.9)));
-    d.gunRows = rows;
-    d.lowGuns = [];
-    const low = rows.find((r4) => !r4.deck);
-    if (low) {
-      for (let i = 0; i < low.n; i++) {
-        const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
-        const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
-        if (t > comp.t0 - 1.6 / L3 && t < comp.t1 + 0.5 / L3 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
-        for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L3, v: s * off, s });
-      }
-    }
-    const tS = 0.02 + 0.3 / L3;
-    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
-    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
-    d.rooms = [
-      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
-    ];
-    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
-    if (fore) {
-      let fe = 0.95;
-      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
-      const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
-      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
-    }
-    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
-    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
-    for (const r4 of d.rooms) if (r4.doors.length) roomFront(d, r4, d.stairs.filter((s) => s.la === upTo[r4.kind][0] && s.lb === upTo[r4.kind][1]));
-    for (const r4 of d.rooms) if (r4.kind === "cabin" || r4.kind === "captain") r4.windows = sternWindows(d, r4);
-    d.walls = [];
-    for (const r4 of d.rooms) {
-      if (!r4.doors.length) continue;
-      const u = xAt(d, r4.front.t), w = innerAt(d, r4.front.t, r4.floor + 1) + 0.1;
-      let v = -w;
-      for (const dr of [...r4.doors].sort((a, b) => a.v - b.v)) {
-        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r4.floor, y1: r4.ceil + 0.12 });
-        v = dr.v + dr.w / 2;
-      }
-      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12 });
-    }
-    for (const r4 of d.rooms) {
-      const hold = r4.kind === "hold";
-      for (const [t, off] of hold ? [[r4.t0, 0], [r4.t1, 0]] : r4.kind === "forecastle" ? [[r4.t1, 0]] : [[r4.t0, 0.05]]) {
-        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r4.floor + 0.3) : innerAt(d, t, r4.floor + 1)) + 0.1;
-        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12, end: true });
-      }
-    }
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
-    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main", h: 0.95 * gs });
-    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold", h: 0.95 * gs });
-    if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main", h: 1 });
-    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? "poop" : "quarter" });
-    if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter", h: 1.2 });
-    if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
-    if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main", h: 1.1 });
-    d.shotPile = null;
-    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
-    const S6 = FURNITURE.shot;
-    for (const m of mainFirst) {
-      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
-        const box2 = { u0: u - S6.w / 2, u1: u + S6.w / 2, v0: v - S6.dp / 2, v1: v + S6.dp / 2 };
-        if (deckClear(d, box2, 0.55)) {
-          d.shotPile = { u, v, ...box2 };
-          break;
-        }
-      }
-      if (d.shotPile) break;
-    }
-    if (d.shotPile) {
-      const p = d.shotPile;
-      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main", h: 0.6 });
-    }
-    furnish(d);
-    d.ladders = [];
-    for (const s of [1, -1]) {
-      const t = ladderT(d, def, s, mainT0, mainT1);
-      if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
-    }
-    return d;
-  }
-  var LADDER_W = 0.62;
-  function ladderT(d, def, s, t0, t1) {
-    const L3 = d.L, mid = (t0 + t1) / 2;
-    for (let k = 0; k < 600; k++) {
-      const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L3;
-      if (t < t0 + 1 / L3 || t > t1 - 1 / L3) continue;
-      const u = xAt(d, t);
-      if ([...d.guns, ...d.lowGuns || []].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
-      if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
-      if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L3) continue;
-      const v = s * (hbAt(t, d.B) * d.walk - 0.5);
-      if (levelAt(d, t, v) !== "main" || solidAt(d, u, v, 0.4, "main") > 0) continue;
-      return t;
-    }
-    return null;
-  }
-  var gunIn = (gs) => 0.92 * gs + 0.05;
-  function gunBox(g, gs) {
-    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
-    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
-  }
-  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
-  var nearRing = (a, u, v, r4) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r4;
-  function deckClear(d, b, pad2) {
-    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
-    if (t0 < d.tq || t1 > d.tf) return false;
-    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
-    const cp = d.comp;
-    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
-    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
-    for (const o of d.solids) {
-      if (o.lvl && o.lvl !== "main") continue;
-      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
-    }
-    return true;
-  }
-  function roomFront(d, r4, stairs2) {
-    const face = r4.kind === "forecastle" ? -1 : 1, t = face > 0 ? r4.t1 : r4.t0, u = xAt(d, t);
-    const w = innerAt(d, t, (r4.floor + r4.top) / 2) + 0.05, dh = Math.min(2.05, r4.top - r4.floor - 0.12);
-    const ds = [...r4.doors].sort((a, b) => a.v - b.v);
-    ds.forEach((dr, i) => {
-      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
-      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
-      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
-      dr.dh = dh;
-      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
-    });
-    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
-    const windows2 = [];
-    if (r4.top - r4.floor > 1.8) {
-      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
-        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
-        windows2.push(zz);
-      }
-    }
-    r4.front = { t, u, face, w, dh, windows: windows2 };
-  }
-  function sternWindows(d, r4) {
-    const w = innerAt(d, r4.t0, r4.floor + 1);
-    if (r4.ceil + 0.1 - r4.floor <= 1.9) return [];
-    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
-    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
-  }
-  var FURNITURE = {
-    table: { w: 1.6, dp: 0.9, h: 0.76 },
-    chair: { w: 0.46, dp: 0.46, h: 0.95 },
-    bench: { w: 1.5, dp: 0.36, h: 0.46 },
-    desk: { w: 1.4, dp: 0.75, h: 0.78 },
-    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
-    chest: { w: 0.9, dp: 0.55, h: 0.62 },
-    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
-    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
-    stove: { w: 1.2, dp: 0.9, h: 0.8 },
-    // (the range itself 0.9 × 0.7, on its stone hearth)
-    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
-    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
-    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
-    crate: { w: 0.8, dp: 0.8, h: 1.2 },
-    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
-    shot: { w: 0.6, dp: 0.45, h: 0.48 },
-    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
-  };
-  function footprint(it) {
-    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
-    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
-    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
-  }
-  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
-  function seatsOf(d) {
-    if (d.seats) return d.seats;
-    const out = [];
-    for (const it of d.furniture || []) {
-      const h2 = SEAT_H[it.kind];
-      if (!h2 || it.ghost || it.y) continue;
-      const face = Math.PI / 2 - (it.rot || 0);
-      if (it.kind !== "bench") {
-        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
-        continue;
-      }
-      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
-      for (let i = 0; i < n; i++) {
-        const o = ((i + 0.5) / n - 0.5) * it.w;
-        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
-      }
-    }
-    return d.seats = out;
-  }
-  var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
-  function liningAt(d, r4, t, y) {
-    const ys = liningYs(r4);
-    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
-    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
-    for (let i = 0; i < ys.length - 1; i++) {
-      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
-    }
-    return at4(ys[ys.length - 1]);
-  }
-  function roomEnds(d, r4) {
-    const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
-    if (r4.kind === "forecastle") return [a + 0.07, b];
-    if (r4.kind === "hold") return [a, b];
-    return [a + 0.1, b - 0.07];
-  }
-  function roomPlacer(d, r4) {
-    const [ua, ub] = roomEnds(d, r4), H5 = r4.ceil - r4.floor;
-    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
-    const ys = liningYs(r4);
-    const P6 = { d, r: r4, ua, ub, H: H5, items: [], keep: [], low: [], rings: [] };
-    const reached = /* @__PURE__ */ new Map();
-    P6.reach = (u, y0, y1) => {
-      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
-      let m = reached.get(key2);
-      if (m === void 0) {
-        m = Infinity;
-        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r4, tOf(Math.round(u * 100) / 100), y));
-        reached.set(key2, m);
-      }
-      return m - 0.03;
-    };
-    const top = (o) => o.pipe ? H5 - 0.1 : (o.y || 0) + o.h;
-    P6.fits = (it) => {
-      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
-      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H5 - (it.y ? 0 : 0.06)) return false;
-      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
-        const w = P6.reach(u, y0, y1);
-        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
-      }
-      if (P6.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
-      if (y1 > 0.72 && P6.low.some((k) => hits(fp, k))) return false;
-      if (P6.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
-      for (const o of P6.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
-      return true;
-    };
-    P6.put = (it) => {
-      const x = { rot: 0, ...it, room: r4.kind, floor: r4.floor };
-      if (!P6.fits(x)) return null;
-      P6.items.push(x);
-      return x;
-    };
-    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
-    const sidePlace = (kind, s, u, extra) => {
-      const S6 = spec(kind, extra), y0 = S6.y || 0, y1 = S6.pipe ? H5 - 0.1 : y0 + S6.h;
-      const w = Math.min(P6.reach(u - S6.w / 2, y0, y1), P6.reach(u, y0, y1), P6.reach(u + S6.w / 2, y0, y1));
-      const it = { rot: s > 0 ? Math.PI : 0, ...S6, u, v: s * (w - 0.01 - S6.dp / 2), room: r4.kind, floor: r4.floor };
-      return { it, off: P6.reach(u, y0, y1) - w };
-    };
-    P6.onSide = (kind, s, u, extra = {}) => P6.put(sidePlace(kind, s, u, extra).it);
-    P6.alongSide = (kind, s, from, to, extra = {}) => {
-      const dir = to >= from ? 1 : -1;
-      let best = null;
-      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const c = sidePlace(kind, s, u, extra);
-        if (!P6.fits(c.it)) continue;
-        if (c.off < 0.12) {
-          best = c;
-          break;
-        }
-        if (!best || c.off < best.off - 0.02) best = c;
-      }
-      if (!best) return null;
-      P6.items.push(best.it);
-      return best.it;
-    };
-    P6.row = (kinds, s, from, to, gap, extra = {}) => {
-      const out = [], dir = to >= from ? 1 : -1;
-      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const kind = kinds[out.length % kinds.length], S6 = spec(kind, extra);
-        const it = P6.onSide(kind, s, u + dir * S6.w / 2, extra);
-        if (it) {
-          out.push(it);
-          u += dir * (S6.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
-        }
-      }
-      return out;
-    };
-    P6.onEnd = (kind, e, v, extra = {}) => {
-      const S6 = spec(kind, extra);
-      return P6.put({ ...S6, u: e < 0 ? ua + 0.01 + S6.dp / 2 : ub - 0.01 - S6.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
-    };
-    P6.around = (u0, v0, fn) => {
-      for (let k = 0; k < 160; k++) {
-        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
-        if (u < ua || u > ub) continue;
-        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
-          const g = fn(u, v0 + dv);
-          if (g) return g;
-        }
-      }
-      return null;
-    };
-    P6.group = (build5, clear3 = 0.55) => {
-      const mark = P6.items.length;
-      const g = build5();
-      const mine = P6.items.slice(mark);
-      if (g && mine.length) {
-        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
-        if (!P6.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
-          P6.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
-          return mine;
-        }
-      }
-      P6.items.length = mark;
-      return null;
-    };
-    P6.table = (u, v, len, wid, seats = "chairs") => P6.group(() => {
-      if (!P6.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
-      let n = 0;
-      if (seats === "benches") {
-        for (const s of [-1, 1]) if (P6.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
-      } else {
-        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
-        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P6.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
-        for (const e of [-1, 1]) if (P6.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
-      }
-      return n >= 2;
-    });
-    P6.rug = (group7) => {
-      if (!group7) return null;
-      const b = group7.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
-      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
-        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
-        const fp = footprint(rug);
-        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
-        if (P6.items.some((o) => !group7.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
-        P6.items.push(rug);
-        return rug;
-      }
-      return null;
-    };
-    P6.lanterns = () => {
-      const S6 = FURNITURE.lantern, y = Math.min(H5 - 0.12, 2.25) - S6.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
-      const free = (lt2) => {
-        const fp = footprint(lt2);
-        return fp.u0 >= ua && fp.u1 <= ub && !P6.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S6.h && top(o) > lt2.y);
-      };
-      for (let i = 0; i < n; i++) {
-        const u = ua + len * (i + 0.5) / n;
-        let put2 = null;
-        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
-          const w = Math.min(P6.reach(u - S6.w / 2, y, y + S6.h), P6.reach(u, y, y + S6.h), P6.reach(u + S6.w / 2, y, y + S6.h)) + 0.02;
-          const lt2 = { kind: "lantern", ...S6, u, v: s * (w - S6.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r4.kind, floor: r4.floor };
-          if (free(lt2)) {
-            put2 = lt2;
-            break;
-          }
-        }
-        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
-          if (put2) break;
-          const lt2 = { kind: "lantern", ...S6, dp: S6.w, u, v: dv, y: H5 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r4.kind, floor: r4.floor };
-          if (free(lt2)) put2 = lt2;
-        }
-        if (put2) P6.items.push(put2);
-      }
-    };
-    for (const dr of r4.doors) {
-      const f = r4.front.face, u = r4.front.u;
-      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
-      P6.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
-      if (dr.leaf) P6.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
-    }
-    if (r4.front) for (const zz of r4.front.windows) P6.low.push({ ...r4.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
-    for (const wd of r4.windows || []) P6.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
-    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P6.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
-    if (r4.kind === "hold") {
-      const cp = d.comp;
-      P6.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
-      for (const g of d.lowGuns) {
-        const b = gunBox(g, d.gunScale);
-        P6.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
-      }
-    }
-    return P6;
-  }
-  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
-  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
-  var ROOMS = {
-    // the great cabin: a bunk along the starboard side with the sea chest at
-    // its foot, books and another chest to port (and on the bigger ships a
-    // second bunk, a water cask and a chest under the stern windows), the
-    // table down the middle with its chairs round it, a rug under it
-    cabin(P6) {
-      const { ua, ub } = P6, len = ub - ua;
-      const bunk = P6.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
-      if (bunk) P6.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
-      if (len > 5.5) P6.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
-      if (len > 5.5) P6.onEnd("chest", -1, 0);
-      const half2 = P6.reach((ua + ub) / 2, 0, 1);
-      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
-      let table = null;
-      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P6.around((ua + ub) / 2 - 0.2, 0, (u, v) => P6.table(u, v, l, w));
-      if (len > 5.5) P6.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
-      P6.rug(table);
-      P6.lanterns();
-    },
-    // the captain's cabin under the poop: the desk facing the door, his chair
-    // behind it (his back to the stern windows); a bunk with a chest at its
-    // foot, bookcases and another chest; a rug
-    captain(P6) {
-      const { ua, ub } = P6, C3 = FURNITURE.chair, D4 = FURNITURE.desk;
-      const bunk = P6.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
-      if (bunk) P6.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
-      let desk = null;
-      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
-        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
-          if (desk) break;
-          const cu = ua + 0.42 + du + C3.dp / 2;
-          desk = P6.group(() => P6.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P6.put({ ...D4, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D4.dp / 2, v, rot: Math.PI / 2 }));
-        }
-      }
-      P6.rug(desk);
-      P6.lanterns();
-    },
-    // the forecastle: the galley stove, the mess table and its benches, the
-    // crew's hammocks slung up under the deck beams and their sea chests below
-    forecastle(P6) {
-      const { ua, ub, H: H5 } = P6, len = ub - ua;
-      const stove = P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
-      if (stove) {
-        const f = footprint(stove);
-        P6.keep.push({ u0: f.u0 - 0.55, u1: f.u1 + 0.55, v0: f.v0 - 0.1, v1: f.v1 + 0.75, top: 1.2 });
-      }
-      P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
-      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.6, { loot: "crew" });
-      if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
-        const tl = clampN(len * 0.4, 1.1, 2.4);
-        for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
-      }
-      for (const s of [1, -1]) P6.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H5 - 0.64, ghost: true });
-      P6.lanterns();
-    },
-    // the hold: the treasure chest by the foot of the ladder (its lid thrown
-    // back, facing you as you come down), the cargo stowed along both sides —
-    // a second row in a wide hold — with the way down the middle clear (on a
-    // gun deck, what fits between the guns)
-    hold(P6) {
-      const { d, ua, ub } = P6, cp = d.comp, T5 = FURNITURE.treasure;
-      let chest = null;
-      for (let du = 0; du < 3 && !chest; du += 0.1) {
-        for (const s of [-1, 1]) {
-          if (!chest) chest = P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T5.dp / 2), rot: s < 0 ? 0 : Math.PI });
-        }
-      }
-      if (!chest) P6.around(cp.u0 - 2.2, 0, (u, v) => P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
-      let n = 0;
-      for (const s of [-1, 1]) n += P6.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
-      for (const o of P6.items.slice()) {
-        if (o.treasure || o.kind === "shot") continue;
-        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S6 = FURNITURE[kind];
-        const v = s > 0 ? f.v0 - 0.08 - S6.dp / 2 : f.v1 + 0.08 + S6.dp / 2;
-        if (Math.abs(v) - S6.dp / 2 >= 1.3) P6.put({ ...S6, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
-      }
-      P6.lanterns();
-    }
-  };
-  function furnish(d) {
-    d.furniture = [];
-    for (const r4 of d.rooms) {
-      const P6 = roomPlacer(d, r4);
-      ROOMS[r4.kind](P6);
-      d.furniture.push(...P6.items);
-    }
-    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room, h: it.h });
-  }
-  var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
-  function hullProfile(d, t) {
-    const top = topAt(d, t), dk3 = d.deckY, D4 = d.D;
-    return [
-      [0.875, top],
-      [0.89, top - 0.14],
-      [0.93, dk3 + 0.95],
-      [0.975, dk3 - 0.25],
-      [1, dk3 * 0.42],
-      [0.985, 0],
-      [0.9, -D4 * 0.3],
-      [0.68, -D4 * 0.64],
-      [0.36, -D4 * 0.9],
-      [0, keelAt(d, t)]
-    ];
-  }
-  function smallProfile(d, t) {
-    const top = topAt(d, t), dk3 = d.deckY;
-    return [
-      [0.965, top],
-      [0.975, top - 0.1],
-      [0.995, dk3 + (d.open ? 0.02 : 0)],
-      [1, dk3 - 0.12],
-      [1, dk3 * 0.55],
-      [0.975, dk3 * 0.12],
-      [0.9, -d.D * 0.25],
-      [0.68, -d.D * 0.62],
-      [0.36, -d.D * 0.9],
-      [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))]
-    ];
-  }
-  function profileWidth(pr, hb, y) {
-    if (y >= pr[0][1]) return pr[0][0] * hb;
-    for (let i = 0; i < pr.length - 1; i++) {
-      const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
-      if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
-    }
-    return 0;
-  }
-  function skinAt(d, t, y) {
-    return profileWidth(hullProfile(d, t), hbAt(t, d.B), y);
-  }
-  function sideAt(d, t, y) {
-    return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y);
-  }
-  var innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
-  function roomHalf(d, r4, t) {
-    return r4.kind === "hold" ? skinAt(d, t, r4.floor + 0.3) - 0.3 : innerAt(d, t, r4.floor + 1) - 0.08;
-  }
-  function roomAt(d, t, h2) {
-    if (!d.rooms) return null;
-    for (const r4 of d.rooms) if (t >= r4.t0 && t <= r4.t1 && h2 > r4.floor - 0.7 && h2 < r4.ceil - 0.9) return r4;
-    return null;
-  }
-  function wallDepth(d, u, v, fl2, margin) {
-    let depth = 0;
-    for (const w of d.walls || []) {
-      if (fl2 < w.y0 - 0.3 || fl2 > w.y1 - 1) continue;
-      const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
-      const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
-      const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
-      depth = Math.max(depth, margin + 0.08 - dd);
-    }
-    return depth;
-  }
-  function wheelSpec(d) {
-    if (d.open) return null;
-    if (d._wheel) return d._wheel;
-    let w;
-    if (d.big) w = { u: d.wheelU, floor: d.helmFloor, hub: d.helmFloor + 0.92, R: 0.56, grip: 0.66 };
-    else {
-      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
-      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
-    }
-    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
-    return w;
-  }
-  function helmPoint(def) {
-    const d = shipDims(def);
-    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
-    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
-  }
-  function hbAt(t, B5) {
-    if (t > 0.58) {
-      const k = (t - 0.58) / 0.42;
-      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
-    }
-    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
-    return B5 / 2;
-  }
-  function topAt(d, t) {
-    let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
-    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
-    if (d.poop) y += d.hp * (1 - smooth2(d.tp - 0.012, d.tp + 0.03, t));
-    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
-    return y;
-  }
-  var xAt = (d, t) => -d.L / 2 + t * d.L;
-  function rakeDx(d, x, y) {
-    if (!d.big) return 0;
-    const t = (x + d.L / 2) / d.L;
-    const hold = d.rooms?.find((r4) => r4.kind === "hold");
-    const tb = hold ? hold.t1 + 5e-3 : 0.9, ts = hold ? hold.t0 - 5e-3 : 0.08;
-    const eb = smooth2(tb, 1, t), es = smooth2(ts, 0, t);
-    if (eb <= 0 && es <= 0) return 0;
-    const top = topAt(d, Math.min(1, Math.max(0, t)));
-    const f = Math.max(0, Math.min(1, (top - y) / (top + d.D)));
-    return -d.L * 0.045 * eb * Math.pow(f, 1.6) + d.L * 0.03 * es * Math.pow(f, 1.4);
-  }
-  function stairAt(d, t, v) {
-    for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
-    return null;
-  }
-  function floorAt(d, t, v = null, h2 = null) {
-    if (v !== null && d.stairs.length) {
-      const s = stairAt(d, t, v);
-      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
-    }
-    if (h2 !== null) {
-      const r4 = roomAt(d, t, h2);
-      if (r4) return r4.floor;
-    }
-    if (d.poop && t < d.tp) return d.yp;
-    if (d.castle && t < d.tq) return d.yq;
-    if (d.fore && t > d.tf) return d.yf;
-    return d.deckY;
-  }
-  function levelAt(d, t, v, h2 = null) {
-    const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
-    if (s) return s;
-    if (h2 !== null) {
-      const r4 = roomAt(d, t, h2);
-      if (r4) return r4.kind;
-    }
-    if (d.poop && t < d.tp) return "poop";
-    if (d.castle && t < d.tq) return "quarter";
-    if (d.fore && t > d.tf) return "fore";
-    return "main";
-  }
-  function solidAt(d, u, v, margin = 0, lvl = null, above = 0) {
-    let depth = 0;
-    for (const o of d.solids) {
-      if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
-      if (o.h !== void 0 && above > o.h - 0.1) continue;
-      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
-      else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
-    }
-    return depth;
-  }
-  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
-  var RIDE_V = [-0.8, 0, 0.8];
-  var softClamp = (x, m) => m * Math.tanh(x / m);
-  var _rs = [0, 0];
-  function rideTarget(ship, time, out) {
-    out[0] = out[1] = out[2] = 0;
-    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
-    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
-    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
-    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
-    const z = _rz;
-    for (let i = 0; i < RIDE_U.length; i++) {
-      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
-      for (let j = 0; j < RIDE_V.length; j++) {
-        const v = RIDE_V[j] * hb, k = i * 3 + j;
-        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
-        W4 += hb;
-        Z2 += hb * z[k];
-      }
-    }
-    const h2 = Z2 / W4;
-    for (let i = 0; i < RIDE_U.length; i++) {
-      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
-      for (let j = 0; j < RIDE_V.length; j++) {
-        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
-        Wu += hb * u * u;
-        Zu += hb * u * dz;
-        Wv += hb * v * v;
-        Zv += hb * v * dz;
-      }
-    }
-    out[0] = h2;
-    out[1] = Math.atan(Zu / Wu);
-    out[2] = Math.atan(-Zv / Wv);
-    return out;
-  }
-  var _rz = new Float64Array(15);
-  var _rt = [0, 0, 0];
-  function waveRide(ship, time) {
-    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
-    if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
-    if (c.t !== time) {
-      c.s0.set(c.s);
-      c.t0 = c.t;
-    }
-    c.t = time;
-    c.x = ship.x;
-    c.y = ship.y;
-    c.hd = ship.heading;
-    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
-    if (!c.ok || !(dt > 0) || dt > 0.5) {
-      for (let k = 0; k < 3; k++) {
-        S6[k * 2] = T5[k];
-        S6[k * 2 + 1] = 0;
-        S6[6 + k] = T5[k];
-        S6[9 + k] = 0;
-      }
-      c.ok = true;
-    } else {
-      const F4 = BOAT_FEEL, L3 = ship.def?.length || 6;
-      const w = Math.max(1.6, F4.rideRate + F4.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F4.rideDamp)), lead = 2 * z / w * F4.rideLead;
-      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
-      for (let k = 0; k < 3; k++) {
-        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
-        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
-        S6[k * 2] = _rs[0];
-        S6[k * 2 + 1] = _rs[1];
-        S6[6 + k] = T5[k];
-        S6[9 + k] = vS;
-      }
-    }
-    c.h = S6[0];
-    const Ls = ship.def?.length || 6, small = Math.max(0.3, Math.min(1, Ls / 12));
-    c.p = softClamp(S6[2] * small, BOAT_FEEL.pitchMax * small);
-    c.r = softClamp(S6[4] * (0.5 + 0.5 * small), BOAT_FEEL.rollMax);
-    return c;
-  }
-  function shipBob(ship, time) {
-    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h;
-  }
-  function shipRock(ship, time) {
-    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
-    const w = waveRide(ship, time);
-    return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5 + (ship.surge || 0), Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
-  }
-  function shipLift(ship, time, u, v, h2) {
-    const [a, b] = shipRock(ship, time);
-    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
-  }
-  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
-    const [a, b] = shipRock(ship, time);
-    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
-    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
-    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
-    out[0] = x2 * ch - z2 * shd;
-    out[1] = shipBob(ship, time) + y2;
-    out[2] = x2 * shd + z2 * ch;
-    return out;
-  }
-  function deckSwing(dk3, time, out = [0, 0]) {
-    out[0] = 0;
-    out[1] = 0;
-    const s = dk3?.ship;
-    if (!s?.def || dk3.plank) return out;
-    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
-    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
-    out[0] = q2[0] - (u * c - v * sn);
-    out[1] = q2[2] - (u * sn + v * c);
-    return out;
-  }
-  var _swq = [0, 0, 0];
-  function deckLift(dk3, time) {
-    return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
-  }
-  function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = (u + d.L / 2) / d.L;
-    if (t < 0.02 || t > 0.97) return null;
-    const room2 = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
-    if (room2) {
-      const lv = levelAt(d, t, v, hRef);
-      const out2 = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room2, t) - Math.abs(v), lvl: lv, room: room2 };
-      const depth = Math.max(margin - out2.edge, solidAt(d, u, v, Math.max(0, margin), room2.kind, Math.max(0, hRef - out2.h)), wallDepth(d, u, v, room2.floor, margin));
-      if (depth > 0) out2.solid = depth;
-      return out2;
-    }
-    const hb = hbAt(t, d.B) * d.walk - margin;
-    if (hb <= 0 || Math.abs(v) > hb) return null;
-    const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
-    if (d.big) out.lvl = levelAt(d, t, v, hRef);
-    if (d.solids.length) {
-      const lv = typeof out.lvl === "string" ? out.lvl : null;
-      let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? "stairs" : null, hRef === null ? 0 : Math.max(0, hRef - out.h));
-      if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
-      if (depth > 0) out.solid = depth;
-    }
-    return out;
-  }
-  function hullPoint(ship, dx, dy, pad2 = 0) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = (u + d.L / 2) / d.L, tc = clamp01(t);
-    if (Math.abs(t - tc) * d.L > pad2) return null;
-    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
-    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
-  }
-  var MAST_KS = (n) => n >= 4 ? [0.92, 1, 0.86, 0.7] : n === 3 ? [0.92, 1, 0.8] : n === 2 ? [1, 0.84] : [1];
-  function mastNest(d) {
-    if (!d.big || !d.mastU?.length) return null;
-    if (d._nest !== void 0) return d._nest;
-    const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
-    const k = MAST_KS(n)[m], base2 = floorAt(d, (mu + d.L / 2) / d.L);
-    const H5 = d.mastH * k, h2 = base2 + (H5 - base2) * 0.76, mr = d.mastR * Math.sqrt(k);
-    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 1.15, mu, base: base2, mr };
-    Object.defineProperty(d, "_nest", { value: out, enumerable: false });
-    return out;
-  }
-  function deckToWorld(ship, t, v) {
-    const d = shipDims(ship.def);
-    const u = -d.L / 2 + t * d.L;
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    return { x: ship.x + u * c - v * s, y: ship.y + u * s + v * c, h: floorAt(d, t, v) };
-  }
-  function hullSolid(ship, dx, dy, h2) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = Math.abs(-dx * s + dy * c);
-    const t = (u + d.L / 2) / d.L;
-    if (t < 0 || t > 1 || h2 < -d.D) return false;
-    if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
-    const hb = hbAt(t, d.B);
-    if (v > hb) return false;
-    if (d.rooms) {
-      for (const r4 of d.rooms) if (t > r4.t0 + 4e-3 && t < r4.t1 - 4e-3 && h2 > r4.floor - 0.05 && h2 < r4.ceil - 0.02 && v < roomHalf(d, r4, t) + 0.05) return false;
-      const cp = d.comp;
-      if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
-    }
-    const rail = d.big ? 0.75 : 0.6, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
-    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
-    if (h2 > topAt(d, t)) return false;
-    if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
-    if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
-    if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
-    if (d.fore && t > d.tf) return h2 < d.yf - 0.1;
-    return false;
-  }
-  function hullGap(ship, dx, dy) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = clamp01((u + d.L / 2) / d.L);
-    const along2 = Math.max(0, Math.abs(u) - d.L / 2);
-    return Math.hypot(along2, Math.max(0, Math.abs(v) - hbAt(t, d.B)));
-  }
-
-  // src/game/flight.js
-  var DEF = { speed: 10, climb: 6, dive: 9, ceiling: 35, drain: 1, sea: 3.5, refill: 6 };
-  var SEA_CEILING = 14;
-  var LOW = 3.5;
-  var helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
-  var timeOf = (game) => game.env?.time ?? game.time ?? 0;
-  var FLY_MASTERY = 40;
-  function flightOf(a) {
-    let best = null;
-    const f = a?.fruitDef;
-    if (f) {
-      const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
-      const form = (a.buffs || []).find((b) => b.form)?.form;
-      for (const t of f.techniques) {
-        if (!t.flight) continue;
-        let fl2 = t.flight;
-        if (fl2.forms && !fl2.forms.includes(form)) {
-          if (!fl2.otherwise) continue;
-          fl2 = { ...fl2, ...fl2.otherwise };
-        }
-        const s = { ...DEF, ...fl2, fruit: true, tech: t.id };
-        s.gauge = Math.round(s.gauge * k * 10) / 10;
-        if (!best || s.gauge > best.gauge) best = s;
-      }
-    }
-    const R5 = RACES[a?.race]?.flight;
-    if (R5 && (!best || R5.gauge > best.gauge)) best = { ...DEF, ...R5, fruit: false };
-    return best;
-  }
-  function groundBase(game, x, y) {
-    return game.view3d ? Math.max(0, game.view3d.ground(x, y)) : 0;
-  }
-  function feetOf(a, game) {
-    if (a.flying && a.alt != null) return a.alt;
-    return a.feetH ? a.feetH(game) : a.z || 0;
-  }
-  function overOpenSea(game, x, y) {
-    const w = game.world;
-    if (!w.isLiquid?.(x, y) || w.isOverlay?.(x, y)) return false;
-    if (game.deckAt && game.ships?.length && game.deckAt(x, y, 0)) return false;
-    return true;
-  }
-  function flyableAt(a, game, x, y, alt = a.alt ?? feetOf(a, game)) {
-    const w = game.world;
-    if (y < 1 || y > w.height - 1) return false;
-    if (w.interiorAt?.(x, y)) return false;
-    const g = groundBase(game, x, y);
-    if (g > alt + 0.6) return false;
-    const roof = game.view3d?.roofAt?.(x, y);
-    if (roof && roof.h > alt + 0.5) return false;
-    if (alt - g < LOW && (w.solid?.(x, y) || w.hitsProp?.(x, y, (a.r || 0.28) * 0.9))) return false;
-    if (game.inShip && game.ships?.length) {
-      for (const s of game.ships) if (game.inShip(s, x, y, alt + 0.9, true)) return false;
-    }
-    return true;
-  }
-  function floorUnder(a, game, x, y) {
-    let f = groundBase(game, x, y);
-    const roof = game.view3d?.roofAt?.(x, y, a.alt + 0.3);
-    if (roof && roof.h > f) f = roof.h;
-    if (game.deckAt && game.ships?.length) {
-      const dk3 = game.deckAt(x, y, 0.1);
-      if (dk3) {
-        const h2 = deckLift(dk3, timeOf(game));
-        if (h2 > f && h2 <= a.alt + 0.3) f = h2;
-      }
-    }
-    return f;
-  }
-  function cantTakeOff(a, game) {
-    const S6 = flightOf(a);
-    if (!S6) return "nowings";
-    if (a.flying) return "flying";
-    if (a.state !== "idle" || a.onShip || a.climb || helpless(a) || a.hitstun > 0.25 || a.status?.grounded) return "busy";
-    if (a.inWater) return "water";
-    const zone = game.world.zone;
-    if (zone === 2 || zone === 3) return "nosky";
-    if (game.world.interiorAt?.(a.x, a.y) && !a.roofed) return "indoors";
-    if (S6.fruit && a.seastoned) return "seastone";
-    if ((a.flightGauge ?? 1) < 0.25) return "tired";
-    return "";
-  }
-  var WHY = {
-    water: "You can't take off from the water.",
-    nosky: "There's no sky to fly in down here.",
-    indoors: "No room to fly in here.",
-    seastone: "Seastone holds your power down.",
-    tired: "Too tired to fly \u2014 catch your breath on solid ground.",
-    busy: ""
-  };
-  function takeOff(a, game) {
-    const why = cantTakeOff(a, game);
-    if (why) {
-      if (a.isPlayer && WHY[why]) game.log(WHY[why], "#ff8a80");
-      return false;
-    }
-    const S6 = flightOf(a);
-    const alt = feetOf(a, game);
-    if (a.deck) {
-      a.deck.ship.aboard?.delete(a);
-      a.deck = null;
-    }
-    a.flying = true;
-    a.flightStyle = S6.style;
-    a.flightRide = S6.ride || null;
-    a.flight = { spec: S6, t: 0, lift: (a.z || 0) > 0.6 ? 0.15 : 0.4, tired: false, landing: false };
-    a.alt = alt;
-    a.vz = 0;
-    a.charging = 0;
-    a.wading = 0;
-    if (!a.dash?.dodge) a.dash = null;
-    if (a.flightGauge === void 0) a.flightGauge = 1;
-    a.flightTired = false;
-    a.takeoffT = timeOf(game);
-    takeoffFx(a, game, S6);
-    game.audio?.sfx("jump_big", a);
-    if (a.isPlayer) {
-      game.emit?.("playerTakeOff", S6.style);
-      game.hint?.("flight", S6.fruit ? "FLYING! Space climbs, Alt dives, Shift for speed. Come down onto the ground (or double-tap Space) to land." : "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
-    }
-    return true;
-  }
-  function land(a, game, quiet = false) {
-    if (!a.flying || !a.flight) return;
-    endFlight(a, game, -0.01);
-    a.landT = timeOf(game);
-    if (!quiet && (a.z || 0) < 0.6) {
-      game.fx.burst(a.x, a.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.2, g: 1.2, z: 0.1, vz: 0.5, life: 0.45, kind: "dust", size: 0.18, grow: 0.4 });
-      game.audio?.sfx("land", a);
-    }
-  }
-  function fall(a, game) {
-    if (!a.flying || !a.flight) return;
-    endFlight(a, game, Math.min(-1, a.flightClimb || -1));
-  }
-  function endFlight(a, game, vz) {
-    const g = a.groundAt ? a.groundAt(game, a.x, a.y) : 0;
-    a.flying = false;
-    a.flight = null;
-    a.flightStyle = null;
-    a.flightRide = null;
-    a.flightTired = false;
-    a.flightClimb = 0;
-    a.flightBank = 0;
-    a.lightBeam = false;
-    a.swingAnchor = null;
-    a.z = Math.max(0, (a.alt ?? g) - g);
-    a.vz = a.z > 0.02 ? vz : 0;
-    a.alt = null;
-    a.airT = 0;
-    a.lastG = g;
-    a.lastGX = a.x;
-    a.lastGY = a.y;
-  }
-  function downFlyer(a, game) {
-    if (!a.flying || !a.flight) return;
-    fall(a, game);
-    game.fx.text(a.x, a.y - 1.6, "DOWNED!", "#ff8a80", 0.34);
-  }
-  function toggleFlight(a, game) {
-    if (a.flying && a.flight) {
-      a.flight.landing = true;
-      return true;
-    }
-    return takeOff(a, game);
-  }
-  function flyStep(a, dt, game) {
-    const F4 = a.flight, S6 = F4.spec, i = a.intent, w = game.world;
-    F4.t += dt;
-    a.inWater = false;
-    a.under = false;
-    a.depth = 0;
-    a.wading = 0;
-    if (a.alt == null) a.alt = feetOf(a, game);
-    if (a.flightOut || helpless(a) || a.status.grounded || S6.fruit && a.seastoned || w.zone === 2 || w.zone === 3) {
-      a.flightOut = false;
-      fall(a, game);
-      return;
-    }
-    if (S6.forms && !S6.forms.includes((a.buffs || []).find((b) => b.form)?.form) && !F4.landing) F4.landing = true;
-    const sea = overOpenSea(game, a.x, a.y);
-    const moving = Math.hypot(i.mx, i.my) > 0.1;
-    let rate = S6.drain;
-    if (i.sprint && moving) rate *= 1.7;
-    if (F4.lift > 0 || i.mz > 0 && !F4.tired) rate *= 1.3;
-    else if (i.mz < 0 || F4.landing || F4.tired) rate *= 0.5;
-    if (sea) rate *= S6.sea;
-    if (S6.fruit) rate = 0;
-    a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
-    if (a.flightGauge <= 0 && !F4.tired) {
-      F4.tired = true;
-      a.flightTired = true;
-      if (a.isPlayer) game.log(sea ? "Your strength gives out over the open sea \u2014 you're coming down!" : "Your strength gives out \u2014 you're coming down.", "#ff8a80");
-    }
-    if (S6.style === "swing" && !F4.landing && !F4.tired && swingStep(a, dt, game, S6, F4)) return;
-    if (S6.style === "swing") {
-      F4.sw = null;
-      a.swingAnchor = null;
-    }
-    const beam2 = !!S6.beam && i.sprint && moving && !F4.tired && !a.action;
-    if (beam2 && !a.lightBeam) {
-      game.audio?.sfx("light", a);
-      game.fx.ring(a.x, a.y, 0.2, 2.2, "#fff59d", 0.25, 0.1, { z: (a.z || 0) + 1, add: true });
-    }
-    a.lightBeam = beam2;
-    let sp = S6.speed * (beam2 ? S6.beam : i.sprint && !F4.tired ? 1.6 : 1) * (F4.tired ? 0.7 : 1);
-    if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
-    if (a.hitstun > 0) sp = 0;
-    if (a.status.slowmo) sp *= 0.2;
-    if (a.status.chill) sp *= 0.6;
-    if (a.zoneSlow) sp *= a.zoneSlow;
-    const k = Math.min(1, dt * (beam2 ? 9 : 3.5));
-    const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
-    a.vx += (i.mx * sp - a.vx) * k;
-    a.vy += (i.my * sp - a.vy) * k;
-    let vx = a.vx, vy = a.vy;
-    if (a.dash) {
-      vx = a.dash.vx;
-      vy = a.dash.vy;
-      a.dash.t -= dt;
-      if (a.dash.t <= 0) {
-        a.dash = null;
-        a.vx *= 0.3;
-        a.vy *= 0.3;
-      }
-    }
-    vx += a.kb.x;
-    vy += a.kb.y;
-    const decay = Math.exp(-dt * 8);
-    a.kb.x *= decay;
-    a.kb.y *= decay;
-    if (Math.abs(a.kb.x) < 0.05) a.kb.x = 0;
-    if (Math.abs(a.kb.y) < 0.05) a.kb.y = 0;
-    let vz;
-    if (F4.lift > 0) {
-      F4.lift -= dt;
-      vz = S6.climb * 1.2;
-    } else if (F4.landing) vz = -S6.dive;
-    else if (F4.tired) vz = -3.5;
-    else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S6.climb : S6.dive);
-    if (S6.style === "swing" && !i.mz && !F4.lift) vz = -2;
-    const sw2 = swoopAlt(a, game);
-    if (sw2 !== null) vz = clamp((sw2 - a.alt) * 6, -16, Math.max(vz, 3));
-    a.alt += vz * dt;
-    const n = Math.max(1, Math.ceil(Math.hypot(vx, vy) * dt / 0.25));
-    for (let s = 0; s < n; s++) {
-      const nx = w.wx(a.x + vx * dt / n), ny = a.y + vy * dt / n;
-      if (flyableAt(a, game, nx, a.y)) a.x = nx;
-      else {
-        a.vx *= 0.2;
-        a.kb.x *= -0.3;
-        if (a.dash) a.dash.vx = 0;
-      }
-      if (flyableAt(a, game, a.x, ny)) a.y = ny;
-      else {
-        a.vy *= 0.2;
-        a.kb.y *= -0.3;
-        if (a.dash) a.dash.vy = 0;
-      }
-    }
-    const g = groundBase(game, a.x, a.y);
-    const ceil = g + (sea ? SEA_CEILING : S6.ceiling);
-    if (a.alt > ceil) a.alt = Math.max(ceil, a.alt - 6 * dt);
-    const floor2 = floorUnder(a, game, a.x, a.y);
-    if (a.alt < floor2) a.alt = floor2;
-    a.z = a.alt - g;
-    const sp2 = Math.hypot(vx, vy);
-    a.flightSpeed = sp2;
-    a.flightClimb = vz;
-    const turn = s0 > 1 && sp2 > 1 ? angleDiff(hv0, Math.atan2(a.vy, a.vx)) / Math.max(dt, 1e-3) : 0;
-    a.flightBank = clamp((a.flightBank || 0) + (clamp(turn * 0.35, -1, 1) - (a.flightBank || 0)) * Math.min(1, dt * 5), -1, 1);
-    a.moving = sp2 > 0.4;
-    a.speed = sp2;
-    if (a.moving && !a.action && !a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(vy, vx)) * Math.min(1, dt * 8);
-    trailFx(a, game, S6, dt);
-    if (a.alt <= floor2 + 0.05 && vz <= 0 && F4.t > 0.3 && (F4.landing || F4.tired || (i.mz || 0) < 0)) land(a, game);
-  }
-  function swingStep(a, dt, game, S6, F4) {
-    const i = a.intent, w = game.world;
-    const m = Math.hypot(i.mx, i.my);
-    let W4 = F4.sw;
-    if (!W4 || W4.u >= 1) {
-      if (m < 0.2) return false;
-      const L3 = i.sprint ? 12.5 : 9.5, th0 = 0.95;
-      const dx = i.mx / m, dy = i.my / m;
-      const ax = w.wx(a.x + dx * L3 * Math.sin(th0)), ay = a.y + dy * L3 * Math.sin(th0);
-      const g2 = Math.max(groundBase(game, a.x, a.y), groundBase(game, ax, ay), floorUnder(a, game, ax, ay));
-      let ah = a.alt + L3 * Math.cos(th0) + ((i.mz || 0) > 0 ? S6.climb * 0.45 : (i.mz || 0) < 0 ? -2.5 : 0);
-      ah = Math.max(ah, g2 + 1.4 + L3);
-      const ceil = groundBase(game, a.x, a.y) + (overOpenSea(game, a.x, a.y) ? SEA_CEILING : S6.ceiling) + L3;
-      ah = Math.min(ah, Math.max(ceil, a.alt + L3 * Math.cos(th0)));
-      W4 = F4.sw = { ax, ay, ah, dx, dy, L: L3, th0, u: 0, T: (i.sprint ? 0.95 : 1.15) * Math.sqrt(L3 / 9.5), h0: a.alt, x0: a.x, y0: a.y };
-      game.audio?.sfx("string", a, { vol: 0.5 });
-      const sw2 = W4;
-      game.fx.add("rope", { x: a.x, y: a.y, follow: a, sw: sw2, color: S6.color || "#f8bbd0", life: W4.T + 0.2, until: () => F4.sw === sw2 && a.flying });
-    }
-    W4.u = Math.min(1, W4.u + dt / W4.T);
-    const th = W4.th0 * (2 * W4.u - 1);
-    const tx = w.wx(W4.ax + W4.dx * W4.L * Math.sin(th)), ty = W4.ay + W4.dy * W4.L * Math.sin(th);
-    const blend2 = Math.min(1, W4.u * 3.5);
-    const arcH = W4.ah - W4.L * Math.cos(th);
-    const nh = W4.h0 + (arcH - W4.h0) * (blend2 * blend2 * (3 - 2 * blend2));
-    const ox = a.x, oy = a.y, oh = a.alt;
-    const mx = w.dx(a.x, tx), my = ty - a.y;
-    const n = Math.max(1, Math.ceil(Math.hypot(mx, my) / 0.25));
-    let blocked = false;
-    a.alt = nh;
-    for (let s = 0; s < n && !blocked; s++) {
-      const nx = w.wx(a.x + mx / n), ny = a.y + my / n;
-      if (flyableAt(a, game, nx, ny)) {
-        a.x = nx;
-        a.y = ny;
-      } else blocked = true;
-    }
-    const floor2 = floorUnder(a, game, a.x, a.y);
-    if (a.alt < floor2 + 0.3) a.alt = floor2 + 0.3;
-    const vx = w.dx(ox, a.x) / Math.max(dt, 1e-3), vy = (a.y - oy) / Math.max(dt, 1e-3);
-    a.vx = vx;
-    a.vy = vy;
-    if (blocked) {
-      F4.sw = null;
-      a.swingAnchor = null;
-      a.vx *= 0.2;
-      a.vy *= 0.2;
-      return true;
-    }
-    const g = groundBase(game, a.x, a.y);
-    a.z = a.alt - g;
-    const sp = Math.hypot(vx, vy);
-    a.flightSpeed = sp;
-    a.flightClimb = (a.alt - oh) / Math.max(dt, 1e-3);
-    a.flightBank = 0;
-    a.moving = sp > 0.4;
-    a.speed = sp;
-    if (!a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(W4.dy, W4.dx)) * Math.min(1, dt * 8);
-    a.swingAnchor = { x: W4.ax, y: W4.ay, h: W4.ah };
-    a.swingTh = th / W4.th0;
-    return true;
-  }
-  function swoopAlt(a, game) {
-    const act2 = a.action;
-    if (!act2) return null;
-    const def = act2.def;
-    const melee = (def.steps || []).some((s) => s.hit && s.hit.shape !== "line" && !s.proj || s.dash?.hit);
-    if (!melee || act2.t > (def.windup ?? 0.1) + 0.45) return null;
-    const t = act2.target && act2.target.alive !== void 0 && act2.target.state === "idle" ? act2.target : foeBelow(a, game);
-    if (!t) return a.dash?.dive ? groundBase(game, a.x, a.y) + 0.4 : null;
-    return feetOf(t, game) + 0.3;
-  }
-  function foeBelow(a, game) {
-    let best = null, bd = Infinity;
-    for (const e of game.actorsNear(a.x, a.y, 4.5)) {
-      if (e === a || e.state !== "idle" || !game.combat.canHit(a, e, { vx: 0 })) continue;
-      const dx = game.world.dx(a.x, e.x), dy = e.y - a.y;
-      if (Math.abs(angleDiff(a.facing, Math.atan2(dy, dx))) > 1.3) continue;
-      const d = Math.hypot(dx, dy);
-      if (d < bd) {
-        bd = d;
-        best = e;
-      }
-    }
-    return best;
-  }
-  function reachesUp(att, tgt, h2, game) {
-    if (!(att?.flying || tgt.flying)) return true;
-    if (h2.vx !== void 0 || h2.isProj || h2.shape === "line") return true;
-    const groundRef = h2.zone || h2.radial && !h2.follow;
-    const from = groundRef ? groundBase(game, h2.x ?? tgt.x, (h2.y ?? tgt.y) + 0.4) : feetOf(att, game);
-    const gap = Math.abs(from - feetOf(tgt, game));
-    const reach3 = h2.reachZ ?? (h2.radial || h2.shape === "circle" ? Math.max(2.4, (h2.range || 1) * 0.7) : 2.4);
-    return gap <= reach3 * Math.max(att?.look?.scale || 1, tgt.look?.scale || 1);
-  }
-  function refill(a, dt, game) {
-    if (a.flying || !(a.flightGauge < 1)) return;
-    if (a.inWater || (a.z || 0) > 0.05 || a.vz || a.state !== "idle") return;
-    const S6 = flightOf(a);
-    if (!S6) return;
-    a.flightGauge = Math.min(1, a.flightGauge + dt / S6.refill);
-  }
-  function geppoSteps(a) {
-    const t = a.techniques || [];
-    let n = 0;
-    if (t.includes("roku_geppo")) n = Math.max(n, 2 + Math.floor((a.masteries?.rokushiki || 0) / 35));
-    if (t.includes("bleg_skywalk")) n = Math.max(n, 2 + Math.floor((a.masteries?.black_leg || 0) / 35));
-    return n;
-  }
-  function airStep(a, game) {
-    const n = geppoSteps(a);
-    if (!n || a.flying || (a.airSteps || 0) >= n) return false;
-    if (a.state !== "idle" || helpless(a) || a.hitstun > 0 || a.inWater || a.climb || a.onShip) return false;
-    if (!((a.z || 0) > 0.35 || a.vz > 0.5)) return false;
-    const J = a.jumpStats();
-    a.vz = J.v * 0.9;
-    const l = Math.hypot(a.intent.mx, a.intent.my);
-    const dx = l > 0.2 ? a.intent.mx / l : Math.cos(a.facing), dy = l > 0.2 ? a.intent.my / l : Math.sin(a.facing);
-    a.dash = { vx: dx * 9, vy: dy * 9, t: 0.22, ignoreWater: true };
-    a.airSteps = (a.airSteps || 0) + 1;
-    a.flightStyle = "geppo";
-    a.airStepT = timeOf(game);
-    for (let k = 0; k < 2; k++) game.fx.add("ring", { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: "#ffffff", width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
-    game.audio?.sfx("jump", a);
-    return true;
-  }
-  function takeoffFx(a, game, S6) {
-    const fx = game.fx, z = Math.max(0.05, a.z || 0);
-    fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
-    fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
-    const c = S6.color || "#ffffff";
-    if (S6.style === "phoenix") {
-      fx.burst(a.x, a.y, 10, { color: ["#29b6f6", "#4fc3f7"], hot: "#e6fbff", speed: 2.5, g: -1, z: z + 1, vz: 1.5, life: 0.55, kind: "fire", size: 0.18 });
-      fx.burst(a.x, a.y, 8, { color: "#ffd54a", speed: 4, g: 0, z: z + 1.1, vz: 1, life: 0.4, kind: "spark", size: 0.05 });
-    } else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
-    else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
-    else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
-  }
-  function trailFx(a, game, S6, dt) {
-    const p = game.player;
-    if (!p || a !== p && game.world.dist2(a.x, a.y, p.x, p.y) > 40 * 40) return;
-    a._flyFxT = (a._flyFxT || 0) - dt;
-    if (a._flyFxT > 0) return;
-    a._flyFxT = 0.05;
-    const fx = game.fx, z = a.z || 0, r4 = () => Math.random() - 0.5;
-    const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
-    switch (S6.style) {
-      case "phoenix":
-        if (Math.random() < 0.6) {
-          const side = Math.random() < 0.5 ? 1 : -1, c = Math.cos(a.facing), s = Math.sin(a.facing);
-          fx.particle({ x: a.x - s * side * 1.3 - c * 0.5, y: a.y + c * side * 1.3 - s * 0.5, z: z + 1.1 + r4() * 0.3, ...back, vz: 0.3, g: 0, life: 0.35, size: 0.05, color: Math.random() < 0.25 ? "#ffd54a" : "#80e4ff", kind: "spark" });
-        }
-        break;
-      case "dragon":
-        fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
-        if (Math.random() < 0.08) fx.burst(a.x, a.y, 3, { color: "#90caf9", speed: 3, g: 0, z: z + 1, life: 0.15, kind: "line", size: 0.05 });
-        break;
-      case "wings":
-        if (Math.random() < 0.25) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.4, z: z + 1.3, ...back, vz: -0.3, g: 0.6, life: 1.2, size: 0.1, color: "#212121", kind: "leaf", rot: Math.random() * TAU, vr: r4() * 6 });
-        break;
-      case "ride":
-        fx.particle({ x: a.x + r4() * 0.6, y: a.y + r4() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S6.ride === "rock" ? 0.12 : 0.35, grow: S6.ride === "rock" ? 0 : 0.4, color: S6.color || "#eceff1", kind: S6.ride === "sand" ? "sand" : S6.ride === "rock" ? "dust" : "smoke" });
-        break;
-      case "jet": {
-        const fsp = a.flightSpeed || 0, cruise = Math.min(1, Math.max(0, (fsp - 1.2) / 8)), rr = 0.1 + 0.95 * cruise * (1 - Math.max(0, Math.min(1, (a.flightClimb || 0) / 6)) * 0.6);
-        const c = Math.cos(a.facing), s = Math.sin(a.facing), up = [Math.sin(rr) * c, Math.sin(rr) * s, Math.cos(rr)];
-        const fx0 = a.x - up[0] * 0.95, fy0 = a.y - up[1] * 0.95, fz = z + 0.95 - up[2] * 0.95;
-        const jet = (sp, k) => ({ vx: -up[0] * sp + (a.vx || 0) * k, vy: -up[1] * sp + (a.vy || 0) * k, vz: -up[2] * sp });
-        if (S6.ride === "light") {
-          if (a.lightBeam) {
-            fx.particle({ x: a.x, y: a.y, z: z + 1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.07, size: 1.1, color: "#fff8e1", kind: "star" });
-            for (let k = 0; k < 3; k++) fx.particle({ x: a.x - (a.vx || 0) * 0.016 * k, y: a.y - (a.vy || 0) * 0.016 * k, z: z + 1 + r4() * 0.1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.6, size: 0.45 - k * 0.08, color: k ? "#ffd54f" : "#fff59d", kind: "glow" });
-            fx.particle({ x: a.x, y: a.y, z: z + 1, vx: -(a.vx || 0) * 0.08, vy: -(a.vy || 0) * 0.08, vz: 0, g: 0, life: 0.3, size: 0.06, color: "#ffffff", kind: "line" });
-          } else {
-            for (let k = 0; k < 2; k++) fx.particle({ x: fx0, y: fy0, z: fz - 0.05 - k * 0.1, ...jet(1.5, 1), g: 0, life: 0.07, size: 0.24 - k * 0.07, color: k ? "#fff59d" : "#ffffff", kind: "glow" });
-          }
-          break;
-        }
-        if (S6.ride === "fire") {
-          for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r4() * 0.15, y: fy0 + r4() * 0.15, z: fz, ...jet(8 + Math.random() * 3, 0.8), g: -1, life: 0.2 + Math.random() * 0.08, size: 0.17, grow: 0.8, color: k ? "#ff7043" : "#ffca28", kind: "fire" });
-          if (Math.random() < 0.3) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(6, 0.6), vz: -up[2] * 6 + 1.5, g: 2, life: 0.5, size: 0.04, color: "#ffe082", kind: "spark" });
-        } else if (S6.ride === "magma") {
-          for (let k = 0; k < 2; k++) fx.particle({ x: fx0 + r4() * 0.15, y: fy0 + r4() * 0.15, z: fz, ...jet(5 + Math.random() * 2, 0.6), g: -0.5, life: 0.28, size: 0.2, grow: 0.6, color: k ? "#e64a19" : "#ff6f00", kind: "fire" });
-          if (Math.random() < 0.5) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(3, 0.5), g: 14, life: 1.2, size: 0.08 + Math.random() * 0.05, color: Math.random() < 0.5 ? "#ff5722" : "#ffab40", kind: "spark" });
-          if (Math.random() < 0.35) fx.particle({ x: fx0, y: fy0, z: fz + 0.2, vx: back.vx, vy: back.vy, vz: 0.8, g: 0, life: 1.1, size: 0.3, grow: 0.8, color: "#3e2723", kind: "smoke" });
-          if (z < 8 && Math.random() < 0.06) game.fx.add("scorch", { x: a.x + r4(), y: a.y + r4(), r: 0.5 + Math.random() * 0.4, life: 8, color: "rgba(40,18,10,1)", rim: "#ff6f00", seed: Math.random() * 100 });
-        } else {
-          for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r4() * 0.2, y: fy0 + r4() * 0.2, z: fz, ...jet(6 + Math.random() * 2, 0.6), g: 1, life: 0.45, size: 0.22, grow: 0.7, color: k ? "#e1c16e" : "#cdae5a", kind: "sand" });
-        }
-        break;
-      }
-      case "swing":
-        if (a.swingAnchor && Math.random() < 0.3) fx.particle({ x: a.x, y: a.y, z: z + 1.9, ...back, vz: 0, g: 0, life: 0.25, size: 0.04, color: "#f8bbd0", kind: "line" });
-        break;
-      case "float":
-        if (S6.ride === "strings") for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.5, y: a.y + r4() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: "#f8bbd0", kind: "line" });
-        else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? "#ffffff" : S6.color || "#fff59d", kind: "glow" });
-        break;
-      default:
-        break;
-    }
-  }
-  function aiFlight(a, ctl, t, dist, game, sorties = false) {
-    if (!a.flying) a.intent.mz = 0;
-    const S6 = flightOf(a);
-    if (!S6) return;
-    const now3 = game.time || 0;
-    if (!a.flying) {
-      if (ctl.flyNext === void 0) ctl.flyNext = now3 + 6 + Math.random() * 8;
-      const above = !!t.flying && feetOf(t, game) - feetOf(a, game) > 2.2;
-      const sortie = a.boss && sorties && now3 >= ctl.flyNext && dist < 14;
-      if ((above || sortie) && !cantTakeOff(a, game)) {
-        takeOff(a, game);
-        ctl.flyChase = above;
-        ctl.flyUntil = now3 + (above ? 30 : 5 + Math.random() * 3);
-        ctl.flyNext = now3 + 16 + Math.random() * 10;
-      }
-      return;
-    }
-    if (!a.flight) return;
-    if (a.flightGauge < 0.2 || now3 > (ctl.flyUntil ?? 0) && !t.flying || ctl.flyChase && !t.flying) a.flight.landing = true;
-    const want = t.flying ? feetOf(t, game) : feetOf(t, game) + (a.flight.landing ? 0 : 4.5);
-    a.intent.mz = clamp((want - a.alt) / 2, -1, 1);
-  }
-
-  // src/world/bframe.js
-  var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-  var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
-  function bw(b, lx, lz) {
-    switch (rotOf(b)) {
-      case 1:
-        return { x: b.x + lz, y: b.y - lx };
-      case 2:
-        return { x: b.x - lx, y: b.y - lz };
-      case 3:
-        return { x: b.x - lz, y: b.y + lx };
-      default:
-        return { x: b.x + lx, y: b.y + lz };
-    }
-  }
-  function bl(b, x, y, world = null) {
-    const dx = world ? world.dx(b.x, x) : x - b.x, dy = y - b.y;
-    switch (rotOf(b)) {
-      case 1:
-        return { lx: -dy, lz: dx };
-      case 2:
-        return { lx: -dx, lz: -dy };
-      case 3:
-        return { lx: dy, lz: -dx };
-      default:
-        return { lx: dx, lz: dy };
-    }
-  }
-  function bbox(b, x0, x1, z0, z1) {
-    const a = bw(b, x0, z0), c = bw(b, x1, z1);
-    return { x0: Math.min(a.x, c.x), x1: Math.max(a.x, c.x), y0: Math.min(a.y, c.y), y1: Math.max(a.y, c.y) };
-  }
-  function bfoot(b) {
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    return bbox(b, -fw / 2, fw / 2, -fd, 0);
-  }
-  function bfront(b) {
-    const f = FRONT[rotOf(b)];
-    return { x: f[0], y: f[1] };
-  }
-  function bfacing(b) {
-    const f = FRONT[rotOf(b)];
-    return Math.atan2(f[1], f[0]);
-  }
-  function bangle(b) {
-    return rotOf(b) * Math.PI / 2;
-  }
-
-  // src/world/interiors.js
-  var WALL_T = 0.22;
-  var PLINTH = 0.35;
-  var STEPS_MAX = 3;
-  var WIN = {
-    village: "cross",
-    town: "cross",
-    port: "cross",
-    city: "tall",
-    desert: "arch",
-    snow: "cross",
-    wano: "shoji",
-    chinese: "lattice",
-    sky: "round",
-    candy: "round",
-    fishman: "round",
-    marine: "tall",
-    noble: "tall",
-    spooky: "gothic",
-    future: "round",
-    tribal: "none",
-    mink: "round",
-    giant: "cross",
-    ruins: "hole"
-  };
-  var DOOR = {
-    village: "plank",
-    town: "panel",
-    port: "plank",
-    city: "panel",
-    desert: "arch",
-    snow: "plank",
-    wano: "noren",
-    chinese: "panel",
-    sky: "arch",
-    candy: "arch",
-    fishman: "arch",
-    marine: "panel",
-    noble: "panel",
-    spooky: "plank",
-    future: "panel",
-    tribal: "hide",
-    mink: "plank",
-    giant: "plank",
-    ruins: "hole"
-  };
-  var winKind = (b) => WIN[b.style] || "cross";
-  var doorKind = (b) => DOOR[b.style] || "plank";
-  var styleScale = (b) => Math.max(b.style === "giant" ? 2.1 : 1, b.tall || 1);
-  var lowStyle = (b) => b.style === "wano";
-  var HOURS = {
-    shop: [7, 21],
-    market: [6, 20],
-    weapons: [8, 20],
-    bank: [8, 18],
-    bounty: [7, 21],
-    library: [8, 20],
-    cafe: [7, 21],
-    restaurant: [10, 23],
-    tavern: [0, 24],
-    bar: [0, 24],
-    inn: [0, 24],
-    doctor: [0, 24],
-    marine_base: [0, 24],
-    church: [6, 22],
-    dojo: [6, 21],
-    trainer: [6, 21],
-    shipwright: [7, 20]
-  };
-  var NOT_ENTERABLE = /* @__PURE__ */ new Set(["palace", "hall", "lighthouse"]);
-  var HUTS = /* @__PURE__ */ new Set(["tribal", "ruins"]);
-  function isEnterable(b) {
-    if (!b || b.kind !== "building" || b.noEnter) return false;
-    const role = b.role || "house";
-    if (NOT_ENTERABLE.has(role) || HUTS.has(b.style)) return false;
-    if (b.roofType === "hut" || b.roofType === "ruin") return false;
-    return (b.fw || 3) >= 3.5 && (b.fd || 3) >= 2.5;
-  }
-  function doorOf(b) {
-    const fw = Math.max(2, b.fw || 3), g = styleScale(b);
-    const role = b.role || "house";
-    const big2 = (role === "marine_base" || role === "palace" || role === "hall" || role === "church") && fw >= 5;
-    const wide = !big2 && role !== "house" && fw >= 4;
-    const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
-    return { x, dw: (big2 ? 1.7 : wide ? 1.4 : 1.05) * g, dh: (big2 ? 2.5 : wide ? 2.3 : 2.15) * g, big: big2, kind: doorKind(b) };
-  }
-  function doorLocalX(b) {
-    if (b.doorX !== void 0) return b.doorX;
-    return b.door ? bl(b, b.door.x, b.door.y).lx : 0;
-  }
-  function heightsOf(b) {
-    const g = styleScale(b);
-    const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
-    const storeyH = 2.75 * g;
-    return { g, storeys, storeyH, ceil: storeys > 1 ? storeyH : 3 * g, H: 3 * g + (storeys - 1) * storeyH };
-  }
-  var hasShutters = (b) => b.style === "village" || b.style === "town";
-  function windowSlots(b, floor2 = 0) {
-    const kind = winKind(b);
-    const none = { front: [], left: [], right: [], w: 0, reach: 0 };
-    if (kind === "none" || kind === "hole") return none;
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-    const d = doorOf(b);
-    const winW = 0.85 * g;
-    const reach3 = winW / 2 + (hasShutters(b) && (kind === "cross" || kind === "tall") ? 0.1 + winW * 0.45 : 0.14);
-    const pitch = 2 * reach3 + 0.3 * g;
-    const spread2 = (len) => {
-      const usable = len - 2 * (0.3 + reach3);
-      if (usable < 0) return [];
-      const n = Math.floor(usable / pitch) + 1;
-      return n === 1 ? [0] : Array.from({ length: n }, (_, i) => -usable / 2 + i * usable / (n - 1));
-    };
-    let front = spread2(fw);
-    if (floor2 === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach3);
-    const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
-    const at4 = b.attach || {};
-    return { front, left: at4.left ? [] : zs, right: at4.right ? [] : zs, w: winW, reach: reach3 };
-  }
-  function groundWindows(b) {
-    const kind = winKind(b);
-    if (kind === "none" || kind === "hole") return [];
-    const g = styleScale(b);
-    const winW = 0.85 * g, winH = 1.05 * g;
-    const h2 = kind === "tall" ? winH * 1.2 : winH;
-    const y = 1.55 * g;
-    const W4 = windowSlots(b, 0);
-    const out = [];
-    for (const x of W4.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
-    for (const face of ["left", "right"]) for (const z of W4[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
-    return out;
-  }
-  function interiorRect(b) {
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    return bbox(b, -fw / 2 + WALL_T, fw / 2 - WALL_T, -fd + WALL_T, -WALL_T);
-  }
-  function hash(a, b = 0, c = 0) {
-    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
-    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
-    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
-  }
-  function rng(seed) {
-    let s = Math.floor(seed * 2654435761) >>> 0 || 1;
-    return () => {
-      s ^= s << 13;
-      s >>>= 0;
-      s ^= s >> 17;
-      s ^= s << 5;
-      s >>>= 0;
-      return s / 4294967296;
-    };
-  }
-  function isPirateHouse(b) {
-    return (b.role || "house") === "house" && !b.npc && isEnterable(b) && hash(b.x, b.y, 7.7) < 0.09;
-  }
-  var rectOf = (x, z, rot, w, d) => {
-    const side = Math.abs(Math.sin(rot)) > 0.5;
-    const hx = (side ? d : w) / 2, hz = (side ? w : d) / 2;
-    return { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz };
-  };
-  var overlap = (a, b, m = 0) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
-  var Placer = class {
-    constructor(L3, R5) {
-      this.L = L3;
-      this.R = R5;
-      this.rects = [];
-      this.keep = [];
-      this.low = [];
-      this.fronts = [];
-    }
-    fits(r4, tall) {
-      const L3 = this.L;
-      if (r4.x0 < L3.x0 - 1e-3 || r4.x1 > L3.x1 + 1e-3 || r4.z0 < L3.z0 - 1e-3 || r4.z1 > L3.z1 + 1e-3) return false;
-      for (const q2 of this.keep) if (overlap(r4, q2)) return false;
-      if (tall) {
-        for (const q2 of this.low) if (overlap(r4, q2)) return false;
-      }
-      for (const q2 of this.rects) if (overlap(r4, q2, 0.04)) return false;
-      for (const q2 of this.fronts) if (overlap(r4, q2)) return false;
-      return true;
-    }
-    /** The floor in front of an item that has to be got at (or null). */
-    frontOf(item, x, z, rot) {
-      if (item.ghost || !ACCESS.has(item.k)) return null;
-      const f = [Math.round(Math.sin(rot)), Math.round(Math.cos(rot))], dd = 0.55;
-      const cx = x + f[0] * (item.d / 2 + dd / 2), cz = z + f[1] * (item.d / 2 + dd / 2);
-      return rectOf(cx, cz, rot, item.w * 0.8, dd);
-    }
-    /** Try to put an item at (x, z) facing `rot`; returns the item or null. */
-    at(item, x, z, rot = 0) {
-      const r4 = rectOf(x, z, rot, item.w, item.d);
-      if (!this.fits(r4, (item.h || 0) > 1.05)) return null;
-      const fr = this.frontOf(item, x, z, rot);
-      if (fr) {
-        for (const q2 of this.rects) if (overlap(fr, q2)) return null;
-      }
-      const it = { ...item, x, z, rot, rect: r4 };
-      if (!item.ghost) this.rects.push(r4);
-      if (fr) this.fronts.push(fr);
-      this.L.items.push(it);
-      return it;
-    }
-    /** Slide an item along a wall ('back' | 'left' | 'right' | 'front'), in the given order. */
-    wall(item, wall, order = "center", gap = 0.02) {
-      const L3 = this.L;
-      let rot, fixed, a0, a1;
-      if (wall === "back") {
-        rot = 0;
-        fixed = L3.z0 + item.d / 2 + gap;
-        a0 = L3.x0 + item.w / 2;
-        a1 = L3.x1 - item.w / 2;
-      } else if (wall === "front") {
-        rot = Math.PI;
-        fixed = L3.z1 - item.d / 2 - gap;
-        a0 = L3.x0 + item.w / 2;
-        a1 = L3.x1 - item.w / 2;
-      } else if (wall === "left") {
-        rot = Math.PI / 2;
-        fixed = L3.x0 + item.d / 2 + gap;
-        a0 = L3.z0 + item.w / 2;
-        a1 = L3.z1 - item.w / 2;
-      } else {
-        rot = -Math.PI / 2;
-        fixed = L3.x1 - item.d / 2 - gap;
-        a0 = L3.z0 + item.w / 2;
-        a1 = L3.z1 - item.w / 2;
-      }
-      if (a1 < a0 - 1e-6) return null;
-      const cands = [];
-      const n = Math.max(1, Math.round((a1 - a0) / 0.1));
-      for (let i = 0; i <= n; i++) cands.push(a0 + (a1 - a0) * (i / n));
-      if (order === "center") {
-        const m = (a0 + a1) / 2;
-        cands.sort((p, q2) => Math.abs(p - m) - Math.abs(q2 - m));
-      } else if (order === "end") cands.reverse();
-      else if (order === "random") cands.sort(() => this.R() - 0.5);
-      for (const a of cands) {
-        const it = wall === "back" || wall === "front" ? this.at(item, a, fixed, rot) : this.at(item, fixed, a, rot);
-        if (it) return it;
-      }
-      return null;
-    }
-    /** Anywhere on the floor (free-standing tables), nearest to (px, pz) first. */
-    free(item, px2 = 0, pz2 = null, rot = 0) {
-      const L3 = this.L;
-      const cz = pz2 ?? (L3.z0 + L3.z1) / 2;
-      const cands = [];
-      for (let x = L3.x0 + item.w / 2; x <= L3.x1 - item.w / 2 + 1e-6; x += 0.15) {
-        for (let z = L3.z0 + item.d / 2; z <= L3.z1 - item.d / 2 + 1e-6; z += 0.15) cands.push([x, z]);
-      }
-      cands.sort((a, b) => Math.hypot(a[0] - px2, a[1] - cz) - Math.hypot(b[0] - px2, b[1] - cz));
-      for (const [x, z] of cands) {
-        const it = this.at(item, x, z, rot);
-        if (it) return it;
-      }
-      return null;
-    }
-    /** Things that don't take floor space (rugs, wall pictures, lamps). */
-    deco(item, x, z, rot = 0) {
-      const it = { ...item, x, z, rot, ghost: true };
-      this.L.items.push(it);
-      return it;
-    }
-  };
-  var F = {
-    bed: { k: "bed", w: 1, d: 2, h: 0.6 },
-    futon: { k: "futon", w: 1, d: 2, h: 0.14, ghost: true },
-    table: { k: "table", w: 0.95, d: 0.8, h: 0.76 },
-    lowTable: { k: "lowtable", w: 1, d: 0.7, h: 0.36 },
-    roundTable: { k: "roundtable", w: 0.9, d: 0.9, h: 0.76 },
-    chair: { k: "chair", w: 0.44, d: 0.44, h: 0.92, ghost: true },
-    stool: { k: "stool", w: 0.38, d: 0.38, h: 0.7, ghost: true },
-    cushion: { k: "cushion", w: 0.5, d: 0.5, h: 0.1, ghost: true },
-    cupboard: { k: "cupboard", w: 0.95, d: 0.45, h: 1.85 },
-    dresser: { k: "dresser", w: 1, d: 0.45, h: 0.9 },
-    tansu: { k: "tansu", w: 0.95, d: 0.45, h: 1.1 },
-    shelf: { k: "shelf", w: 1.2, d: 0.34, h: 1.9 },
-    lowShelf: { k: "lowshelf", w: 1.1, d: 0.36, h: 1 },
-    bookcase: { k: "bookcase", w: 1.2, d: 0.36, h: 2.1 },
-    stove: { k: "stove", w: 0.75, d: 0.6, h: 0.95 },
-    fireplace: { k: "fireplace", w: 1.3, d: 0.5, h: 1.35 },
-    hibachi: { k: "hibachi", w: 0.55, d: 0.55, h: 0.35 },
-    chest: { k: "chest", w: 0.8, d: 0.5, h: 0.55 },
-    barrel: { k: "barrel", w: 0.62, d: 0.62, h: 0.95 },
-    crate: { k: "crate", w: 0.62, d: 0.62, h: 0.6 },
-    sacks: { k: "sacks", w: 0.8, d: 0.55, h: 0.6 },
-    plant: { k: "plant", w: 0.45, d: 0.45, h: 1.1 },
-    counter: { k: "counter", w: 2, d: 0.48, h: 1.02 },
-    desk: { k: "desk", w: 1.3, d: 0.62, h: 0.78 },
-    medbed: { k: "medbed", w: 0.9, d: 1.95, h: 0.68 },
-    // (its head to the wall, as in a ward)
-    cabinet: { k: "medcabinet", w: 1, d: 0.36, h: 1.8 },
-    screen: { k: "screen", w: 1.1, d: 0.12, h: 1.6 },
-    rack: { k: "rack", w: 1.3, d: 0.3, h: 1.6 },
-    armor: { k: "armorstand", w: 0.6, d: 0.5, h: 1.75 },
-    dummy: { k: "dummy", w: 0.55, d: 0.55, h: 1.75 },
-    shrine: { k: "shrine", w: 1.2, d: 0.4, h: 1.2 },
-    pew: { k: "pew", w: 1.9, d: 0.5, h: 0.92 },
-    altar: { k: "altar", w: 1.4, d: 0.6, h: 1 },
-    safe: { k: "safe", w: 0.8, d: 0.7, h: 1.2 },
-    bench: { k: "bench", w: 1.4, d: 0.42, h: 0.46 },
-    board: { k: "board", w: 1.3, d: 0.06, h: 1, ghost: true },
-    filing: { k: "filing", w: 0.6, d: 0.5, h: 1.3 },
-    flag: { k: "flag", w: 1.1, d: 0.05, h: 1.6, ghost: true },
-    stairs: { k: "stairs", w: 2.6, d: 0.95, h: 2.4 },
-    workbench: { k: "workbench", w: 1.7, d: 0.7, h: 0.9 },
-    lumber: { k: "lumber", w: 1.8, d: 0.6, h: 0.7 },
-    hull: { k: "hull", w: 2.4, d: 1.2, h: 1.1 },
-    produce: { k: "produce", w: 1.1, d: 0.6, h: 0.8 }
-  };
-  var ACCESS = /* @__PURE__ */ new Set(["cupboard", "dresser", "tansu", "shelf", "lowshelf", "bookcase", "stove", "fireplace", "medcabinet", "safe", "filing", "workbench", "rack", "shrine", "altar"]);
-  var sized = (it, g) => g === 1 ? it : { ...it, w: it.w * g, d: it.d * g, h: it.h * g };
-  var GROUP = {
-    house: "house",
-    shop: "shop",
-    market: "market",
-    weapons: "weapons",
-    bank: "bank",
-    bounty: "bounty",
-    library: "library",
-    tavern: "tavern",
-    bar: "tavern",
-    inn: "inn",
-    restaurant: "restaurant",
-    cafe: "restaurant",
-    doctor: "doctor",
-    dojo: "dojo",
-    trainer: "dojo",
-    church: "church",
-    marine_base: "marine",
-    shipwright: "shipwright"
-  };
-  var roomOf = (b) => GROUP[b.role || "house"] || "house";
-  var KEEPER = {
-    shop: "Shopkeeper",
-    market: "Grocer",
-    weapons: "Armourer",
-    bank: "Banker",
-    bounty: "Bounty Clerk",
-    library: "Librarian",
-    tavern: "Barkeep",
-    inn: "Innkeeper",
-    restaurant: "Cook",
-    doctor: "Doctor",
-    dojo: "Sensei",
-    church: "Priest",
-    marine: "Marine Officer",
-    shipwright: "Shipwright"
-  };
-  function layoutOf(b) {
-    if (b._layout) return b._layout;
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-    const T5 = WALL_T;
-    const door = doorOf(b);
-    const L3 = { x0: -fw / 2 + T5, x1: fw / 2 - T5, z0: -fd + T5, z1: -T5, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
-    const R5 = rng(hash(b.x, b.y, (b.v || 0) + 1));
-    const P6 = new Placer(L3, R5);
-    P6.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L3.z1 - Math.max(1, door.dw) - 0.06, z1: L3.z1 + 1 });
-    for (const w of groundWindows(b)) {
-      const hw = w.w / 2 + 0.12;
-      if (w.face === "front") P6.low.push({ x0: w.u - hw, x1: w.u + hw, z0: L3.z1 - 0.7, z1: L3.z1 + 1 });
-      else if (w.face === "left") P6.low.push({ x0: L3.x0 - 1, x1: L3.x0 + 0.7, z0: w.u - hw, z1: w.u + hw });
-      else P6.low.push({ x0: L3.x1 - 0.7, x1: L3.x1 + 1, z0: w.u - hw, z1: w.u + hw });
-    }
-    const S6 = (k) => sized(F[k], g);
-    (ROOMS2[L3.room] || ROOMS2.house)(P6, L3, b, R5, S6, g);
-    P6.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
-    b._layout = L3;
-    return L3;
-  }
-  function counterRoom(P6, L3, S6, g, { shelf = "goods", len = 2.2, gapBehind = 0.58 } = {}) {
-    const width = L3.x1 - L3.x0;
-    const bd = 0.26 * g;
-    const cw = Math.min(len * g, width - 0.75 * g);
-    const cz = L3.z0 + bd + gapBehind * g + S6("counter").d / 2;
-    const counter2 = P6.at({ ...S6("counter"), w: cw }, L3.x0 + cw / 2 + 0.02, cz, 0) || P6.at({ ...S6("counter"), w: cw * 0.8 }, L3.x0 + cw * 0.4 + 0.02, cz, 0);
-    if (!counter2) return null;
-    const bw2 = Math.min(width - 0.1, cw + 0.4 * g);
-    P6.deco({ k: shelf, w: bw2, d: bd, h: 1.9 * g }, L3.x0 + bw2 / 2 + 0.02, L3.z0 + bd / 2 + 0.01, 0);
-    P6.rects.push({ x0: L3.x0, x1: L3.x0 + bw2 + 0.02, z0: L3.z0, z1: counter2.rect.z0 });
-    P6.keep.push({ x0: counter2.x - 0.55, x1: counter2.x + 0.55, z0: counter2.rect.z1, z1: counter2.rect.z1 + 0.85 });
-    L3.keeper = { x: counter2.x, z: L3.z0 + bd + gapBehind * g * 0.5 };
-    L3.use.push({ kind: "service", x: counter2.x, z: counter2.rect.z1 + 0.45, label: null });
-    return counter2;
-  }
-  function bedIn(P6, S6, low, order) {
-    const k = low ? "futon" : "bed";
-    return P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "start") || P6.wall(S6(k), "right", "start");
-  }
-  function searchable(L3, it, label) {
-    if (!it) return null;
-    const f = [Math.sin(it.rot), Math.cos(it.rot)];
-    L3.use.push({ kind: "loot", x: it.x + f[0] * (it.d / 2 + 0.42), z: it.z + f[1] * (it.d / 2 + 0.42), label });
-    return it;
-  }
-  function stash(P6, L3, S6, k, walls, label) {
-    for (const [wall, order] of walls) {
-      const it = P6.wall({ ...S6(k), loot: true }, wall, order);
-      if (it) return searchable(L3, it, label);
-    }
-    return null;
-  }
-  function footChest(P6, L3, S6, bed2, label) {
-    if (!bed2 || bed2.rot !== 0) return null;
-    const c = S6("chest"), r4 = bed2.rect;
-    const it = P6.at({ ...c, loot: true }, (r4.x0 + r4.x1) / 2, r4.z1 + c.d / 2 + 0.05, 0);
-    if (it) L3.use.push({ kind: "loot", x: it.x, z: it.rect.z1 + 0.45, label });
-    return it;
-  }
-  function hearthIn(P6, L3, b, S6, low, order) {
-    const k = b.style === "snow" || b.style === "village" || b.style === "giant" ? "fireplace" : low ? "hibachi" : "stove";
-    const st = P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "end") || P6.wall(S6(k), "right", "end");
-    if (st) L3.residents.push({ x: st.x + Math.sin(st.rot) * (st.d / 2 + 0.35), z: st.z + Math.cos(st.rot) * (st.d / 2 + 0.35) });
-    return st;
-  }
-  function tableIn(P6, L3, S6, low, kind, x, z, seat) {
-    const tb = P6.free(S6(low ? "lowTable" : kind), x, z);
-    if (!tb) return null;
-    for (const s of [-1, 1]) {
-      const st = S6(low ? "cushion" : seat);
-      const sx = tb.x + s * (tb.w / 2 + st.w * 0.45);
-      if (sx - st.w / 2 < L3.x0 || sx + st.w / 2 > L3.x1) continue;
-      P6.deco(st, sx, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-      L3.residents.push({ x: sx, z: tb.z, sit: true, face: s < 0 ? 0 : Math.PI });
-    }
-    return tb;
-  }
-  var sides = (R5) => R5() < 0.5 ? ["start", "end"] : ["end", "start"];
-  var HOMES = {
-    family(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      if (bed2 && L3.x1 - L3.x0 > 5) P6.wall(S6(low ? "futon" : "bed"), "back", other);
-      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
-      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["left", "random"], ["right", "random"], ["front", "start"]], "Search the cupboard");
-      hearthIn(P6, L3, b, S6, low, other);
-      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.8 : -0.8), L3.z0 + (L3.z1 - L3.z0) * 0.55, "chair");
-      P6.wall(S6("shelf"), "right", "random") || P6.wall(S6("lowShelf"), "front", "end");
-      if (R5() < 0.6) P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
-      if (R5() < 0.5) P6.wall(S6("plant"), "front", "end");
-    },
-    // nets, floats and barrels of salt fish; a sea chest by the bed
-    fisher(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
-      hearthIn(P6, L3, b, S6, low, other);
-      P6.wall(S6("rack"), "left", "random");
-      P6.wall(S6("barrel"), "right", "start");
-      P6.wall(S6("barrel"), "right", "start");
-      P6.wall(S6("crate"), "front", R5() < 0.5 ? "start" : "end");
-      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.6, "stool");
-      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
-    },
-    // a carpenter or smith who works at home: a workbench, timber, tools
-    crafter(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const wb = P6.wall(S6("workbench"), "back", other) || P6.wall(S6("workbench"), "left", "random") || P6.wall(S6("workbench"), "right", "random");
-      if (wb) {
-        const f = [Math.sin(wb.rot), Math.cos(wb.rot)];
-        L3.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI });
-      }
-      P6.wall(S6("rack"), "right", "random") || P6.wall(S6("rack"), "left", "random");
-      P6.wall(S6("lumber"), "front", R5() < 0.5 ? "start" : "end") || P6.wall(S6("crate"), "front", "start");
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the tool chest");
-      stash(P6, L3, S6, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
-      hearthIn(P6, L3, b, S6, low, "center");
-      if (R5() < 0.7) P6.wall(S6("crate"), "right", "end");
-    },
-    // books everywhere, a desk under the lamp
-    scholar(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      P6.wall(S6("bookcase"), "back", other) || P6.wall(S6("shelf"), "back", other);
-      P6.wall(S6("bookcase"), "left", "random") || P6.wall(S6("lowShelf"), "left", "random");
-      const desk = P6.wall(S6("desk"), "right", "random") || P6.free(S6("desk"), 0, (L3.z0 + L3.z1) / 2);
-      if (desk) {
-        const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S6("chair");
-        const cx = desk.x + f[0] * (desk.d / 2 + ch.d * 0.4), cz = desk.z + f[1] * (desk.d / 2 + ch.d * 0.4);
-        P6.deco(ch, cx, cz, desk.rot + Math.PI);
-        L3.residents.push({ x: cx, z: cz, sit: true, face: desk.rot + Math.PI });
-      }
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the chest") || stash(P6, L3, S6, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
-      hearthIn(P6, L3, b, S6, low, "center");
-      if (R5() < 0.7) P6.wall(S6("plant"), "front", "end");
-    },
-    // sacks of grain, barrels, baskets of produce
-    farmer(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
-      hearthIn(P6, L3, b, S6, low, other);
-      P6.wall(S6("sacks"), "left", "start");
-      P6.wall(S6("sacks"), "left", "end");
-      P6.wall(S6("produce"), "right", "random") || P6.wall(S6("barrel"), "right", "random");
-      P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
-      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.58, "chair");
-      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
-    },
-    // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
-    sailor(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["left", "random"]], "Search the sea chest");
-      P6.wall(S6("barrel"), "back", other);
-      P6.wall(S6("barrel"), "right", "start");
-      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.5 : -0.5), L3.z0 + (L3.z1 - L3.z0) * 0.55, "stool");
-      P6.wall(S6("lowShelf"), "left", "random") || P6.wall(S6("shelf"), "right", "random");
-      hearthIn(P6, L3, b, S6, low, "center");
-      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
-    }
-  };
-  var ROOMS2 = {
-    house(P6, L3, b, R5, S6, g) {
-      const low = lowStyle(b);
-      const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
-      const kind = b.npc ? "family" : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
-      L3.kind = kind;
-      HOMES[kind](P6, L3, b, R5, S6, g, low);
-      if (!L3.use.some((u) => u.kind === "loot")) {
-        const walls = [["left", "random"], ["right", "random"], ["front", "start"], ["front", "end"], ["back", "center"]];
-        if (!stash(P6, L3, S6, "chest", walls, "Search the chest")) {
-          const it = P6.free({ ...S6("chest"), loot: true }, 0, (L3.z0 + L3.z1) / 2);
-          if (it) searchable(L3, it, "Search the chest");
-        }
-      }
-      P6.deco({ k: low ? "tatami" : "rug", w: Math.min(2.2 * g, (L3.x1 - L3.x0) * 0.6), d: Math.min(1.5 * g, (L3.z1 - L3.z0) * 0.5), h: 0.02 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2 + 0.2);
-      P6.deco({ k: R5() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L3.x0 + (L3.x1 - L3.x0) * (0.3 + R5() * 0.4), L3.z0 + 0.02, 0);
-      if (!L3.residents.length) L3.residents.push({ x: (L3.x0 + L3.x1) / 2, z: (L3.z0 + L3.z1) / 2 });
-    },
-    shop(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods" });
-      P6.wall(S6("shelf"), "left", "start") || P6.wall(S6("lowShelf"), "left", "start");
-      P6.wall(S6("shelf"), "right", "start") || P6.wall(S6("lowShelf"), "right", "start");
-      P6.wall(S6("barrel"), "front", "start");
-      P6.wall(S6("crate"), "front", "end");
-      if (L3.z1 - L3.z0 > 3) P6.free(S6("produce"), 0, L3.z1 - 1.4);
-      P6.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L3.door.x, L3.z1 - 0.7);
-    },
-    market(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods" });
-      P6.wall(S6("produce"), "left", "start");
-      P6.wall(S6("produce"), "right", "start");
-      P6.wall(S6("sacks"), "front", "start");
-      P6.wall(S6("barrel"), "front", "end");
-      P6.wall(S6("crate"), "left", "end");
-    },
-    weapons(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "wallrack" });
-      P6.wall(S6("rack"), "left", "start") || P6.wall(S6("rack"), "left", "end");
-      P6.wall(S6("rack"), "right", "start") || P6.wall(S6("armor"), "right", "start");
-      P6.wall(S6("armor"), "front", "start");
-      P6.wall(S6("barrel"), "front", "end");
-    },
-    bank(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 2.6 });
-      P6.wall(S6("safe"), "right", "start");
-      P6.wall(S6("bench"), "left", "end") || P6.wall(S6("bench"), "front", "start");
-      P6.wall(S6("plant"), "front", "end");
-    },
-    bounty(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 1.6 });
-      P6.deco({ k: "wanted", w: Math.min(1.8, L3.z1 - L3.z0 - 0.4), d: 0.04, h: 1 }, L3.x0 + 0.03, (L3.z0 + L3.z1) / 2 + 0.2, Math.PI / 2);
-      P6.wall(S6("filing"), "right", "start");
-      P6.wall(S6("bench"), "front", "start");
-    },
-    library(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "books", len: 1.6 });
-      P6.wall(S6("bookcase"), "left", "start");
-      P6.wall(S6("bookcase"), "left", "end");
-      P6.wall(S6("bookcase"), "right", "start");
-      P6.wall(S6("bookcase"), "right", "end");
-      const tb = P6.free(S6("table"), 0.6, L3.z1 - 1.5);
-      if (tb) for (const s of [-1, 1]) P6.deco(S6("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-      L3.use.push({ kind: "read", x: L3.x0 + 0.7, z: (L3.z0 + L3.z1) / 2, label: "Browse the shelves" });
-    },
-    tavern(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 3 });
-      const bar2 = L3.items.find((it) => it.k === "counter");
-      if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P6.deco(S6("stool"), x, bar2.rect.z1 + 0.3, 0);
-      for (const px2 of [L3.x0 + 0.9, L3.x1 - 0.9]) {
-        const t = P6.free(S6("roundTable"), px2, L3.z1 - 1.05);
-        if (!t) continue;
-        for (const a of [0, 2.1, 4.2]) {
-          const x = t.x + Math.cos(a) * 0.62, z = t.z + Math.sin(a) * 0.62;
-          if (x < L3.x0 + 0.15 || x > L3.x1 - 0.15 || z < L3.z0 + 0.15 || z > L3.z1 - 0.15) continue;
-          P6.deco(S6("stool"), x, z, 0);
-        }
-        L3.residents.push({ x: t.x + 0.62, z: t.z, sit: true, face: Math.PI / 2 });
-      }
-      P6.wall(S6("barrel"), "right", "end") || P6.wall(S6("barrel"), "front", "end");
-      P6.wall(S6("barrel"), "left", "end");
-      P6.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2, -Math.PI / 2);
-      L3.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L3.z1 - 1 };
-    },
-    inn(P6, L3, b, R5, S6, g) {
-      ROOMS2.tavern(P6, L3, b, R5, S6, g);
-      P6.wall(S6("stairs"), "left", "start") || P6.wall(S6("stairs"), "right", "start");
-    },
-    restaurant(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 2.2 });
-      const W4 = L3.x1 - L3.x0, D4 = L3.z1 - L3.z0;
-      const cols = Math.max(2, Math.floor((W4 - 1) / (3.2 * g)));
-      const small = cols === 2 && D4 - 3 * g < 5.6 * g;
-      const rows = small ? 1 : Math.max(1, Math.min(4, 1 + Math.floor((D4 - 3.7 * g) / (2.4 * g))));
-      let diners = 0;
-      for (let r4 = 0; r4 < rows; r4++) {
-        for (let c = 0; c < cols; c++) {
-          const px2 = small ? c ? L3.x1 - 0.8 : L3.x0 + 0.8 : L3.x0 + 0.5 + (c + 0.5) * (W4 - 1) / cols;
-          const pz2 = L3.z1 - (small ? 1.1 : 1.1 * g + r4 * 2.4 * g);
-          const t = small ? P6.free(S6("table"), px2, pz2) : P6.at(S6("table"), px2, pz2, 0);
-          if (!t) continue;
-          for (const s of [-1, 1]) {
-            const x = t.x + s * (t.w / 2 + 0.22);
-            if (x < L3.x0 + 0.2 || x > L3.x1 - 0.2) continue;
-            P6.deco(S6("chair"), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-          }
-          if (small || diners < 6 && (r4 + c) % 2 === 0) {
-            L3.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 });
-            diners++;
-          }
-        }
-      }
-      P6.wall(S6("plant"), "front", "end");
-    },
-    doctor(P6, L3, b, R5, S6, g) {
-      const desk = P6.wall(S6("desk"), "back", "start", 0.62 * g);
-      if (desk) {
-        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
-        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
-        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
-        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
-      }
-      P6.wall(S6("cabinet"), "back", "end");
-      const b1 = P6.wall(S6("medbed"), "right", "start") || P6.wall(S6("medbed"), "left", "start");
-      if (b1) L3.residents.push({ x: b1.x, z: b1.z, lie: true, rot: b1.rot });
-      P6.wall(S6("medbed"), "left", "start");
-      P6.wall(S6("screen"), "right", "end");
-      P6.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L3.z0 + 0.02, 0);
-      P6.wall(S6("plant"), "front", "end");
-    },
-    dojo(P6, L3, b, R5, S6, g) {
-      P6.deco({ k: "mats", w: L3.x1 - L3.x0 - 0.4, d: L3.z1 - L3.z0 - 0.3, h: 0.03 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
-      const sh = P6.wall(S6("shrine"), "back", "center");
-      L3.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L3.z0) + 0.55 };
-      P6.rects.push({ x0: L3.keeper.x - 0.4, x1: L3.keeper.x + 0.4, z0: L3.keeper.z - 0.35, z1: L3.keeper.z + 0.35 });
-      P6.wall(S6("rack"), "left", "start");
-      P6.wall(S6("rack"), "right", "start");
-      P6.free(S6("dummy"), L3.x0 + 1, L3.z1 - 1.2);
-      P6.free(S6("dummy"), L3.x1 - 1, L3.z1 - 1.2);
-      L3.use.push({ kind: "service", x: L3.keeper.x, z: L3.keeper.z + 0.9, label: null });
-    },
-    church(P6, L3, b, R5, S6, g) {
-      const al = P6.wall(S6("altar"), "back", "center", 0.6 * g);
-      if (al) {
-        L3.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
-        P6.rects.push({ x0: al.rect.x0, x1: al.rect.x1, z0: L3.z0, z1: al.rect.z0 });
-        L3.use.push({ kind: "service", x: al.x, z: al.rect.z1 + 0.5, label: null });
-      }
-      for (let z = (al ? al.rect.z1 : L3.z0) + 0.9; z < L3.z1 - 1.2; z += 0.95) {
-        for (const s of [-1, 1]) {
-          const w = Math.min(1.9 * g, (L3.x1 - L3.x0) / 2 - 0.7);
-          if (w < 0.8) continue;
-          P6.at({ ...S6("pew"), w }, s * ((L3.x1 - L3.x0) / 4 + 0.15), z, Math.PI);
-        }
-      }
-      P6.wall(S6("plant"), "front", "start");
-      P6.wall(S6("plant"), "front", "end");
-    },
-    marine(P6, L3, b, R5, S6, g) {
-      const desk = P6.wall(S6("desk"), "back", "center", 0.62 * g);
-      if (desk) {
-        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
-        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
-        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
-        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
-        P6.deco({ ...S6("flag"), k: "marineflag" }, desk.x, L3.z0 + 0.03, 0);
-      }
-      P6.wall(S6("filing"), "back", "start");
-      P6.wall(S6("filing"), "back", "end");
-      P6.wall(S6("rack"), "left", "start");
-      P6.wall(S6("bench"), "right", "end") || P6.wall(S6("bench"), "front", "start");
-      P6.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2 - 0.3, -Math.PI / 2);
-      L3.residents.push({ x: L3.x0 + 0.8, z: L3.z1 - 1, guard: true });
-    },
-    shipwright(P6, L3, b, R5, S6, g) {
-      const wb = P6.wall(S6("workbench"), "back", "start", 0.62 * g);
-      if (wb) {
-        L3.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
-        P6.rects.push({ x0: wb.rect.x0, x1: wb.rect.x1, z0: L3.z0, z1: wb.rect.z0 });
-        L3.use.push({ kind: "service", x: wb.x, z: wb.rect.z1 + 0.45, label: null });
-      }
-      P6.free(S6("hull"), L3.x1 - 1.6, (L3.z0 + L3.z1) / 2);
-      P6.wall(S6("lumber"), "front", "start") || P6.wall(S6("lumber"), "left", "end");
-      P6.wall(S6("rack"), "right", "start");
-      P6.wall(S6("barrel"), "front", "end");
-    }
-  };
-
-  // src/game/entity.js
-  var nextId = 1;
-  var Entity = class {
-    constructor(o = {}) {
-      this.id = nextId++;
-      this.x = o.x ?? 0;
-      this.y = o.y ?? 0;
-      this.vx = 0;
-      this.vy = 0;
-      this.r = o.r ?? 0.3;
-      this.alive = true;
-      this.kind = o.kind || "entity";
-      this.faction = o.faction || "neutral";
-      this.world = o.world || null;
-    }
-    update() {
-    }
-    remove() {
-      this.alive = false;
-    }
-  };
-  var HOSTILITY = {
-    player: /* @__PURE__ */ new Set(["pirate", "bandit", "beast", "seaking", "baroque", "cp", "marine_hostile", "zombie", "rival"]),
-    marine: /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "revolutionary"]),
-    pirate: /* @__PURE__ */ new Set(["player", "marine", "civilian_target", "rival"]),
-    bandit: /* @__PURE__ */ new Set(["player", "civilian_target"]),
-    beast: /* @__PURE__ */ new Set(["player", "civilian", "marine", "pirate", "bandit"]),
-    seaking: /* @__PURE__ */ new Set(["player", "marine", "pirate"]),
-    baroque: /* @__PURE__ */ new Set(["player", "marine"]),
-    cp: /* @__PURE__ */ new Set(["player"]),
-    zombie: /* @__PURE__ */ new Set(["player", "marine"]),
-    rival: /* @__PURE__ */ new Set(["player", "pirate"]),
-    civilian: /* @__PURE__ */ new Set(),
-    neutral: /* @__PURE__ */ new Set()
-  };
-  function hostile(a, b) {
-    if (!a || !b || a === b) return false;
-    if (a.faction === "player" && b.aggroPlayer) return true;
-    if (b.faction === "player" && a.aggroPlayer) return true;
-    const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
-    return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
   }
 
   // src/game/stats.js
@@ -7239,7 +3953,7 @@
     },
     soft: (k) => k * k * (3 - 2 * k)
   };
-  var clamp012 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
   var clamp2 = (v, a, b) => v < a ? a : v > b ? b : v;
   var mixN = (a, b, k) => a + (b - a) * k;
   var frac = (x) => x - Math.floor(x);
@@ -7659,7 +4373,7 @@
 
   // src/render/anim/move.js
   function gaitParams(v, sprint) {
-    const k = clamp012((v - 1.4) / 3);
+    const k = clamp01((v - 1.4) / 3);
     const s = sprint ? 1 : 0;
     return {
       k,
@@ -7709,8 +4423,8 @@
     P6.ht = (P6.ht || 0) - P6.l * 0.45;
     const armed = base2.wF !== null && base2.wF !== void 0;
     if (pose.combat && !armed) return;
-    const swF = clamp012(0.5 - a[0] / (2 * g.R)), swB = clamp012(0.5 - b[0] / (2 * g.R));
-    const run = clamp012(g.k * 1.3 - 0.2);
+    const swF = clamp01(0.5 - a[0] / (2 * g.R)), swB = clamp01(0.5 - b[0] / (2 * g.R));
+    const run = clamp01(g.k * 1.3 - 0.2);
     const walkArm = (s) => [mixN(-0.1, 0.14, s), 0.38 - s * 0.03];
     const runArm = (s) => [mixN(-0.14, 0.22 + 0.04 * g.s, s), mixN(0.28, 0.06, s)];
     const wF = walkArm(swF), wB = walkArm(swB), rF = runArm(swF), rB = runArm(swB);
@@ -8250,7 +4964,7 @@
     return out;
   }
   function dodgePose(P6, pose) {
-    const k = clamp012(pose.dodge), kind = pose.dodgeKind || "dash";
+    const k = clamp01(pose.dodge), kind = pose.dodgeKind || "dash";
     const dir = pose.dodgeDir ?? 1, side = pose.dodgeSide ?? (Math.abs(dir) < 0.35 ? 1 : 0);
     const n = Math.hypot(dir, side) || 1;
     const c = dir / n, s = side / n;
@@ -8722,7 +5436,7 @@
     keys2.push({ t: tEnd, p: end, e: "inout" });
     return finalize(keys2);
   }
-  var S2 = (c, o) => ({
+  var S = (c, o) => ({
     ...o,
     stance: o.stance || c.stance,
     weight: o.weight || c.weight,
@@ -8737,169 +5451,169 @@
   var CLIPS = {
     // ---------------------------------------------------------------- fists
     // the lead fist snapped straight out from the chin, the lead foot stepping in under it; the other fist never leaves the chin
-    jab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.06], l: 0.05, tw: -0.12, hp: -0.04, ht: 0.08, hF: [0.13, 0], hB: [0.11, -0.01], face: "fierce" }, hit: { b: [0.1, 0.035], l: 0.2, tw: 0.36, hp: 0.14, ht: 0.02, hF: [0.47, -0.05], hB: [0.1, -0.03], fF: [0.25, 0], fB: [-0.12, -0.01], sm: 0.1, face: "fierce" }, follow: { hF: [0.36, -0.02], tw: 0.28, l: 0.17 } })) }),
+    jab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.06], l: 0.05, tw: -0.12, hp: -0.04, ht: 0.08, hF: [0.13, 0], hB: [0.11, -0.01], face: "fierce" }, hit: { b: [0.1, 0.035], l: 0.2, tw: 0.36, hp: 0.14, ht: 0.02, hF: [0.47, -0.05], hB: [0.1, -0.03], fF: [0.25, 0], fB: [-0.12, -0.01], sm: 0.1, face: "fierce" }, follow: { hF: [0.36, -0.02], tw: 0.28, l: 0.17 } })) }),
     // the rear hand: the hips whip round and drive the shoulder through, the back heel up, the lead fist pulled home
-    cross: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.04, 0.06], l: 0.02, tw: 0.22, hp: 0.12, ht: 0.06, hB: [0.05, 0], hF: [0.22, -0.03], face: "fierce" }, hit: { b: [0.13, 0.04], l: 0.28, tw: -0.62, hp: -0.42, ht: 0, hB: [0.49, -0.05], hF: [0.1, 0], fF: [0.25, 0], fB: [-0.14, -0.05], sm: 0.12, face: "shout" }, follow: { tw: -0.72, l: 0.3, hB: [0.42, -0.02] } })) }),
+    cross: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.04, 0.06], l: 0.02, tw: 0.22, hp: 0.12, ht: 0.06, hB: [0.05, 0], hF: [0.22, -0.03], face: "fierce" }, hit: { b: [0.13, 0.04], l: 0.28, tw: -0.62, hp: -0.42, ht: 0, hB: [0.49, -0.05], hF: [0.1, 0], fF: [0.25, 0], fB: [-0.14, -0.05], sm: 0.12, face: "shout" }, follow: { tw: -0.72, l: 0.3, hB: [0.42, -0.02] } })) }),
     // wide and flat: the elbow up, the fist swung round from the side as the whole body turns into it
-    hook: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.08], l: 0.06, tw: -0.4, hp: -0.12, ht: 0.06, hF: [0.1, -0.02], zF: 0.2, eF: -1, hB: [0.12, -0.01], face: "fierce" }, hit: { b: [0.08, 0.06], l: 0.2, tw: 0.62, hp: 0.32, ht: 0.03, hF: [0.36, -0.06], zF: -0.04, eF: -0.8, hB: [0.1, 0], fF: [0.21, 0], fB: [-0.15, -0.04], sm: 0.06, face: "shout" }, follow: { tw: 0.8, l: 0.24, hF: [0.3, -0.03], zF: -0.12, eF: -0.7 } })) }),
+    hook: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.08], l: 0.06, tw: -0.4, hp: -0.12, ht: 0.06, hF: [0.1, -0.02], zF: 0.2, eF: -1, hB: [0.12, -0.01], face: "fierce" }, hit: { b: [0.08, 0.06], l: 0.2, tw: 0.62, hp: 0.32, ht: 0.03, hF: [0.36, -0.06], zF: -0.04, eF: -0.8, hB: [0.1, 0], fF: [0.21, 0], fB: [-0.15, -0.04], sm: 0.06, face: "shout" }, follow: { tw: 0.8, l: 0.24, hF: [0.3, -0.03], zF: -0.12, eF: -0.7 } })) }),
     // the finisher: dropped low and coiled, then up off the ground behind the fist
-    uppercut: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.13], l: 0.26, tw: -0.32, hp: -0.16, ht: 0.12, hF: [0.12, 0.3], eF: 1, hB: [0.12, -0.02], fF: [0.2, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.07, -0.07], z: 0.11, l: -0.06, tw: 0.5, hp: 0.28, ht: -0.24, hF: [0.3, -0.33], eF: 0.5, hB: [0.06, 0.1], fF: [0.2, -0.05], fB: [-0.08, -0.18], sm: 0.08, face: "shout" }, follow: { z: 0.05, l: -0.03, hF: [0.27, -0.3] } })), legs: true }),
+    uppercut: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.13], l: 0.26, tw: -0.32, hp: -0.16, ht: 0.12, hF: [0.12, 0.3], eF: 1, hB: [0.12, -0.02], fF: [0.2, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.07, -0.07], z: 0.11, l: -0.06, tw: 0.5, hp: 0.28, ht: -0.24, hF: [0.3, -0.33], eF: 0.5, hB: [0.06, 0.1], fF: [0.2, -0.05], fB: [-0.08, -0.18], sm: 0.08, face: "shout" }, follow: { z: 0.05, l: -0.03, hF: [0.27, -0.3] } })), legs: true }),
     // a dip forward, the arm swung right back with the whole trunk wound up behind it, then everything thrown through it
-    haymaker: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, antic: { b: [0.03, 0.07], l: 0.16, tw: 0.12, hF: [0.24, 0], ht: 0.1 }, load: { b: [-0.1, 0.07], l: -0.28, tw: -0.8, hp: -0.32, ht: -0.04, hF: [-0.32, -0.12], zF: 0.06, eF: 0.9, hB: [0.24, -0.02], handB: "palm", fF: [0.24, 0], fB: [-0.19, 0], face: "grit" }, hit: { b: [0.25, 0.05], l: 0.44, tw: 0.78, hp: 0.48, ht: -0.12, hF: [0.5, -0.03], eF: 0.2, hB: [-0.14, 0.16], zB: 0.1, handB: "fist", fF: [0.36, 0], fB: [-0.12, -0.08], sm: 0.14, face: "shout" }, follow: { b: [0.28, 0.08], l: 0.5, tw: 0.9, hF: [0.44, 0.06] } })), jitter: 0.012 }),
+    haymaker: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, antic: { b: [0.03, 0.07], l: 0.16, tw: 0.12, hF: [0.24, 0], ht: 0.1 }, load: { b: [-0.1, 0.07], l: -0.28, tw: -0.8, hp: -0.32, ht: -0.04, hF: [-0.32, -0.12], zF: 0.06, eF: 0.9, hB: [0.24, -0.02], handB: "palm", fF: [0.24, 0], fB: [-0.19, 0], face: "grit" }, hit: { b: [0.25, 0.05], l: 0.44, tw: 0.78, hp: 0.48, ht: -0.12, hF: [0.5, -0.03], eF: 0.2, hB: [-0.14, 0.16], zB: 0.1, handB: "fist", fF: [0.36, 0], fB: [-0.12, -0.08], sm: 0.14, face: "shout" }, follow: { b: [0.28, 0.08], l: 0.5, tw: 0.9, hF: [0.44, 0.06] } })), jitter: 0.012 }),
     // Fish-Man Karate: the palm from the hip, the other hand pulled back to its hip as it goes (and the kiai)
-    palm: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: PALMS, load: { b: [-0.02, 0.11], l: 0.02, tw: -0.28, hp: -0.1, hF: [0.03, 0.19], hB: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.13, 0.08], l: 0.18, tw: 0.46, hp: 0.22, hF: [0.49, -0.03], hB: [-0.02, 0.2], hand: "palm", handB: "fist", fF: [0.27, 0], fB: [-0.18, -0.02], sm: 0.08, face: "shout" }, follow: { hF: [0.45, -0.01], l: 0.2 } })) }),
-    palm2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: PALMS, load: { b: [-0.03, 0.11], l: 0, tw: 0.3, hp: 0.12, hB: [0, 0.2], hF: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.14, 0.08], l: 0.24, tw: -0.55, hp: -0.3, hB: [0.5, -0.03], hF: [-0.02, 0.2], hand: "fist", handB: "palm", fF: [0.27, 0], fB: [-0.18, -0.03], sm: 0.08, face: "shout" }, follow: { hB: [0.45, -0.01], l: 0.25 } })) }),
+    palm: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: PALMS, load: { b: [-0.02, 0.11], l: 0.02, tw: -0.28, hp: -0.1, hF: [0.03, 0.19], hB: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.13, 0.08], l: 0.18, tw: 0.46, hp: 0.22, hF: [0.49, -0.03], hB: [-0.02, 0.2], hand: "palm", handB: "fist", fF: [0.27, 0], fB: [-0.18, -0.02], sm: 0.08, face: "shout" }, follow: { hF: [0.45, -0.01], l: 0.2 } })) }),
+    palm2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: PALMS, load: { b: [-0.03, 0.11], l: 0, tw: 0.3, hp: 0.12, hB: [0, 0.2], hF: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.14, 0.08], l: 0.24, tw: -0.55, hp: -0.3, hB: [0.5, -0.03], hF: [-0.02, 0.2], hand: "fist", handB: "palm", fF: [0.27, 0], fB: [-0.18, -0.03], sm: 0.08, face: "shout" }, follow: { hB: [0.45, -0.01], l: 0.25 } })) }),
     // both palms gathered at one hip, the body wound round them, then driven out together (the Shark Tile Fist)
-    palm_double: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: PALMS, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.1, hF: [0.3, 0], hB: [0.28, 0.04] }, load: { b: [-0.08, 0.14], l: -0.16, tw: -0.5, hp: -0.2, hF: [-0.06, 0.2], hB: [-0.1, 0.17], hand: "palm", handB: "palm", fF: [0.23, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.23, 0.08], l: 0.3, tw: 0.2, hp: 0.25, hF: [0.5, -0.07], hB: [0.47, 0.07], hand: "palm", handB: "palm", fF: [0.33, 0], fB: [-0.19, -0.04], smF: 0.1, smB: 0.1, face: "shout" }, follow: { l: 0.34, b: [0.25, 0.1] } })), jitter: 0.01 }),
+    palm_double: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: PALMS, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.1, hF: [0.3, 0], hB: [0.28, 0.04] }, load: { b: [-0.08, 0.14], l: -0.16, tw: -0.5, hp: -0.2, hF: [-0.06, 0.2], hB: [-0.1, 0.17], hand: "palm", handB: "palm", fF: [0.23, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.23, 0.08], l: 0.3, tw: 0.2, hp: 0.25, hF: [0.5, -0.07], hB: [0.47, 0.07], hand: "palm", handB: "palm", fF: [0.33, 0], fB: [-0.19, -0.04], smF: 0.1, smB: 0.1, face: "shout" }, follow: { l: 0.34, b: [0.25, 0.1] } })), jitter: 0.01 }),
     // Shigan: a fencer's lunge behind one stabbing finger, the other hand kept at the small of the back
-    shigan: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.03, 0.05], l: -0.04, tw: -0.15, hp: -0.06, hF: [0.03, -0.06], hand: "finger", face: "fierce" }, hit: { b: [0.18, 0.05], l: 0.3, tw: 0.6, hp: 0.36, hF: [0.53, -0.07], hand: "finger", hB: [-0.14, 0.26], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hF: [0.46, -0.05] } })) }),
-    shigan2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, tw: 0.25, hp: 0.1, hB: [0, -0.05], handB: "finger", hF: [0.18, 0.02], face: "fierce" }, hit: { b: [0.19, 0.05], l: 0.32, tw: -0.66, hp: -0.4, hB: [0.53, -0.07], handB: "finger", hF: [-0.1, 0.24], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hB: [0.46, -0.05] } })) }),
+    shigan: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.03, 0.05], l: -0.04, tw: -0.15, hp: -0.06, hF: [0.03, -0.06], hand: "finger", face: "fierce" }, hit: { b: [0.18, 0.05], l: 0.3, tw: 0.6, hp: 0.36, hF: [0.53, -0.07], hand: "finger", hB: [-0.14, 0.26], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hF: [0.46, -0.05] } })) }),
+    shigan2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.03, 0.05], l: -0.06, tw: 0.25, hp: 0.1, hB: [0, -0.05], handB: "finger", hF: [0.18, 0.02], face: "fierce" }, hit: { b: [0.19, 0.05], l: 0.32, tw: -0.66, hp: -0.4, hB: [0.53, -0.07], handB: "finger", hF: [-0.1, 0.24], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hB: [0.46, -0.05] } })) }),
     // a claw raked down from high behind the head (and back up, and both crossing)
-    claw: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.08, b: [-0.02, 0.05], tw: -0.35, ls: -0.08, hF: { a: -2.15, r: 0.38 }, zF: 0.08, hand: "claw", eF: 1, face: "fierce" }, hit: { l: 0.32, b: [0.12, 0.08], tw: 0.5, ls: 0.08, hF: { a: 0.75, r: 0.43 }, zF: -0.08, hand: "claw", fF: [0.24, 0], fB: [-0.15, -0.02], sm: 0.06, face: "shout" }, follow: { hF: { a: 1.15, r: 0.4 }, zF: -0.14, tw: 0.62 } })) }),
-    claw2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: 0.18, b: [0, 0.1], tw: 0.32, hB: { a: 1.7, r: 0.36 }, zB: 0.06, handB: "claw", face: "fierce" }, hit: { l: -0.1, b: [0.1, 0], tw: -0.55, hB: { a: -0.95, r: 0.43 }, zB: -0.06, handB: "claw", hF: [0.12, 0.1], sm: 0.06, face: "shout" }, follow: { hB: { a: -1.25, r: 0.41 } } })) }),
-    claw_x: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.68, antic: { b: [0, 0.1], l: 0.2, hF: [0.2, 0.15], hB: [0.15, 0.18] }, load: { l: -0.24, b: [-0.04, 0.03], ht: -0.12, hF: { a: -2, r: 0.42 }, hB: { a: -1.85, r: 0.4 }, zF: 0.12, zB: 0.12, hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.4, b: [0.18, 0.1], ht: 0.1, hF: { a: 0.95, r: 0.43 }, hB: { a: 0.8, r: 0.42 }, zF: -0.12, zB: -0.12, hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, -0.02], smF: 0.07, smB: 0.07, face: "shout" }, follow: { l: 0.44, b: [0.2, 0.12] } })), jitter: 8e-3 }),
+    claw: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.08, b: [-0.02, 0.05], tw: -0.35, ls: -0.08, hF: { a: -2.15, r: 0.38 }, zF: 0.08, hand: "claw", eF: 1, face: "fierce" }, hit: { l: 0.32, b: [0.12, 0.08], tw: 0.5, ls: 0.08, hF: { a: 0.75, r: 0.43 }, zF: -0.08, hand: "claw", fF: [0.24, 0], fB: [-0.15, -0.02], sm: 0.06, face: "shout" }, follow: { hF: { a: 1.15, r: 0.4 }, zF: -0.14, tw: 0.62 } })) }),
+    claw2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: 0.18, b: [0, 0.1], tw: 0.32, hB: { a: 1.7, r: 0.36 }, zB: 0.06, handB: "claw", face: "fierce" }, hit: { l: -0.1, b: [0.1, 0], tw: -0.55, hB: { a: -0.95, r: 0.43 }, zB: -0.06, handB: "claw", hF: [0.12, 0.1], sm: 0.06, face: "shout" }, follow: { hB: { a: -1.25, r: 0.41 } } })) }),
+    claw_x: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.68, antic: { b: [0, 0.1], l: 0.2, hF: [0.2, 0.15], hB: [0.15, 0.18] }, load: { l: -0.24, b: [-0.04, 0.03], ht: -0.12, hF: { a: -2, r: 0.42 }, hB: { a: -1.85, r: 0.4 }, zF: 0.12, zB: 0.12, hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.4, b: [0.18, 0.1], ht: 0.1, hF: { a: 0.95, r: 0.43 }, hB: { a: 0.8, r: 0.42 }, zF: -0.12, zB: -0.12, hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, -0.02], smF: 0.07, smB: 0.07, face: "shout" }, follow: { l: 0.44, b: [0.2, 0.12] } })), jitter: 8e-3 }),
     // Ryusoken: the claw cocked by the ear, lunged out open, then crushed shut on what it caught
-    grab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.07], l: -0.06, tw: -0.32, hF: [0.02, -0.12], zF: 0.06, hand: "claw", eF: -0.6, face: "fierce" }, hit: { b: [0.14, 0.04], l: 0.28, tw: 0.5, hp: 0.25, hF: [0.5, -0.06], hand: "claw", fF: [0.26, 0], fB: [-0.15, -0.02], sm: 0.1, face: "shout" }, follow: { hand: "fist", hF: [0.43, -0.02], hr: 0.08, l: 0.22 } })) }),
-    grab2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.07], l: -0.08, tw: 0.3, hB: [0, -0.1], zB: 0.06, handB: "claw", eB: -0.6, face: "fierce" }, hit: { b: [0.15, 0.04], l: 0.3, tw: -0.58, hp: -0.3, hB: [0.5, -0.05], handB: "claw", hF: [0.08, 0.12], sm: 0.1, face: "shout" }, follow: { handB: "fist", hB: [0.43, -0.01], hr: -0.08 } })) }),
-    chop: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], tw: -0.3, hF: { a: -2.15, r: 0.37 }, hand: "palm", face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.42, hp: 0.2, hF: { a: 0.6, r: 0.43 }, hand: "palm", fF: [0.24, 0], sm: 0.06, face: "fierce" }, follow: { hF: { a: 0.9, r: 0.42 }, tw: 0.5 } })) }),
-    chop2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: 0.12, b: [0, 0.08], tw: 0.25, hF: { a: 2, r: 0.34 }, hand: "palm", face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.3, hF: { a: -0.62, r: 0.43 }, hand: "palm", sm: 0.06, face: "fierce" }, follow: { hF: { a: -0.9, r: 0.42 } } })) }),
+    grab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.07], l: -0.06, tw: -0.32, hF: [0.02, -0.12], zF: 0.06, hand: "claw", eF: -0.6, face: "fierce" }, hit: { b: [0.14, 0.04], l: 0.28, tw: 0.5, hp: 0.25, hF: [0.5, -0.06], hand: "claw", fF: [0.26, 0], fB: [-0.15, -0.02], sm: 0.1, face: "shout" }, follow: { hand: "fist", hF: [0.43, -0.02], hr: 0.08, l: 0.22 } })) }),
+    grab2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.07], l: -0.08, tw: 0.3, hB: [0, -0.1], zB: 0.06, handB: "claw", eB: -0.6, face: "fierce" }, hit: { b: [0.15, 0.04], l: 0.3, tw: -0.58, hp: -0.3, hB: [0.5, -0.05], handB: "claw", hF: [0.08, 0.12], sm: 0.1, face: "shout" }, follow: { handB: "fist", hB: [0.43, -0.01], hr: -0.08 } })) }),
+    chop: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.14, b: [-0.02, 0.04], tw: -0.3, hF: { a: -2.15, r: 0.37 }, hand: "palm", face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.42, hp: 0.2, hF: { a: 0.6, r: 0.43 }, hand: "palm", fF: [0.24, 0], sm: 0.06, face: "fierce" }, follow: { hF: { a: 0.9, r: 0.42 }, tw: 0.5 } })) }),
+    chop2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: 0.12, b: [0, 0.08], tw: 0.25, hF: { a: 2, r: 0.34 }, hand: "palm", face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.3, hF: { a: -0.62, r: 0.43 }, hand: "palm", sm: 0.06, face: "fierce" }, follow: { hF: { a: -0.9, r: 0.42 } } })) }),
     // a long lunging thrust of one arm, the other flung back behind for the reach
-    thrust: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.06, 0.1], l: -0.06, tw: -0.4, hp: -0.15, hF: [0.04, 0.06], hB: [0.2, 0], face: "grit" }, hit: { b: [0.16, 0.05], l: 0.46, tw: 0.6, hp: 0.3, hF: [0.47, -0.01], hB: [-0.22, 0.16], fF: [0.28, 0], fB: [-0.33, -0.08], sm: 0.14, face: "shout" } })) }),
+    thrust: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.06, 0.1], l: -0.06, tw: -0.4, hp: -0.15, hF: [0.04, 0.06], hB: [0.2, 0], face: "grit" }, hit: { b: [0.16, 0.05], l: 0.46, tw: 0.6, hp: 0.3, hF: [0.47, -0.01], hB: [-0.22, 0.16], fF: [0.28, 0], fB: [-0.33, -0.08], sm: 0.14, face: "shout" } })) }),
     // head down, the shoulder first, arms tucked: a battering ram
-    charge: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.06, 0.13], l: 0.12, tw: -0.2, hF: [0.1, 0.18], hB: [-0.1, 0.2], face: "grit" }, hit: { b: [0.12, 0.09], l: 0.6, tw: 0.55, hp: 0.25, ht: -0.25, hF: [0.12, 0.15], hB: [-0.24, 0.18], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    charge: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.06, 0.13], l: 0.12, tw: -0.2, hF: [0.1, 0.18], hB: [-0.1, 0.2], face: "grit" }, hit: { b: [0.12, 0.09], l: 0.6, tw: 0.55, hp: 0.25, ht: -0.25, hF: [0.12, 0.15], hB: [-0.24, 0.18], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
     // hands on the other's collar, reared right back, then the brow brought down into them
-    headbutt: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.42, b: [-0.07, 0.03], ht: -0.2, hF: [0.32, -0.02], hB: [0.3, 0.02], hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.55, b: [0.19, 0.06], ht: 0.32, hF: [0.24, 0.06], hB: [0.22, 0.1], hand: "fist", handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], face: "shout" } })) }),
+    headbutt: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.42, b: [-0.07, 0.03], ht: -0.2, hF: [0.32, -0.02], hB: [0.3, 0.02], hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.55, b: [0.19, 0.06], ht: 0.32, hF: [0.24, 0.06], hB: [0.22, 0.1], hand: "fist", handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], face: "shout" } })) }),
     // ---------------------------------------------------------------- kicks
     // a snap kick: the knee chambered high, the leg whipped out level, the hips turned over into it and the body back to balance it
-    kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
+    kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
     // Black Leg (Sanji): kicks from a cook's stance, hands in his pockets.
     // The snap: the knee drawn up high and tight first (the chamber), then the
     // leg whipped out straight from it, toe pointed, the body leaning back to
     // balance it — and drawn back into the chamber before it comes down.
-    bl_snap: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.62, load: { b: [0, 0.07], l: -0.04, hp: -0.18, tw: 0.12, fF: [0.2, -0.46], fB: [-0.06, 0], ...arms(c, { hF: [0.12, 0.08], hB: [0.04, 0.12] }), face: "fierce" }, hit: { b: [0.04, -0.01], l: -0.3, hp: 0.32, tw: -0.06, ht: 0.12, fF: [0.8, -0.58], fB: [-0.1, 0], sm: 0.12, ...arms(c, { hF: [0.06, 0.16], hB: [-0.14, 0.14] }), face: "fierce" }, follow: { fF: [0.3, -0.48], l: -0.14, hp: 0.12 }, loadEase: "inout", hitEase: "snap" })), legs: true }),
+    bl_snap: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, load: { b: [0, 0.07], l: -0.04, hp: -0.18, tw: 0.12, fF: [0.2, -0.46], fB: [-0.06, 0], ...arms(c, { hF: [0.12, 0.08], hB: [0.04, 0.12] }), face: "fierce" }, hit: { b: [0.04, -0.01], l: -0.3, hp: 0.32, tw: -0.06, ht: 0.12, fF: [0.8, -0.58], fB: [-0.1, 0], sm: 0.12, ...arms(c, { hF: [0.06, 0.16], hB: [-0.14, 0.14] }), face: "fierce" }, follow: { fF: [0.3, -0.48], l: -0.14, hp: 0.12 }, loadEase: "inout", hitEase: "snap" })), legs: true }),
     // the roundhouse: a pivot on the standing foot, the hips turned right
     // over, the leg swinging round high and flat at the head, the body
     // leaning away from it — a long, smooth arc, not a jab
-    bl_round: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.58, load: { b: [0, 0.08], l: -0.08, hp: -0.38, tw: -0.22, ls: 0.06, fF: [0.14, -0.5], fB: [-0.05, 0], ...arms(c, { hF: [0.14, 0.04], hB: [0.06, 0.1] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.42, hp: 0.6, tw: 0.28, ls: -0.16, ht: 0.22, fF: [0.66, -0.92], fB: [-0.07, 0], sm: 0.14, ...arms(c, { hF: [-0.16, 0.1], hB: [0.26, -0.02] }), face: "shout" }, follow: { fF: [0.34, -0.58], l: -0.22, hp: 0.34, tw: 0.16 }, loadEase: "inout" })), legs: true }),
-    kick_high: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
+    bl_round: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.58, load: { b: [0, 0.08], l: -0.08, hp: -0.38, tw: -0.22, ls: 0.06, fF: [0.14, -0.5], fB: [-0.05, 0], ...arms(c, { hF: [0.14, 0.04], hB: [0.06, 0.1] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.42, hp: 0.6, tw: 0.28, ls: -0.16, ht: 0.22, fF: [0.66, -0.92], fB: [-0.07, 0], sm: 0.14, ...arms(c, { hF: [-0.16, 0.1], hB: [0.26, -0.02] }), face: "shout" }, follow: { fF: [0.34, -0.58], l: -0.22, hp: 0.34, tw: 0.16 }, loadEase: "inout" })), legs: true }),
+    kick_high: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
     // a whirling kick: a turn the other way, the leg whipped round, and the body spun on through after it
-    kick_spin: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
-    sweep: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { followAt: 0.35, load: { b: [0, 0.24], l: 0.24, fF: [0.06, -0.04], ...arms(c, { hF: [0.22, 0.32], hB: [-0.04, 0.32] }), face: "fierce" }, hit: { b: [0.02, 0.31], l: 0.32, hp: 0.4, fF: [0.82, -0.05], fB: [-0.2, 0], sm: 0.08, ...arms(c, { hF: [0.26, 0.44], hB: [-0.1, 0.38] }), face: "fierce" }, follow: { sp: 0.5, fF: [0.5, -0.04] }, end: spun(c) })), legs: true }),
+    kick_spin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
+    sweep: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.35, load: { b: [0, 0.24], l: 0.24, fF: [0.06, -0.04], ...arms(c, { hF: [0.22, 0.32], hB: [-0.04, 0.32] }), face: "fierce" }, hit: { b: [0.02, 0.31], l: 0.32, hp: 0.4, fF: [0.82, -0.05], fB: [-0.2, 0], sm: 0.08, ...arms(c, { hF: [0.26, 0.44], hB: [-0.1, 0.38] }), face: "fierce" }, follow: { sp: 0.5, fF: [0.5, -0.04] }, end: spun(c) })), legs: true }),
     // the Rankyaku finisher: a hop and the leg swept up and over in a crescent, the arms flung out to balance it
-    rankyaku: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { followAt: 0.3, load: { b: [0, 0.12], l: 0.08, hp: -0.25, fF: [0.12, -0.18], fB: [-0.08, 0], ...arms(c, { hF: [0.18, 0.06], hB: [0.06, 0.12] }), face: "grit" }, hit: { b: [0.02, -0.04], z: 0.12, l: -0.55, hp: 0.5, ls: -0.16, ht: 0.25, fF: [0.42, -0.98], fB: [-0.06, -0.06], sm: 0.12, ...arms(c, { hF: [-0.12, -0.04], hB: [0.24, -0.16], zF: 0.18, zB: 0.12 }), face: "shout" }, follow: { z: 0.04, l: -0.38, fF: [0.66, -0.48] } })), legs: true }),
+    rankyaku: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.3, load: { b: [0, 0.12], l: 0.08, hp: -0.25, fF: [0.12, -0.18], fB: [-0.08, 0], ...arms(c, { hF: [0.18, 0.06], hB: [0.06, 0.12] }), face: "grit" }, hit: { b: [0.02, -0.04], z: 0.12, l: -0.55, hp: 0.5, ls: -0.16, ht: 0.25, fF: [0.42, -0.98], fB: [-0.06, -0.06], sm: 0.12, ...arms(c, { hF: [-0.12, -0.04], hB: [0.24, -0.16], zF: 0.18, zB: 0.12 }), face: "shout" }, follow: { z: 0.04, l: -0.38, fF: [0.66, -0.48] } })), legs: true }),
     // Hasshoken: the palm driven in and stopped dead against the body, the whole arm shuddering as the blow goes on through it
-    vibe_palm: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, load: { b: [-0.03, 0.09], l: 0, tw: -0.4, hp: -0.15, hF: [0.02, 0.16], hand: "palm", hB: [0.28, -0.02], handB: "palm", face: "grit" }, hit: { b: [0.14, 0.07], l: 0.22, tw: 0.5, hp: 0.3, hF: [0.44, -0.03], hand: "palm", hB: [0, 0.18], handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], sm: 0.05, face: "shout" }, holdT: 0.16, holdK: 0.6 })), shake: { a: 0.014, t: 0.18 } }),
+    vibe_palm: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, load: { b: [-0.03, 0.09], l: 0, tw: -0.4, hp: -0.15, hF: [0.02, 0.16], hand: "palm", hB: [0.28, -0.02], handB: "palm", face: "grit" }, hit: { b: [0.14, 0.07], l: 0.22, tw: 0.5, hp: 0.3, hF: [0.44, -0.03], hand: "palm", hB: [0, 0.18], handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], sm: 0.05, face: "shout" }, holdT: 0.16, holdK: 0.6 })), shake: { a: 0.014, t: 0.18 } }),
     // both hands on the other's head, pulling it down onto the knee driven up to meet it
-    knee: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.07], l: 0.04, hp: -0.1, fF: [0.1, -0.1], hF: [0.3, -0.04], hB: [0.26, 0], hand: "claw", handB: "claw", face: "fierce" }, hit: { b: [0.08, -0.05], z: 0.07, l: 0.16, hp: 0.3, fF: [0.26, -0.44], fB: [-0.08, -0.02], hF: [0.3, 0.1], hB: [0.27, 0.13], hand: "fist", handB: "fist", ht: 0.15, face: "shout" }, follow: { z: 0 } })), legs: true }),
-    axe_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.34, hp: 0.2, ht: -0.1, fF: [0.18, -0.98], fB: [-0.1, -0.14], ...arms(c, { hF: [-0.12, -0.1], hB: [0.22, -0.22] }), face: "grit" }, hit: { z: 0, b: [0.1, 0.1], l: 0.32, hp: 0, ht: 0.15, fF: [0.58, -0.04], fB: [-0.17, 0], smfF: 0.08, ...arms(c, { hF: [-0.1, 0.22], hB: [0.1, 0.16] }), face: "shout" } })), legs: true }),
+    knee: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.07], l: 0.04, hp: -0.1, fF: [0.1, -0.1], hF: [0.3, -0.04], hB: [0.26, 0], hand: "claw", handB: "claw", face: "fierce" }, hit: { b: [0.08, -0.05], z: 0.07, l: 0.16, hp: 0.3, fF: [0.26, -0.44], fB: [-0.08, -0.02], hF: [0.3, 0.1], hB: [0.27, 0.13], hand: "fist", handB: "fist", ht: 0.15, face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.75, load: { z: 0.55, l: -0.34, hp: 0.2, ht: -0.1, fF: [0.18, -0.98], fB: [-0.1, -0.14], ...arms(c, { hF: [-0.12, -0.1], hB: [0.22, -0.22] }), face: "grit" }, hit: { z: 0, b: [0.1, 0.1], l: 0.32, hp: 0, ht: 0.15, fF: [0.58, -0.04], fB: [-0.17, 0], smfF: 0.08, ...arms(c, { hF: [-0.1, 0.22], hB: [0.1, 0.16] }), face: "shout" } })), legs: true }),
     // Collier: crouched, then up off the ground with the leg swung in an arc to the throat
-    rise_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.19], l: 0.16, hp: -0.15, fF: [0.28, -0.03], fB: [-0.12, 0], ...arms(c, { hF: [0.1, 0.28], hB: [0, 0.26] }), face: "grit" }, hit: { b: [0.02, -0.05], z: 0.16, l: -0.5, hp: 0.3, ht: 0.2, fF: [0.38, -0.98], fB: [-0.05, -0.04], sm: 0.12, ...arms(c, { hF: [-0.22, 0.1], hB: [0.14, 0.2] }), face: "shout" }, follow: { z: 0.06, fF: [0.42, -0.85] } })), legs: true }),
+    rise_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.19], l: 0.16, hp: -0.15, fF: [0.28, -0.03], fB: [-0.12, 0], ...arms(c, { hF: [0.1, 0.28], hB: [0, 0.26] }), face: "grit" }, hit: { b: [0.02, -0.05], z: 0.16, l: -0.5, hp: 0.3, ht: 0.2, fF: [0.38, -0.98], fB: [-0.05, -0.04], sm: 0.12, ...arms(c, { hF: [-0.22, 0.1], hB: [0.14, 0.2] }), face: "shout" }, follow: { z: 0.06, fF: [0.42, -0.85] } })), legs: true }),
     // Mouton Shot: a dip, the knee drawn right up to the chest, then the sole driven out straight with a hop behind it
-    mouton: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, antic: { b: [0, 0.1], l: 0.12, fF: [0.2, 0] }, load: { l: -0.36, z: 0.08, hp: -0.2, b: [-0.04, 0.04], ht: 0.12, fF: [-0.05, -0.48], fB: [-0.04, 0], ...arms(c, { hF: [0.1, -0.1] }), face: "grit" }, hit: { l: -0.78, b: [0.27, 0], z: 0.17, hp: 0.35, ht: 0.35, fF: [0.9, -0.56], fB: [-0.12, -0.13], smfF: 0.12, ...arms(c, { hF: [-0.36, 0.25], hB: [-0.32, 0.3] }), face: "shout" }, follow: { z: 0, l: -0.42 } })), legs: true }),
-    handstand: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
-    flying_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0], face: "grit" }, hit: { z: 0.3, l: -0.34, hp: 0.3, fF: [0.78, -0.46], fB: [-0.06, -0.3], smfF: 0.08, ...arms(c, { hF: [-0.2, 0.05], hB: [0.2, -0.1] }), face: "shout" }, follow: { z: 0 } })), legs: true }),
-    stomp: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, ...arms(c, { hF: [0.2, -0.1], hB: [-0.1, -0.1] }), face: "grit" }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    mouton: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, antic: { b: [0, 0.1], l: 0.12, fF: [0.2, 0] }, load: { l: -0.36, z: 0.08, hp: -0.2, b: [-0.04, 0.04], ht: 0.12, fF: [-0.05, -0.48], fB: [-0.04, 0], ...arms(c, { hF: [0.1, -0.1] }), face: "grit" }, hit: { l: -0.78, b: [0.27, 0], z: 0.17, hp: 0.35, ht: 0.35, fF: [0.9, -0.56], fB: [-0.12, -0.13], smfF: 0.12, ...arms(c, { hF: [-0.36, 0.25], hB: [-0.32, 0.3] }), face: "shout" }, follow: { z: 0, l: -0.42 } })), legs: true }),
+    handstand: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
+    flying_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0], face: "grit" }, hit: { z: 0.3, l: -0.34, hp: 0.3, fF: [0.78, -0.46], fB: [-0.06, -0.3], smfF: 0.08, ...arms(c, { hF: [-0.2, 0.05], hB: [0.2, -0.1] }), face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { fF: [0.18, -0.55], l: -0.1, ...arms(c, { hF: [0.2, -0.1], hB: [-0.1, -0.1] }), face: "grit" }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
     // Okama Kenpo: ballet
-    ballet_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, load: { b: [0, 0.11], hF: [0.14, 0.24], hB: [-0.08, 0.24], zF: 0.08, zB: 0.08 }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.04], hp: 0.25, hF: [0.34, -0.24], hB: [-0.36, -0.22], zF: 0.12, zB: 0.12, sm: 0.06, face: "fierce" } })), legs: true }),
-    pirouette: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, followAt: 0.35, load: { b: [0, 0.1], sp: -0.05, hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 0, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hp: 0.3, hF: [0.14, -0.44], hB: [0, -0.46], zF: 0.05, zB: 0.05, sm: 0.08, face: "fierce" }, follow: { sp: 0.6 }, end: { ...BALLET, sp: 1 } })), legs: true }),
-    jete: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], zF: 0.1, zB: 0.1, smfF: 0.06, face: "fierce" }, follow: { z: 0 } })), legs: true }),
-    arabesque: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], zB: 0.1, smfB: 0.08, face: "fierce" } })), legs: true }),
+    ballet_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, load: { b: [0, 0.11], hF: [0.14, 0.24], hB: [-0.08, 0.24], zF: 0.08, zB: 0.08 }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.04], hp: 0.25, hF: [0.34, -0.24], hB: [-0.36, -0.22], zF: 0.12, zB: 0.12, sm: 0.06, face: "fierce" } })), legs: true }),
+    pirouette: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, followAt: 0.35, load: { b: [0, 0.1], sp: -0.05, hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 0, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hp: 0.3, hF: [0.14, -0.44], hB: [0, -0.46], zF: 0.05, zB: 0.05, sm: 0.08, face: "fierce" }, follow: { sp: 0.6 }, end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], zF: 0.1, zB: 0.1, smfF: 0.06, face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], zB: 0.1, smfB: 0.08, face: "fierce" } })), legs: true }),
     // ---------------------------------------------------------------- blades
     // the blade raised back over the shoulder, the body wound away, then cut down through with the hips behind it
-    slash: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.05], tw: -0.42, hp: -0.15, hF: { a: -2.15, r: 0.35 }, wF: -2.6, hB: [-0.04, 0.18], face: "fierce" }, hit: { l: 0.3, b: [0.14, 0.08], tw: 0.5, hp: 0.3, hF: { a: 0.6, r: 0.43 }, wF: 0.85, hB: [0.16, 0.18], fF: [0.31, 0], fB: [-0.17, -0.02], face: "shout" }, follow: { l: 0.34, tw: 0.62, hF: { a: 0.95, r: 0.42 }, wF: 1.25 } })) }),
-    slash2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: 0.14, b: [0, 0.1], tw: 0.3, hp: 0.1, hF: { a: 2.05, r: 0.34 }, wF: 2.5, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.03], tw: -0.35, hp: -0.15, hF: { a: -0.62, r: 0.43 }, wF: -1, face: "fierce" }, follow: { hF: { a: -1, r: 0.42 }, wF: -1.45, tw: -0.42 } })) }),
-    rise_slash: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.17], l: 0.28, tw: -0.4, hp: -0.12, hF: { a: 1.9, r: 0.36 }, wF: 2.55, hB: [0, 0.22], face: "grit" }, hit: { b: [0.12, -0.04], z: 0.06, l: -0.22, tw: 0.42, hp: 0.25, hF: { a: -1.2, r: 0.43 }, wF: -1.55, hB: [-0.12, 0.1], fF: [0.26, 0], fB: [-0.16, -0.06], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.85, l: -0.26 } })) }),
-    slash3: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), loadAt: 0.7, followAt: 0.35, load: { l: -0.22, b: [-0.04, 0.08], tw: -0.5, hF: { a: 2.7, r: 0.36 }, wF: 3, sp: -0.05, face: "grit" }, hit: { sp: 0, l: 0.22, b: [0.16, 0.06], tw: 0.55, hp: 0.3, hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, follow: { sp: 0.55, wF: 0.3 }, end: { ...sw(c), sp: 1 } })) }),
+    slash: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.05], tw: -0.42, hp: -0.15, hF: { a: -2.15, r: 0.35 }, wF: -2.6, hB: [-0.04, 0.18], face: "fierce" }, hit: { l: 0.3, b: [0.14, 0.08], tw: 0.5, hp: 0.3, hF: { a: 0.6, r: 0.43 }, wF: 0.85, hB: [0.16, 0.18], fF: [0.31, 0], fB: [-0.17, -0.02], face: "shout" }, follow: { l: 0.34, tw: 0.62, hF: { a: 0.95, r: 0.42 }, wF: 1.25 } })) }),
+    slash2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: 0.14, b: [0, 0.1], tw: 0.3, hp: 0.1, hF: { a: 2.05, r: 0.34 }, wF: 2.5, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.03], tw: -0.35, hp: -0.15, hF: { a: -0.62, r: 0.43 }, wF: -1, face: "fierce" }, follow: { hF: { a: -1, r: 0.42 }, wF: -1.45, tw: -0.42 } })) }),
+    rise_slash: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.17], l: 0.28, tw: -0.4, hp: -0.12, hF: { a: 1.9, r: 0.36 }, wF: 2.55, hB: [0, 0.22], face: "grit" }, hit: { b: [0.12, -0.04], z: 0.06, l: -0.22, tw: 0.42, hp: 0.25, hF: { a: -1.2, r: 0.43 }, wF: -1.55, hB: [-0.12, 0.1], fF: [0.26, 0], fB: [-0.16, -0.06], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.85, l: -0.26 } })) }),
+    slash3: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), loadAt: 0.7, followAt: 0.35, load: { l: -0.22, b: [-0.04, 0.08], tw: -0.5, hF: { a: 2.7, r: 0.36 }, wF: 3, sp: -0.05, face: "grit" }, hit: { sp: 0, l: 0.22, b: [0.16, 0.06], tw: 0.55, hp: 0.3, hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, follow: { sp: 0.55, wF: 0.3 }, end: { ...sw(c), sp: 1 } })) }),
     // a deep lunge behind the point, the free hand laid along to aim it
-    stab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.09, 0.07], tw: -0.45, hp: -0.2, hF: [-0.04, 0.06], wF: 0, hB: [0.14, -0.04], handB: "palm", face: "grit" }, hit: { l: 0.34, b: [0.23, 0.05], tw: 0.55, hp: 0.4, hF: [0.47, -0.03], wF: -0.03, hB: [-0.22, 0.14], handB: "fist", fF: [0.37, 0], fB: [-0.23, -0.03], face: "shout" } })) }),
-    cleave: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.12, hF: [0.2, 0.18], wF: -0.4 }, load: { l: -0.26, b: [-0.06, 0], tw: -0.25, ht: -0.1, hF: { a: -1.85, r: 0.38 }, hB: { a: -1.75, r: 0.34 }, wF: -2.3, face: "grit" }, hit: { l: 0.4, b: [0.23, 0.13], tw: 0.3, hp: 0.3, ht: 0.2, hF: { a: 0.72, r: 0.41 }, hB: { a: 0.82, r: 0.36 }, wF: 0.78, fF: [0.37, 0], fB: [-0.23, 0], face: "shout" }, follow: { l: 0.44, b: [0.25, 0.15], wF: 0.86 } })), jitter: 0.01 }),
+    stab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: -0.14, b: [-0.09, 0.07], tw: -0.45, hp: -0.2, hF: [-0.04, 0.06], wF: 0, hB: [0.14, -0.04], handB: "palm", face: "grit" }, hit: { l: 0.34, b: [0.23, 0.05], tw: 0.55, hp: 0.4, hF: [0.47, -0.03], wF: -0.03, hB: [-0.22, 0.14], handB: "fist", fF: [0.37, 0], fB: [-0.23, -0.03], face: "shout" } })) }),
+    cleave: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.12, hF: [0.2, 0.18], wF: -0.4 }, load: { l: -0.26, b: [-0.06, 0], tw: -0.25, ht: -0.1, hF: { a: -1.85, r: 0.38 }, hB: { a: -1.75, r: 0.34 }, wF: -2.3, face: "grit" }, hit: { l: 0.4, b: [0.23, 0.13], tw: 0.3, hp: 0.3, ht: 0.2, hF: { a: 0.72, r: 0.41 }, hB: { a: 0.82, r: 0.36 }, wF: 0.78, fF: [0.37, 0], fB: [-0.23, 0], face: "shout" }, follow: { l: 0.44, b: [0.25, 0.15], wF: 0.86 } })), jitter: 0.01 }),
     // the quick draw: crouched low with the hand on the hilt at the hip, the cut drawn out through the dash, and the blade slid home after
-    iai: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: { ...SWORD, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.17], l: 0.36, tw: -0.5, hp: -0.2, ht: -0.15, hF: [-0.02, 0.32], zF: -0.12, wF: 2.75, hB: [0.02, 0.3], face: "grit" }, hit: { l: 0.5, b: [0.22, 0.09], tw: 0.6, hp: 0.4, hF: [0.47, 0.03], wF: 0.08, hB: [-0.1, 0.24], fB: [-0.37, -0.12], face: "shout" }, follow: { l: 0.2, tw: 0.2, hF: [0.12, 0.27], zF: -0.08, wF: 2.6 } })) }),
+    iai: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: { ...SWORD, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.17], l: 0.36, tw: -0.5, hp: -0.2, ht: -0.15, hF: [-0.02, 0.32], zF: -0.12, wF: 2.75, hB: [0.02, 0.3], face: "grit" }, hit: { l: 0.5, b: [0.22, 0.09], tw: 0.6, hp: 0.4, hF: [0.47, 0.03], wF: 0.08, hB: [-0.1, 0.24], fB: [-0.37, -0.12], face: "shout" }, follow: { l: 0.2, tw: 0.2, hF: [0.12, 0.27], zF: -0.08, wF: 2.6 } })) }),
     // two blades (Nitoryu): alternating cuts, then an X
-    dual1: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: -0.16, tw: -0.4, hF: { a: -2.1, r: 0.34 }, wF: -2.55, face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.45, hp: 0.25, hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" }, follow: { tw: 0.55, wF: 1.1 } })) }),
-    dual2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: -0.14, tw: 0.35, hB: { a: -2.2, r: 0.33 }, wB: -2.6, face: "fierce" }, hit: { l: 0.3, b: [0.13, 0.07], tw: -0.5, hp: -0.25, hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" }, follow: { tw: -0.6, wB: 1.15 } })) }),
-    dual3: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: 0.12, b: [0, 0.1], tw: 0.2, hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.25, hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
-    dualx: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], ht: -0.08, hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, zF: 0.06, zB: 0.06, face: "grit" }, hit: { l: 0.34, b: [0.18, 0.1], ht: 0.12, hp: 0.2, hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, zF: -0.08, zB: -0.08, fF: [0.31, 0], fB: [-0.2, -0.02], face: "shout" }, follow: { l: 0.38 } })) }),
-    dual_stab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: -0.16, b: [-0.1, 0.07], tw: -0.3, hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "grit" }, hit: { l: 0.36, b: [0.24, 0.05], tw: 0.3, hp: 0.3, hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    dual1: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: -0.16, tw: -0.4, hF: { a: -2.1, r: 0.34 }, wF: -2.55, face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.45, hp: 0.25, hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" }, follow: { tw: 0.55, wF: 1.1 } })) }),
+    dual2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: -0.14, tw: 0.35, hB: { a: -2.2, r: 0.33 }, wB: -2.6, face: "fierce" }, hit: { l: 0.3, b: [0.13, 0.07], tw: -0.5, hp: -0.25, hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" }, follow: { tw: -0.6, wB: 1.15 } })) }),
+    dual3: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: 0.12, b: [0, 0.1], tw: 0.2, hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.25, hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], ht: -0.08, hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, zF: 0.06, zB: 0.06, face: "grit" }, hit: { l: 0.34, b: [0.18, 0.1], ht: 0.12, hp: 0.2, hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, zF: -0.08, zB: -0.08, fF: [0.31, 0], fB: [-0.2, -0.02], face: "shout" }, follow: { l: 0.38 } })) }),
+    dual_stab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: -0.16, b: [-0.1, 0.07], tw: -0.3, hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "grit" }, hit: { l: 0.36, b: [0.24, 0.05], tw: 0.3, hp: 0.3, hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
     // Tora Gari: up off the ground with the blades raised high, and down through the landing in one cut
-    tora: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, loadAt: 0.72, load: { z: 0.4, l: -0.32, ht: -0.1, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "grit" }, hit: { z: 0, l: 0.42, b: [0.24, 0.12], ht: 0.18, hp: 0.25, hF: { a: 0.75, r: 0.4 }, hB: { a: 0.9, r: 0.38 }, wF: 0.72, wB: 0.86, zF: 0.08, zB: 0.08, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
-    bladespin: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], tw: -0.4, hF: { a: 2.6, r: 0.38 }, wF: 2.9, face: "grit" }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, zF: 0.1, zB: 0.1, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    tora: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, loadAt: 0.72, load: { z: 0.4, l: -0.32, ht: -0.1, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "grit" }, hit: { z: 0, l: 0.42, b: [0.24, 0.12], ht: 0.18, hp: 0.25, hF: { a: 0.75, r: 0.4 }, hB: { a: 0.9, r: 0.38 }, wF: 0.72, wB: 0.86, zF: 0.08, zB: 0.08, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], tw: -0.4, hF: { a: 2.6, r: 0.38 }, wF: 2.9, face: "grit" }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, zF: 0.1, zB: 0.1, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
     // big weapons: swung with the whole body; the head comes down on the ground in front, not through it
-    axe: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], tw: -0.35, hp: -0.15, ht: -0.1, hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "grit" }, hit: { l: 0.36, b: [0.2, 0.1], tw: 0.3, hp: 0.25, ht: 0.15, hF: { a: 0.62, r: 0.42 }, hB: { a: 0.8, r: 0.36 }, wF: 0.72, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4, wF: 0.8 } })) }),
-    axe2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], tw: 0.3, hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6, face: "grit" }, hit: { l: -0.2, b: [0.16, 0.02], tw: -0.3, hp: -0.2, hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" }, follow: { wF: -1.4, tw: -0.4 } })) }),
-    axe_slam: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], ht: -0.15, hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "grit" }, hit: { z: 0, l: 0.46, b: [0.24, 0.16], ht: 0.2, hF: { a: 0.62, r: 0.43 }, hB: { a: 0.74, r: 0.38 }, wF: 0.58, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.48, b: [0.24, 0.17], wF: 0.64 } })), jitter: 0.012 }),
-    staff: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAFF, load: { l: -0.14, tw: -0.35, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2], face: "fierce" }, hit: { l: 0.26, b: [0.1, 0.05], tw: 0.4, hp: 0.2, hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" }, follow: { tw: 0.5, wF: 0.85 } })) }),
-    staff2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], tw: 0.3, hF: { a: 1.9, r: 0.34 }, wF: 2.3, face: "fierce" }, hit: { l: -0.12, b: [0.1, 0.02], tw: -0.35, hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" }, follow: { wF: -1.1 } })) }),
-    staff_jab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], tw: -0.35, hF: [0, 0.06], wF: 0.02, face: "grit" }, hit: { l: 0.3, b: [0.2, 0.04], tw: 0.45, hp: 0.3, hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    axe: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], tw: -0.35, hp: -0.15, ht: -0.1, hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "grit" }, hit: { l: 0.36, b: [0.2, 0.1], tw: 0.3, hp: 0.25, ht: 0.15, hF: { a: 0.62, r: 0.42 }, hB: { a: 0.8, r: 0.36 }, wF: 0.72, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4, wF: 0.8 } })) }),
+    axe2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], tw: 0.3, hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6, face: "grit" }, hit: { l: -0.2, b: [0.16, 0.02], tw: -0.3, hp: -0.2, hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" }, follow: { wF: -1.4, tw: -0.4 } })) }),
+    axe_slam: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], ht: -0.15, hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "grit" }, hit: { z: 0, l: 0.46, b: [0.24, 0.16], ht: 0.2, hF: { a: 0.62, r: 0.43 }, hB: { a: 0.74, r: 0.38 }, wF: 0.58, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.48, b: [0.24, 0.17], wF: 0.64 } })), jitter: 0.012 }),
+    staff: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAFF, load: { l: -0.14, tw: -0.35, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2], face: "fierce" }, hit: { l: 0.26, b: [0.1, 0.05], tw: 0.4, hp: 0.2, hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" }, follow: { tw: 0.5, wF: 0.85 } })) }),
+    staff2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], tw: 0.3, hF: { a: 1.9, r: 0.34 }, wF: 2.3, face: "fierce" }, hit: { l: -0.12, b: [0.1, 0.02], tw: -0.35, hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" }, follow: { wF: -1.1 } })) }),
+    staff_jab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], tw: -0.35, hF: [0, 0.06], wF: 0.02, face: "grit" }, hit: { l: 0.3, b: [0.2, 0.04], tw: 0.45, hp: 0.3, hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
     // ---------------------------------------------------------------- guns & throws
     // a pistol held out and fired, the recoil kicking the hand up; a slingshot's band
     // drawn back to the cheek and let go, the drawing hand springing open
-    shoot: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.43, -0.04], wF: 0, tw: 0.3, ht: 0.06, hB: c.sling ? [-0.02, -0.07] : [0.3, 0.05], l: 0.04, face: "fierce" }, hit: { hF: c.sling ? [0.42, -0.1] : [0.35, -0.13], wF: c.sling ? -0.15 : -0.45, tw: 0.25, hB: c.sling ? [-0.07, -0.09] : [0.26, 0.04], handB: c.sling ? "palm" : "fist", l: c.sling ? -0.02 : -0.12, b: [-0.08, 0] }, follow: { hF: [0.41, -0.06], wF: -0.12, l: 0, handB: "fist" } })) }),
+    shoot: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.43, -0.04], wF: 0, tw: 0.3, ht: 0.06, hB: c.sling ? [-0.02, -0.07] : [0.3, 0.05], l: 0.04, face: "fierce" }, hit: { hF: c.sling ? [0.42, -0.1] : [0.35, -0.13], wF: c.sling ? -0.15 : -0.45, tw: 0.25, hB: c.sling ? [-0.07, -0.09] : [0.26, 0.04], handB: c.sling ? "palm" : "fist", l: c.sling ? -0.02 : -0.12, b: [-0.08, 0] }, follow: { hF: [0.41, -0.06], wF: -0.12, l: 0, handB: "fist" } })) }),
     // a long aim, the eye down the barrel (or along the band), then the shot: a gun's recoil throws the arm up, a slingshot's band snaps the hand open
-    aim: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, tw: 0.35, hr: 0.14, hB: c.sling ? [-0.03, -0.07] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: c.sling ? { hF: [0.42, -0.1], wF: -0.15, l: -0.04, b: [-0.05, 0.05], hr: 0.06 } : { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02], hr: 0 }, hit: c.sling ? { hF: [0.42, -0.1], wF: -0.15, hB: [-0.09, -0.1], handB: "palm", l: -0.04, b: [-0.05, 0.05], face: "shout" } : { hF: [0.3, -0.24], wF: -0.7, hB: [0.24, 0.02], l: -0.16, b: [-0.14, 0.02], face: "shout" } })) }),
-    flick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { hF: [0.02, 0.2], tw: -0.25, l: -0.06 }, hit: { hF: [0.46, -0.1], tw: 0.35, l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
-    throw: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, tw: -0.45, hp: -0.2, l: -0.16, b: [-0.04, 0.04], hB: [0.3, -0.06], handB: "palm", face: "fierce" }, hit: { hF: { a: 0.15, r: 0.43 }, tw: 0.5, hp: 0.3, l: 0.26, b: [0.1, 0.04], hB: [-0.1, 0.16], handB: "fist", hand: "palm", fF: [0.24, 0], fB: [-0.15, -0.03], face: "fierce" } })) }),
+    aim: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, tw: 0.35, hr: 0.14, hB: c.sling ? [-0.03, -0.07] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: c.sling ? { hF: [0.42, -0.1], wF: -0.15, l: -0.04, b: [-0.05, 0.05], hr: 0.06 } : { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02], hr: 0 }, hit: c.sling ? { hF: [0.42, -0.1], wF: -0.15, hB: [-0.09, -0.1], handB: "palm", l: -0.04, b: [-0.05, 0.05], face: "shout" } : { hF: [0.3, -0.24], wF: -0.7, hB: [0.24, 0.02], l: -0.16, b: [-0.14, 0.02], face: "shout" } })) }),
+    flick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { hF: [0.02, 0.2], tw: -0.25, l: -0.06 }, hit: { hF: [0.46, -0.1], tw: 0.35, l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { hF: { a: -2.4, r: 0.4 }, tw: -0.45, hp: -0.2, l: -0.16, b: [-0.04, 0.04], hB: [0.3, -0.06], handB: "palm", face: "fierce" }, hit: { hF: { a: 0.15, r: 0.43 }, tw: 0.5, hp: 0.3, l: 0.26, b: [0.1, 0.04], hB: [-0.1, 0.16], handB: "fist", hand: "palm", fF: [0.24, 0], fB: [-0.15, -0.03], face: "fierce" } })) }),
     // ---------------------------------------------------------------- casting
     // both palms driven out together behind a beam
-    push: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.05, 0.11], l: -0.16, tw: -0.25, hF: [-0.12, 0.18], hB: [-0.15, 0.2], hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.12, 0.05], l: 0.24, tw: 0.15, hF: [0.48, -0.07], hB: [0.44, 0.04], hand: "palm", handB: "palm", fF: [0.29, 0], fB: [-0.19, -0.02], face: "shout" } })), jitter: 6e-3 }),
+    push: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.05, 0.11], l: -0.16, tw: -0.25, hF: [-0.12, 0.18], hB: [-0.15, 0.2], hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.12, 0.05], l: 0.24, tw: 0.15, hF: [0.48, -0.07], hB: [0.44, 0.04], hand: "palm", handB: "palm", fF: [0.29, 0], fB: [-0.19, -0.02], face: "shout" } })), jitter: 6e-3 }),
     // the arm thrown out to point, the body turned side-on behind it
-    point: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { hF: [0.08, 0.06], tw: -0.2, l: -0.06, hB: [0, 0.3], face: "fierce" }, hit: { hF: [0.49, -0.12], hand: "finger", tw: 0.4, hp: 0.15, l: 0.1, hB: [-0.08, 0.3], fF: [0.19, 0], fB: [-0.13, 0], face: "fierce" } })) }),
+    point: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { hF: [0.08, 0.06], tw: -0.2, l: -0.06, hB: [0, 0.3], face: "fierce" }, hit: { hF: [0.49, -0.12], hand: "finger", tw: 0.4, hp: 0.15, l: 0.1, hB: [-0.08, 0.3], fF: [0.19, 0], fB: [-0.13, 0], face: "fierce" } })) }),
     // a hand raised high, then flung forward to send it
-    raise: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, ht: -0.15, tw: -0.25, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.16, tw: 0.35, b: [0.05, 0.04], ht: 0, face: "shout" } })), jitter: 4e-3 }),
+    raise: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, ht: -0.15, tw: -0.25, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.16, tw: 0.35, b: [0.05, 0.04], ht: 0, face: "shout" } })), jitter: 4e-3 }),
     // both arms swept up to the sky
-    summon: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.12], l: 0.2, ht: 0.2, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.3, hF: { a: -1.75, r: 0.43 }, hB: { a: -1.4, r: 0.43 }, zF: 0.12, zB: 0.12, hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    summon: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.12], l: 0.2, ht: 0.2, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.3, hF: { a: -1.75, r: 0.43 }, hB: { a: -1.4, r: 0.43 }, zF: 0.12, zB: 0.12, hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
     // a transformation: hunched over clenched fists, gathering it in, then thrown open with the head back — the roar
-    powerup: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.78, load: { b: [0, 0.17], l: 0.3, ht: 0.25, hF: [0.04, 0.28], hB: [-0.04, 0.3], zF: 0.06, zB: 0.06, fF: [0.21, 0], fB: [-0.21, 0], zfF: 0.04, zfB: 0.04, face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.25, hF: [0.18, -0.08], hB: [-0.16, -0.06], zF: 0.22, zB: 0.22, hand: "fist", handB: "fist", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.16 })), jitter: 0.012 }),
+    powerup: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.78, load: { b: [0, 0.17], l: 0.3, ht: 0.25, hF: [0.04, 0.28], hB: [-0.04, 0.3], zF: 0.06, zB: 0.06, fF: [0.21, 0], fB: [-0.21, 0], zfF: 0.04, zfB: 0.04, face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.25, hF: [0.18, -0.08], hB: [-0.16, -0.06], zF: 0.22, zB: 0.22, hand: "fist", handB: "fist", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.16 })), jitter: 0.012 }),
     // arms crossed before the chest, coiled, then flung wide: a burst from the hands
-    spread: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], l: 0.2, hF: [0.18, 0.06], hB: [0.16, 0.08], zF: -0.12, zB: -0.12, face: "grit" }, hit: { b: [0, -0.02], l: -0.1, hF: [0.36, -0.14], hB: [-0.36, -0.14], zF: 0.14, zB: 0.14, hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.21, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
-    hana: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85, settle: false })) }),
-    slam: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, l: -0.24, ht: -0.15, hF: [0.12, -0.46], hB: [0.05, -0.46], zF: 0.03, zB: 0.03, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "grit" }, hit: { z: 0, b: [0.1, 0.27], l: 0.5, ht: 0.25, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.27, 0], fB: [-0.21, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    spread: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], l: 0.2, hF: [0.18, 0.06], hB: [0.16, 0.08], zF: -0.12, zB: -0.12, face: "grit" }, hit: { b: [0, -0.02], l: -0.1, hF: [0.36, -0.14], hB: [-0.36, -0.14], zF: 0.14, zB: 0.14, hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.21, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85, settle: false })) }),
+    slam: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, l: -0.24, ht: -0.15, hF: [0.12, -0.46], hB: [0.05, -0.46], zF: 0.03, zB: 0.03, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "grit" }, hit: { z: 0, b: [0.1, 0.27], l: 0.5, ht: 0.25, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.27, 0], fB: [-0.21, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
     // a punch at the air itself: the fist cocked back, driven out, stopped dead and shuddering
-    quake: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.07], l: 0.12 }, load: { b: [-0.06, 0.09], l: -0.24, tw: -0.6, hp: -0.25, hF: [-0.24, -0.06], hB: [0.22, 0.04], face: "grit" }, hit: { b: [0.2, 0.06], l: 0.36, tw: 0.6, hp: 0.4, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], sm: 0.06, face: "shout" }, holdT: 0.14 })), jitter: 0.014, shake: { a: 0.012, t: 0.14 } }),
-    pray: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], zF: -0.06, zB: -0.06, hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
-    blink: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
+    quake: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.7, antic: { b: [0.02, 0.07], l: 0.12 }, load: { b: [-0.06, 0.09], l: -0.24, tw: -0.6, hp: -0.25, hF: [-0.24, -0.06], hB: [0.22, 0.04], face: "grit" }, hit: { b: [0.2, 0.06], l: 0.36, tw: 0.6, hp: 0.4, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], sm: 0.06, face: "shout" }, holdT: 0.14 })), jitter: 0.014, shake: { a: 0.012, t: 0.14 } }),
+    pray: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], zF: -0.06, zB: -0.06, hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    blink: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
     // Conqueror's Haki: no wind-up to speak of, only stillness — standing tall, chin up, fists at the sides, and a glare
-    will: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.85, load: { b: [-0.02, 0], l: -0.1, ht: -0.16, hF: [0.03, 0.36], hB: [-0.05, 0.36], zF: 0.05, zB: 0.05, face: "glare" }, hit: { b: [0, -0.02], l: -0.14, ht: -0.22, hF: [0.06, 0.34], hB: [-0.08, 0.34], zF: 0.12, zB: 0.12, face: "glare" }, holdT: 0.35, settle: false })) }),
+    will: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.85, load: { b: [-0.02, 0], l: -0.1, ht: -0.16, hF: [0.03, 0.36], hB: [-0.05, 0.36], zF: 0.05, zB: 0.05, face: "glare" }, hit: { b: [0, -0.02], l: -0.14, ht: -0.22, hF: [0.06, 0.34], hB: [-0.08, 0.34], zF: 0.12, zB: 0.12, face: "glare" }, holdT: 0.35, settle: false })) }),
     // braced like iron: the guard locked tight, the feet planted wide
-    guardup: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: GUARD, load: { b: [0, 0.08], hF: [0.15, -0.1], hB: [0.2, -0.02], eB: -1, zF: -0.05 }, hit: { b: [0, 0.1], hF: [0.16, -0.12], hB: [0.2, -0.03], eB: -1, zF: -0.06, zB: -0.04, zfF: 0.05, zfB: 0.05, face: "grit" }, holdT: 0.3, settle: false })) }),
-    flex: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.12, hF: [0.12, 0.2], hB: [-0.1, 0.22], face: "grit" }, hit: { b: [0, 0.1], l: -0.06, ht: -0.12, hF: [0.12, -0.24], hB: [-0.14, -0.24], zF: 0.2, zB: 0.2, eF: 1, eB: 1, face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
-    breath: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "grit" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
-    pull: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    guardup: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: GUARD, load: { b: [0, 0.08], hF: [0.15, -0.1], hB: [0.2, -0.02], eB: -1, zF: -0.05 }, hit: { b: [0, 0.1], hF: [0.16, -0.12], hB: [0.2, -0.03], eB: -1, zF: -0.06, zB: -0.04, zfF: 0.05, zfB: 0.05, face: "grit" }, holdT: 0.3, settle: false })) }),
+    flex: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.12, hF: [0.12, 0.2], hB: [-0.1, 0.22], face: "grit" }, hit: { b: [0, 0.1], l: -0.06, ht: -0.12, hF: [0.12, -0.24], hB: [-0.14, -0.24], zF: 0.2, zB: 0.2, eF: 1, eB: 1, face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "grit" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
     // ---------------------------------------------------------------- Devil Fruit signatures
     // Gum-Gum Pistol: the arm wound far back on its rubber (past where an arm
     // could reach: it stretches), the body twisted away from it and the other
     // hand aiming — then let go
-    pistol: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-1.15, 0], zF: 0.07, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.25, 0], fB: [-0.18, 0], face: "grit" }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: "fist", fF: [0.29, 0], fB: [-0.15, -0.05], face: "shout" }, holdT: 0.12 })) }),
+    pistol: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-1.15, 0], zF: 0.07, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.25, 0], fB: [-0.18, 0], face: "grit" }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: "fist", fF: [0.29, 0], fB: [-0.15, -0.05], face: "shout" }, holdT: 0.12 })) }),
     // Gum-Gum Bazooka: both arms stretched far back behind on their rubber, then
     // the two palms slammed out together, the arms running out to them (and
     // snapping home after)
-    bazooka: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-1.05, 0.02], hB: [-1.08, 0.1], zF: 0.04, zB: 0.04, hand: "palm", handB: "palm", stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [1.75, -0.04], hB: [1.72, 0.07], zF: -0.08, zB: -0.08, hand: "palm", handB: "palm", stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: "shout" }, hold: { hF: [1.62, -0.03], hB: [1.6, 0.07] }, follow: { hF: [0.3, 0], hB: [0.28, 0.08], zF: 0, zB: 0, stretch: true }, holdT: 0.12, followAt: 0.3 })) }),
+    bazooka: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-1.05, 0.02], hB: [-1.08, 0.1], zF: 0.04, zB: 0.04, hand: "palm", handB: "palm", stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [1.75, -0.04], hB: [1.72, 0.07], zF: -0.08, zB: -0.08, hand: "palm", handB: "palm", stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: "shout" }, hold: { hF: [1.62, -0.03], hB: [1.6, 0.07] }, follow: { hF: [0.3, 0], hB: [0.28, 0.08], zF: 0, zB: 0, stretch: true }, holdT: 0.12, followAt: 0.3 })) }),
     // Gear Third: the thumb bitten and blown into — the arm swelling like a
     // balloon as it's wound back — then the giant fist thrown (it flies on its
     // rubber: the projectile has the arm), the arm going down again after
-    gigant: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.62, antic: { b: [0, 0.05], l: 0.1, ht: 0.1, hF: [0.08, -0.22], eF: 1, hB: [0.1, 0.1], inF: 0.25, face: "grit" }, anticAt: 0.45, load: { b: [-0.07, 0.1], l: -0.22, tw: -0.8, hp: -0.3, ht: 0.06, hF: [-0.62, -0.06], zF: 0.06, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], inF: 1, face: "grit" }, hit: { b: [0.16, 0.05], l: 0.3, tw: 0.7, hp: 0.42, hF: [0.5, -0.05], stretch: true, hB: [-0.06, 0.13], handB: "fist", fF: [0.31, 0], fB: [-0.16, -0.05], inF: 1, face: "shout" }, hold: { inF: 1 }, follow: { inF: 0.5 }, holdT: 0.14 })), jitter: 8e-3 }),
+    gigant: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, antic: { b: [0, 0.05], l: 0.1, ht: 0.1, hF: [0.08, -0.22], eF: 1, hB: [0.1, 0.1], inF: 0.25, face: "grit" }, anticAt: 0.45, load: { b: [-0.07, 0.1], l: -0.22, tw: -0.8, hp: -0.3, ht: 0.06, hF: [-0.62, -0.06], zF: 0.06, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], inF: 1, face: "grit" }, hit: { b: [0.16, 0.05], l: 0.3, tw: 0.7, hp: 0.42, hF: [0.5, -0.05], stretch: true, hB: [-0.06, 0.13], handB: "fist", fF: [0.31, 0], fB: [-0.16, -0.05], inF: 1, face: "shout" }, hold: { inF: 1 }, follow: { inF: 0.5 }, holdT: 0.14 })), jitter: 8e-3 }),
     // a flurry: the stance wide, leaning in behind fists that blur (see samplePose)
-    gatling: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: "grit" }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
-    kneel: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "grit" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    gatling: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: "grit" }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "grit" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
     // Gum-Gum Rocket: both arms shot out far ahead to grab hold, the body
     // leaning back against the pull — then let go of the ground and flung
     // after them, the arms shortening as it flies in
-    rocket: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.75, load: { b: [-0.06, 0.12], l: -0.3, ht: -0.1, hF: [2.3, -0.3], hB: [2.25, -0.24], zF: -0.06, zB: -0.06, hand: "claw", handB: "claw", stretch: true, fF: [0.3, 0], fB: [-0.22, 0], face: "grit" }, hit: { l: 0.62, z: 0.16, ht: -0.4, hF: [1.1, -0.12], hB: [1.06, -0.06], hand: "fist", handB: "fist", stretch: true, fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" }, hold: { hF: [0.55, -0.06], hB: [0.52, 0] }, follow: { stretch: false } })), legs: true }),
-    fly: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
+    rocket: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.75, load: { b: [-0.06, 0.12], l: -0.3, ht: -0.1, hF: [2.3, -0.3], hB: [2.25, -0.24], zF: -0.06, zB: -0.06, hand: "claw", handB: "claw", stretch: true, fF: [0.3, 0], fB: [-0.22, 0], face: "grit" }, hit: { l: 0.62, z: 0.16, ht: -0.4, hF: [1.1, -0.12], hB: [1.06, -0.06], hand: "fist", handB: "fist", stretch: true, fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" }, hold: { hF: [0.55, -0.06], hB: [0.52, 0] }, follow: { stretch: false } })), legs: true }),
+    fly: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
     // Hiken: the fist pulled back to the hip in its fire, the body wound round it and the other hand out to aim — then thrown with everything behind it
-    hiken: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], face: "grit" }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: "fist", fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: "shout" }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 6e-3 }),
+    hiken: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], face: "grit" }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: "fist", fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: "shout" }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 6e-3 }),
     // Gura Gura: the fist cocked high by the ear, the elbow up and back, then punched into the empty air in front — where it stops dead and the air cracks
-    kaishin: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, antic: { b: [0.02, 0.08], l: 0.12 }, load: { b: [-0.06, 0.12], l: -0.12, tw: -0.62, hp: -0.25, hF: [-0.12, -0.16], eF: -0.5, zF: 0.06, hB: [0.22, 0.04], fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.17, 0.08], l: 0.3, tw: 0.55, hp: 0.4, hF: [0.42, -0.06], eF: 0.6, hB: [-0.08, 0.16], fF: [0.33, 0], fB: [-0.17, -0.04], sm: 0.04, face: "shout" }, holdT: 0.18, holdK: 0.6 })), jitter: 0.016, shake: { a: 0.016, t: 0.2 } }),
+    kaishin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, antic: { b: [0.02, 0.08], l: 0.12 }, load: { b: [-0.06, 0.12], l: -0.12, tw: -0.62, hp: -0.25, hF: [-0.12, -0.16], eF: -0.5, zF: 0.06, hB: [0.22, 0.04], fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.17, 0.08], l: 0.3, tw: 0.55, hp: 0.4, hF: [0.42, -0.06], eF: 0.6, hB: [-0.08, 0.16], fF: [0.33, 0], fB: [-0.17, -0.04], sm: 0.04, face: "shout" }, holdT: 0.18, holdK: 0.6 })), jitter: 0.016, shake: { a: 0.016, t: 0.2 } }),
     // Seaquake: both hands up gripping the air itself, then the whole body wrenching it round and down — the world tilts
-    tilt: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.6, load: { b: [0, 0.06], l: -0.1, ht: -0.12, hF: [0.3, -0.18], hB: [0.28, -0.2], zF: 0.18, zB: 0.18, hand: "claw", handB: "claw", fF: [0.24, 0], fB: [-0.2, 0], zfF: 0.05, zfB: 0.05, face: "grit" }, hit: { b: [0.04, 0.14], l: 0.2, ls: 0.35, tw: 0.4, ht: 0.05, hF: [0.32, 0.05], hB: [0.3, -0.25], zF: 0.1, zB: 0.12, hand: "fist", handB: "fist", face: "shout" }, holdT: 0.3 })), jitter: 0.012, shake: { a: 0.012, t: 0.3 } }),
+    tilt: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.6, load: { b: [0, 0.06], l: -0.1, ht: -0.12, hF: [0.3, -0.18], hB: [0.28, -0.2], zF: 0.18, zB: 0.18, hand: "claw", handB: "claw", fF: [0.24, 0], fB: [-0.2, 0], zfF: 0.05, zfB: 0.05, face: "grit" }, hit: { b: [0.04, 0.14], l: 0.2, ls: 0.35, tw: 0.4, ht: 0.05, hF: [0.32, 0.05], hB: [0.3, -0.25], zF: 0.1, zB: 0.12, hand: "fist", handB: "fist", face: "shout" }, holdT: 0.3 })), jitter: 0.012, shake: { a: 0.012, t: 0.3 } }),
     // El Thor: the arm thrust up at the sky, the finger raised — and swept down at the target as the bolt falls
-    skyward: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: "finger", hB: [0.02, 0.32], zB: 0.04, face: "fierce" }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: "finger", hB: [-0.05, 0.3], face: "shout" }, holdT: 0.2 })), jitter: 5e-3 }),
+    skyward: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: "finger", hB: [0.02, 0.32], zB: 0.04, face: "fierce" }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: "finger", hB: [-0.05, 0.3], face: "shout" }, holdT: 0.2 })), jitter: 5e-3 }),
     // Ice Age: the palm raised high, then down onto one knee and slapped flat on the ground (it freezes out from there)
-    groundpalm: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: "palm", hB: [0.05, 0.3], face: "fierce" }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: "palm", hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
+    groundpalm: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: "palm", hB: [0.05, 0.3], face: "fierce" }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: "palm", hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
     // ROOM: a hand held up before the face, open as if round a sphere, as the dome spreads out from it
-    room: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: "claw", hB: [0, 0.32], face: "fierce" }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: "claw", eF: 1, hB: [-0.02, 0.32], face: "fierce" }, holdT: 0.28, settle: false })) }),
+    room: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: "claw", hB: [0, 0.32], face: "fierce" }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: "claw", eF: 1, hB: [-0.02, 0.32], face: "fierce" }, holdT: 0.28, settle: false })) }),
     // Dai Enkai: both hands raised high under the second sun, then one arm hurling it down at them
-    sunraise: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [0, 0.04], l: -0.18, ht: -0.25, hF: { a: -1.55, r: 0.42 }, hB: { a: -1.45, r: 0.42 }, zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.18, 0], face: "grit" }, hit: { b: [0.16, 0.06], l: 0.32, tw: 0.4, ht: 0, hF: [0.47, -0.08], hB: [-0.1, 0.12], hand: "palm", handB: "fist", fF: [0.3, 0], fB: [-0.17, -0.04], face: "shout" }, holdT: 0.15 })), jitter: 8e-3 })
+    sunraise: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.7, load: { b: [0, 0.04], l: -0.18, ht: -0.25, hF: { a: -1.55, r: 0.42 }, hB: { a: -1.45, r: 0.42 }, zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.18, 0], face: "grit" }, hit: { b: [0.16, 0.06], l: 0.32, tw: 0.4, ht: 0, hF: [0.47, -0.08], hB: [-0.1, 0.12], hand: "palm", handB: "fist", fF: [0.3, 0], fB: [-0.17, -0.04], face: "shout" }, holdT: 0.15 })), jitter: 8e-3 })
   };
   var LIMB = {
     gigant: "hF",
@@ -11681,7 +8395,7 @@
     }
     g.restore();
   }
-  function catmull2(p0, p1, p2, p3, t) {
+  function catmull(p0, p1, p2, p3, t) {
     const t2 = t * t, t3 = t2 * t;
     return [
       0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
@@ -11693,7 +8407,7 @@
     const out = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-      for (let k = 0; k < sub; k++) out.push(catmull2(p0, p1, p2, p3, k / sub));
+      for (let k = 0; k < sub; k++) out.push(catmull(p0, p1, p2, p3, k / sub));
     }
     out.push(pts[pts.length - 1]);
     return out;
@@ -12902,6 +9616,80 @@
     g.restore();
   }
 
+  // src/core/rng.js
+  function hashString(str2) {
+    let h2 = 2166136261 >>> 0;
+    for (let i = 0; i < str2.length; i++) {
+      h2 ^= str2.charCodeAt(i);
+      h2 = Math.imul(h2, 16777619);
+    }
+    return h2 >>> 0;
+  }
+  function hash2i(x, y, seed = 0) {
+    let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 2246822519) | 0;
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    h2 ^= h2 >>> 16;
+    return h2 >>> 0;
+  }
+  var hash2 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
+  function hash01(a, b = 0, c = 0) {
+    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  }
+  var RNG = class _RNG {
+    constructor(seed = 1) {
+      this.s = (typeof seed === "string" ? hashString(seed) : seed >>> 0) || 2654435769;
+    }
+    next() {
+      let t = this.s = this.s + 1831565813 >>> 0;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    range(a, b) {
+      return a + (b - a) * this.next();
+    }
+    int(a, b) {
+      return a + Math.floor(this.next() * (b - a + 1));
+    }
+    chance(p) {
+      return this.next() < p;
+    }
+    pick(arr) {
+      return arr[Math.floor(this.next() * arr.length)];
+    }
+    sign() {
+      return this.next() < 0.5 ? -1 : 1;
+    }
+    gauss() {
+      const u = 1 - this.next(), v = this.next();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+    shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(this.next() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    /** Pick from [{weight, ...}] or [[item, weight]] lists. */
+    weighted(list, weightKey = "weight") {
+      let total = 0;
+      for (const e of list) total += Array.isArray(e) ? e[1] : e[weightKey];
+      let r4 = this.next() * total;
+      for (const e of list) {
+        r4 -= Array.isArray(e) ? e[1] : e[weightKey];
+        if (r4 <= 0) return Array.isArray(e) ? e[0] : e;
+      }
+      const last2 = list[list.length - 1];
+      return Array.isArray(last2) ? last2[0] : last2;
+    }
+    fork(salt) {
+      return new _RNG(hashString(String(salt)) ^ Math.floor(this.next() * 4294967296));
+    }
+  };
+
   // src/game/haki.js
   var CONQUEROR_COLOURS = [
     { id: "crimson", name: "Crimson", hex: "#ff1a3c", w: 28 },
@@ -13012,7 +9800,7 @@
   // src/render/combatfx.js
   var TAU5 = Math.PI * 2;
   var rnd = (a, b) => a + Math.random() * (b - a);
-  var clamp013 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp012 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   var ELEM = {
     physical: { c: "#ffffff", spark: ["#ffffff", "#fff8e1", "#ffe0b2"], kind: "spark" },
     slash: { c: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], kind: "spark" },
@@ -15500,7 +12288,7 @@
     const sg = sigFor(def) || {};
     const st = styleOf(def, actor);
     const E = elem ? elemFor(elem, actor, def) : null;
-    const k = t < w ? clamp013(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
+    const k = t < w ? clamp012(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
     const trail3 = sg.trail || (E && elem !== "physical" ? E.c : st ? st.trail : "#ffffff");
     const fxElem = sg.elem || (elem && elem !== "physical" ? elem : st && st.elem) || null;
     out.fx = { elem: fxElem, color: E ? E.c : trail3, trail: trail3, limb: sg.limb || clip2.limb, k, additive: !!(E && E.add), claw: st && st.claw };
@@ -15573,6 +12361,1614 @@
       drawCharacter(g, ghostLook(look, "#ffffff"), { facing: pose.facing, P: pose.P, time: pose.time, state: "idle", noShadow: true, ghost: true });
       g.restore();
     }
+  }
+
+  // src/world/constants.js
+  var POS_SCALE = 6;
+  var SIZE_SCALE = 2.25;
+  var chart = (v) => Math.round(v * POS_SCALE);
+  var csize = (v) => Math.round(v * SIZE_SCALE);
+  var W = chart(4096);
+  var H = chart(2048);
+  var EQ = chart(1024);
+  var GL_HALF = chart(400);
+  var CB = chart(100);
+  var RL_HALF = chart(46);
+  var RM_X = chart(2048);
+  var MG_X = 0;
+  var POLAR = chart(26);
+  var GL_TOP = EQ - GL_HALF;
+  var GL_BOTTOM = EQ + GL_HALF;
+  var CB_TOP = GL_TOP - CB;
+  var CB_BOTTOM = GL_BOTTOM + CB;
+  var REGION = {
+    EAST_BLUE: 1,
+    NORTH_BLUE: 2,
+    WEST_BLUE: 3,
+    SOUTH_BLUE: 4,
+    PARADISE: 5,
+    NEW_WORLD: 6,
+    CALM_NORTH: 7,
+    CALM_SOUTH: 8,
+    RED_LINE: 9,
+    POLAR: 10
+  };
+  var REGION_INFO = {
+    [REGION.EAST_BLUE]: { id: "east_blue", name: "East Blue", danger: 1, color: "#4fb3e8", sea: true },
+    [REGION.NORTH_BLUE]: { id: "north_blue", name: "North Blue", danger: 2, color: "#5a8fd6", sea: true },
+    [REGION.WEST_BLUE]: { id: "west_blue", name: "West Blue", danger: 2, color: "#4a9fc9", sea: true },
+    [REGION.SOUTH_BLUE]: { id: "south_blue", name: "South Blue", danger: 2, color: "#3fc1c9", sea: true },
+    [REGION.PARADISE]: { id: "paradise", name: "Grand Line \u2014 Paradise", danger: 4, color: "#2aa198", sea: true },
+    [REGION.NEW_WORLD]: { id: "new_world", name: "Grand Line \u2014 New World", danger: 7, color: "#6c5ce7", sea: true },
+    [REGION.CALM_NORTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
+    [REGION.CALM_SOUTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
+    [REGION.RED_LINE]: { id: "red_line", name: "Red Line", danger: 5, color: "#b33939", sea: false },
+    [REGION.POLAR]: { id: "polar", name: "Polar Sea", danger: 3, color: "#dfe6e9", sea: true }
+  };
+  var SEA_IDS = {
+    east_blue: REGION.EAST_BLUE,
+    north_blue: REGION.NORTH_BLUE,
+    west_blue: REGION.WEST_BLUE,
+    south_blue: REGION.SOUTH_BLUE,
+    paradise: REGION.PARADISE,
+    new_world: REGION.NEW_WORLD,
+    calm_belt: REGION.CALM_NORTH,
+    red_line: REGION.RED_LINE
+  };
+  var wrapX = (x) => (x % W + W) % W;
+  var RMX = 900;
+  var RMY = 3300;
+  function regionAt(x, y) {
+    x = wrapX(x);
+    if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
+    if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W - RL_HALF) return REGION.RED_LINE;
+    const ey = (y - EQ) / RMY;
+    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
+    const east = x > RM_X;
+    if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
+    if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
+    if (y >= GL_BOTTOM && y < CB_BOTTOM) return REGION.CALM_SOUTH;
+    if (y < EQ) return east ? REGION.EAST_BLUE : REGION.NORTH_BLUE;
+    return east ? REGION.SOUTH_BLUE : REGION.WEST_BLUE;
+  }
+  var isCalmBelt = (r4) => r4 === REGION.CALM_NORTH || r4 === REGION.CALM_SOUTH;
+  var isGrandLine = (r4) => r4 === REGION.PARADISE || r4 === REGION.NEW_WORLD;
+  var isBlue = (r4) => r4 >= REGION.EAST_BLUE && r4 <= REGION.SOUTH_BLUE;
+
+  // src/world/reverseMountain.js
+  var RM = {
+    x: RM_X,
+    y: EQ,
+    rx: 900,
+    // the massif's reach across the Red Line (the coast bulges out this far)…
+    ry: 3300,
+    // …and along it (past the Calm Belt, into the Blues)
+    top: 160,
+    // water level of the summit pool, metres above the sea
+    poolR: 56,
+    // (room for the greatest ships to turn out into the torrent)
+    halfW: 17,
+    // half the width of a canal (a great galleon rides it with room either side)
+    climb: 740,
+    // the last stretch of each canal, where it climbs the mountain
+    drop: 620,
+    // the torrent down to Paradise
+    cone: { rx: 760, ry: 1250, h: 110 },
+    // the mountain standing on the Red Line
+    upSpeed: 20,
+    // m/s of the currents up the mountain…
+    downSpeed: 28
+    // …and of the torrent down
+  };
+  var UP_PTS = [[780, 3460], [440, 3390], [236, 3285], [205, 3e3], [192, 2400], [182, 1800], [168, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
+  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
+  var CANALS = [
+    { id: "east_blue", sx: 1, sy: -1 },
+    { id: "north_blue", sx: -1, sy: -1 },
+    { id: "west_blue", sx: -1, sy: 1 },
+    { id: "south_blue", sx: 1, sy: 1 },
+    { id: "exit", exit: true }
+  ];
+  var STEP = 4;
+  var CELL = 32;
+  function catmull2(pts, step2) {
+    const out = [];
+    const P6 = [pts[0], ...pts, pts[pts.length - 1]];
+    for (let i = 1; i < P6.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
+      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      const n = Math.max(1, Math.ceil(len / step2));
+      for (let k = 0; k < n; k++) {
+        const t = k / n, t2 = t * t, t3 = t2 * t;
+        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  function build() {
+    for (const c of CANALS) {
+      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
+      const raw = catmull2(pts, STEP);
+      const n = raw.length;
+      c.x = new Float32Array(n);
+      c.y = new Float32Array(n);
+      c.s = new Float32Array(n);
+      c.lv = new Float32Array(n);
+      c.fx = new Float32Array(n);
+      c.fy = new Float32Array(n);
+      let s = 0;
+      for (let i = 0; i < n; i++) {
+        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
+        c.x[i] = RM.x + raw[i][0];
+        c.y[i] = RM.y + raw[i][1];
+        c.s[i] = s;
+      }
+      c.len = s;
+      for (let i = 0; i < n; i++) {
+        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
+        c.fx[i] = dx / d;
+        c.fy[i] = dy / d;
+        const si = c.s[i];
+        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
+      }
+    }
+    const grid2 = /* @__PURE__ */ new Map();
+    CANALS.forEach((c, ci) => {
+      for (let i = 0; i < c.x.length; i++) {
+        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
+        let l = grid2.get(k);
+        if (!l) grid2.set(k, l = []);
+        l.push(ci, i);
+      }
+    });
+    RM.grid = grid2;
+  }
+  build();
+  function canalLevel(c, s) {
+    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
+    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
+  }
+  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
+  var POOL_CURL = 0.2;
+  function canalAt(x, y, reach3 = 40, out = HIT) {
+    const dxs = x - RM.x, dys = y - RM.y;
+    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 3500) return null;
+    const pd = Math.hypot(dxs, dys);
+    if (pd < RM.poolR) {
+      out.canal = CANALS[4];
+      out.i = 0;
+      out.d = 0;
+      out.s = 0;
+      out.level = RM.top;
+      out.pool = true;
+      const c2 = pd > 1e-3 ? dxs / pd : 1;
+      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
+      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
+      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
+      const f = Math.hypot(out.fx, out.fy) || 1;
+      out.fx /= f;
+      out.fy /= f;
+      out.side = 0;
+      return out;
+    }
+    let best = -1, bc = 0, bd = reach3 * reach3;
+    const r4 = Math.ceil(reach3 / CELL);
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (let j = -r4; j <= r4; j++) {
+      for (let i = -r4; i <= r4; i++) {
+        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
+        if (!l) continue;
+        for (let k = 0; k < l.length; k += 2) {
+          const c2 = CANALS[l[k]], si = l[k + 1];
+          const ex = x - c2.x[si], ey = y - c2.y[si];
+          const d2 = ex * ex + ey * ey;
+          if (d2 < bd) {
+            bd = d2;
+            best = si;
+            bc = l[k];
+          }
+        }
+      }
+    }
+    if (best < 0) return null;
+    const c = CANALS[bc];
+    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
+    const ax = x - px2, ay = y - py2;
+    const along2 = ax * c.fx[best] + ay * c.fy[best];
+    s = Math.max(0, Math.min(c.len, s + along2));
+    const side = ax * -c.fy[best] + ay * c.fx[best];
+    out.canal = c;
+    out.i = best;
+    out.s = s;
+    out.d = Math.abs(side);
+    out.side = side;
+    out.level = canalLevel(c, s);
+    out.fx = c.fx[best];
+    out.fy = c.fy[best];
+    out.pool = false;
+    return out;
+  }
+  function coneAt(x, y) {
+    const C3 = RM.cone;
+    const r4 = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
+    if (r4 >= 1) return 0;
+    const k = 1 - r4;
+    return C3.h * k * k * (3 - 2 * k);
+  }
+  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
+
+  // src/world/deform.js
+  var MAX = 8;
+  var DEFORM = { list: [], pads: [], now: 0, world: null, seq: 0 };
+  var KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
+  function addDeform(o) {
+    const d = {
+      kind: KINDS[o.kind] || 1,
+      x: o.x,
+      y: o.y,
+      r: o.r || 12,
+      amp: o.amp ?? 2,
+      ang: o.ang || 0,
+      w: o.w || 2,
+      rise: o.rise ?? 0.35,
+      hold: o.hold ?? 4,
+      fall: o.fall ?? 3,
+      wob: o.wob || 0,
+      t0: DEFORM.now + (o.delay || 0),
+      id: ++DEFORM.seq
+    };
+    d.c = Math.cos(d.ang);
+    d.s = Math.sin(d.ang);
+    DEFORM.list.push(d);
+    while (DEFORM.list.length > MAX) DEFORM.list.shift();
+    return d;
+  }
+  function tickDeform(now3, world) {
+    if (world && DEFORM.world && world !== DEFORM.world || now3 < DEFORM.now - 1) DEFORM.list.length = 0;
+    DEFORM.now = now3;
+    if (world) DEFORM.world = world;
+    if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now3 - d.t0 < d.rise + d.hold + d.fall && d.t0 - now3 < 30);
+    if (DEFORM.pads.length) DEFORM.pads = DEFORM.pads.filter((d) => now3 < d.end && d.t0 - now3 < 30);
+  }
+  function addIcePad(x, y, r4, hold = 8) {
+    const P6 = DEFORM.pads;
+    P6.push({ x, y, r: r4, t0: DEFORM.now, end: DEFORM.now + hold });
+    while (P6.length > 80) P6.shift();
+  }
+  var sst = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  function envelope(d, now3 = DEFORM.now) {
+    const t = now3 - d.t0;
+    if (t < 0) return 0;
+    let e;
+    if (t < d.rise) e = sst(0, 1, t / d.rise);
+    else if (t < d.rise + d.hold) e = 1;
+    else e = 1 - sst(0, 1, (t - d.rise - d.hold) / d.fall);
+    if (d.wob && t < d.rise + 1.2) e *= 1 + d.wob * Math.sin(t * 38) * Math.exp(-t * 2.2);
+    return e;
+  }
+  function shapeAt(kind, lx, ly, r4, amp, c, s, w) {
+    const dd = Math.hypot(lx, ly), q2 = dd / r4;
+    if (kind === 1) {
+      if (q2 >= 1) return 0;
+      const fade2 = 1 - sst(0.55, 1, q2);
+      return amp * ((lx * c + ly * s) / r4) * fade2;
+    }
+    if (kind === 2) {
+      if (q2 >= 1.5) return 0;
+      const bowl = q2 < 1 ? -amp * (1 - q2 * q2) : 0;
+      return bowl + amp * 0.3 * Math.exp(-(((q2 - 1) / 0.18) ** 2));
+    }
+    if (kind === 3) {
+      const u = lx * c + ly * s, v = -lx * s + ly * c;
+      if (u < -w || u > r4 + w) return 0;
+      const run = sst(-w, w * 0.5, u) * (1 - sst(r4 - w * 1.5, r4 + w, u));
+      return -amp * Math.exp(-((v / w) ** 2)) * run + amp * 0.18 * Math.exp(-(((Math.abs(v) - w * 1.3) / (w * 0.5)) ** 2)) * run;
+    }
+    if (kind === 5) return 0;
+    if (kind === 4) {
+      if (q2 >= 1) return 0;
+      return amp * (1 - sst(0, 1, q2));
+    }
+    return 0;
+  }
+  var ICE_TOP = 0.32;
+  function iceCover(x, y) {
+    const L3 = DEFORM.list;
+    const w = DEFORM.world;
+    for (const d of DEFORM.pads) {
+      const left = d.end - DEFORM.now, k = Math.min(1, left / 1.5);
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x;
+      if (Math.hypot(lx, y - d.y) < d.r * k) return true;
+    }
+    if (!L3.length) return false;
+    for (const d of L3) {
+      if (d.kind !== 5) continue;
+      const e = envelope(d);
+      if (e < 0.25) continue;
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
+      const th = Math.atan2(ly, lx);
+      const rag = 1 + 0.07 * Math.sin(th * 7 + d.id) + 0.04 * Math.sin(th * 17 + d.id * 3);
+      if (Math.hypot(lx, ly) < d.r * rag * Math.min(1, e * 1.3)) return true;
+    }
+    return false;
+  }
+  function deformAt(x, y, sea = false) {
+    const L3 = DEFORM.list;
+    if (!L3.length) return 0;
+    const w = DEFORM.world;
+    let h2 = 0;
+    for (const d of L3) {
+      if (sea && d.kind !== 1) continue;
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
+      const R5 = d.kind === 3 ? d.r + d.w * 2 : d.r * 1.5;
+      if (Math.abs(lx) > R5 + 2 || Math.abs(ly) > R5 + 2) continue;
+      const e = envelope(d);
+      if (e) h2 += e * shapeAt(d.kind, lx, ly, d.r, d.amp, d.c, d.s, d.w);
+    }
+    return h2;
+  }
+
+  // src/render3d/swell.js
+  var SWELL_GLSL = (
+    /* glsl */
+    `
+  float sHash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+  float sNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
+  }
+  // two octaves, rotated against each other (no grid-aligned blobs)
+  float sFbm(vec2 p) {
+    float a = sNoise(p);
+    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
+    return a * 0.64 + sNoise(p) * 0.36;
+  }
+  // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
+  float swells(vec2 p, float t, float d, out vec2 slope) {
+    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
+    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
+    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
+    // bent crests (a little everywhere, and long slow curves)
+    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
+    // wave groups
+    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
+    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
+    float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
+    float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
+    // (the cross swell strong in some stretches of sea, gone in others)
+    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
+    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
+    // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
+    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
+    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
+    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
+    return h / 2.6;
+  }
+`
+  );
+  var fract = (v) => v - Math.floor(v);
+  function sHash(x, y) {
+    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
+    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
+    a += d;
+    b += d;
+    c += d;
+    return fract((a + b) * c);
+  }
+  function sNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
+    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
+    return top + (bot - top) * uy;
+  }
+  function sFbm(x, y) {
+    const a = sNoise(x, y);
+    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
+    return a * 0.64 + sNoise(px2, py2) * 0.36;
+  }
+  var sst2 = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  function swells(x, y, t, d = 0) {
+    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
+    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
+    const g0 = (0.36 + 0.45 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst2(160, 320, d));
+    const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst2(150, 300, d));
+    const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst2(45, 100, d));
+    const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst2(25, 55, d));
+    const g4 = (0.7 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) + 0.15) * 0.8 * (1 - sst2(160, 320, d));
+    const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
+    const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
+    const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
+    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
+    const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
+    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
+    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
+  }
+  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
+  var LIQUID = new Float32Array(256).fill(0.15);
+  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
+  LIQUID[3] = 0.5;
+  LIQUID[9] = 0;
+  function calmPoints(world) {
+    if (!world?.reverseMountain) return [];
+    if (world.calmPts) return world.calmPts;
+    const out = [];
+    for (const c of CANALS) {
+      if (c.i0 === void 0) continue;
+      const land2 = c.exit ? c.i1 - 3 : c.i0 + 3;
+      const j = Math.max(0, Math.min(c.x.length - 1, land2 + (c.exit ? 12 : -12)));
+      out.push([c.x[j], c.y[j], 170]);
+    }
+    return world.calmPts = out;
+  }
+  function calmAt(w, x, y) {
+    let k = 1;
+    for (const [cx, cy, r4] of calmPoints(w)) k = Math.min(k, sst2(r4 * 0.45, r4, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
+    return k;
+  }
+  var S2 = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
+  function setSwell(t, amp, world, ox, oy) {
+    S2.t = t;
+    S2.amp = amp;
+    S2.world = world;
+    S2.ox = ox;
+    S2.oy = oy;
+  }
+  function swellAt(x, y, t = S2.t) {
+    const w = S2.world;
+    if (!w || !S2.amp) return 0;
+    const dx = w.dx ? w.dx(S2.ox, x) : x - S2.ox, dy = y - S2.oy;
+    const d = Math.hypot(dx, dy);
+    if (d > 320) return 0;
+    const k = w.type(Math.floor(x), Math.floor(y));
+    const liquid = LIQUID[k < 16 ? k : 255];
+    if (!liquid) return 0;
+    const shore = 0.35 + 0.65 * sst2(0.5, -7, w.sd ? w.sd(x, y) : -32);
+    const tilt = DEFORM.list.length ? deformAt(x, y, true) * sst2(-1.5, -8, w.sd ? w.sd(x, y) : -32) : 0;
+    return swells(x, y, t, d) * S2.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1) + tilt;
+  }
+  var swellOn = () => !!(S2.world && S2.amp > 0.01);
+
+  // src/game/boatFeel.js
+  var BOAT_FEEL = {
+    // ---- steering (the helm you hold with A / D)
+    helmIn: 0.32,
+    // s for the helm to go hard over when you steer (eased in and out, no snap)
+    helmOut: 0.2,
+    // s for it to come back amidships when you let go
+    turnLag: 0.1,
+    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
+    turnLagPerM: 32e-4,
+    // … and that much more per metre of her length (a big ship swings more slowly)
+    turnRate: 1,
+    // × each class's top turning rate (1 = as the ship tables have it)
+    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
+    wheelMax: 2.2,
+    // radians the wheel is turned hard over (about a third of a turn)
+    wheelSpeed: 14,
+    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
+    standTilt: 0.5,
+    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
+    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
+    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
+    rideRate: 6.5,
+    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
+    rideRatePerM: -0.055,
+    // … less per metre of her length (a long hull is heavier, slower to answer)
+    rideDamp: 0.9,
+    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
+    rideLead: 1,
+    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
+    pitchMax: 0.22,
+    // radians she pitches at most (bow up or down)
+    rollMax: 0.26,
+    // radians she rolls at most
+    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
+    speedSmooth: 0.45,
+    // s over which a change in her driving force builds up (under sail)
+    speedSmoothOars: 0.12
+    // … under oars (each stroke still surges her on)
+  };
+
+  // src/world/hull.js
+  var clamp013 = (x) => Math.max(0, Math.min(1, x));
+  var smooth2 = (a, b, x) => {
+    const t = clamp013((x - a) / (b - a));
+    return t * t * (3 - 2 * t);
+  };
+  var BIG_SHIP = 8;
+  var dimsCache = /* @__PURE__ */ new Map();
+  function shipDims(def) {
+    if (def._dims) return def._dims;
+    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
+    let d = dimsCache.get(key2);
+    if (!d) {
+      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
+      dimsCache.set(key2, d);
+    }
+    Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
+    return d;
+  }
+  function smallDims(def) {
+    const L3 = def.length, B5 = def.beam;
+    const open = L3 < 3.5;
+    const D4 = B5 * 0.42;
+    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
+    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
+    const castle2 = L3 >= 5.5, fore = L3 >= 6.8;
+    const hq = castle2 ? 0.85 + (L3 - 5.5) * 0.1 : 0;
+    const hf = fore ? 0.5 : 0;
+    const tq = castle2 ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
+    const masts = def.masts ?? 1;
+    const mastH = masts ? 1.2 + L3 * 0.75 : 0;
+    let helmX = -L3 * 0.42;
+    const d = {
+      L: L3,
+      B: B5,
+      D: D4,
+      open,
+      deckY: deckY2,
+      bulH,
+      castle: castle2,
+      fore,
+      hq,
+      hf,
+      tq,
+      tf: tf2,
+      masts,
+      mastH,
+      helmX,
+      yq: deckY2 + hq,
+      yf: deckY2 + hf,
+      helmFloor: castle2 ? deckY2 + hq : deckY2,
+      big: false,
+      poop: false,
+      hp: 0,
+      tp: 0,
+      sheer: 0.16 * B5,
+      walk: 0.94,
+      stairs: [],
+      solids: []
+    };
+    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L3 : L3 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
+    d.mastR = 0.05 + L3 * 0.011;
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
+    if (!open) {
+      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
+      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
+      d.helmX = helmX = Math.max(-L3 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
+      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
+    }
+    if (def.oarsOnly) {
+      const seatT = 0.44, lockT = seatT + 0.4 / L3;
+      d.row = {
+        seatT,
+        seatU: xAt(d, seatT),
+        seatH: 0.3,
+        // (the top of the thwart, over the floor)
+        lockT,
+        lockU: xAt(d, lockT),
+        lockV: hbAt(lockT, B5) * 0.965,
+        lockH: topAt(d, lockT) + 0.04,
+        inboard: 0.56,
+        outboard: 1.5
+      };
+      d.helmX = helmX = d.row.seatU;
+    }
+    return d;
+  }
+  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
+  var ease = (k) => k * k * (3 - 2 * k);
+  function oarStroke(ph, pull = 1) {
+    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
+    let a, b, f;
+    if (ph < 0.08) {
+      const k = ease(ph / 0.08);
+      a = ca;
+      b = liftB + (dipB - liftB) * k;
+      f = 0;
+    } else if (ph < 0.52) {
+      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
+      b = dipB;
+      f = 0;
+    } else if (ph < 0.6) {
+      const k = ease((ph - 0.52) / 0.08);
+      a = fa;
+      b = dipB + (liftB - dipB) * k;
+      f = k;
+    } else {
+      const k = (ph - 0.6) / 0.4;
+      a = fa + (ca - fa) * ease(k);
+      b = liftB + Math.sin(k * Math.PI) * 0.05;
+      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
+    }
+    if (pull < 0) a = ca + fa - a;
+    return { a, b, f };
+  }
+  function rowLean(ship) {
+    const o = ship.oars;
+    if (!o) return 0;
+    const k = clamp013((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
+    return -0.08 + 0.44 * k;
+  }
+  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
+  function oarPoints(d, side, a, b) {
+    const r4 = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
+    const px2 = r4.lockU, py2 = r4.lockH, pz2 = side * r4.lockV;
+    return {
+      lock: [px2, py2, pz2],
+      dir: [ox, oy, oz],
+      grip: [px2 - ox * r4.inboard, py2 - oy * r4.inboard, pz2 - oz * r4.inboard],
+      tip: [px2 + ox * r4.outboard, py2 + oy * r4.outboard, pz2 + oz * r4.outboard]
+    };
+  }
+  function bigDims(def) {
+    const L3 = def.length, B5 = def.beam;
+    const D4 = B5 * 0.45;
+    const narrow = B5 < 7;
+    const large = L3 >= 44, mid = !narrow && !large;
+    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
+    const bulH = 1.1;
+    const fore = L3 >= 24;
+    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
+    const poop = large, hp = poop ? hq - 0.2 : 0;
+    const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
+    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
+    const masts = Math.max(1, Math.min(4, def.masts || 3));
+    const tHelm = poop ? tp - 2.2 / L3 : narrow ? 0.08 : 0.1;
+    const d = {
+      L: L3,
+      B: B5,
+      D: D4,
+      open: false,
+      big: true,
+      narrow,
+      deckY: deckY2,
+      bulH,
+      castle: true,
+      fore,
+      poop,
+      hq,
+      hf,
+      hp,
+      tq,
+      tf: tf2,
+      tp,
+      masts,
+      mastH: narrow ? L3 * 0.95 + 3 : L3 + 4,
+      helmX: -L3 / 2 + tHelm * L3,
+      yq,
+      yf,
+      yp,
+      helmFloor: poop ? yp : yq,
+      sheer: Math.min(1.3, 0.4 + L3 * 0.016),
+      walk: 0.86
+    };
+    d.bowY = fore ? yf : deckY2 + 0.9;
+    d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L3);
+    d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
+    d.wheelU = d.helmX + 0.9;
+    const bu = d.wheelU + 1.45;
+    d.binnacleU = !narrow && !poop && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
+    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
+    const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
+    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
+    d.stairs = [];
+    const flight = (ta, tb, ha, hb, la, lb) => {
+      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
+      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
+    };
+    flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
+    if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
+    if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
+    const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
+    const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
+    d.mainT0 = mainT0;
+    d.mainT1 = mainT1;
+    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
+    d.holdY = holdY;
+    const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
+    let h0 = 0.06, h1 = 0.94;
+    while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
+    while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
+    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
+    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
+    const rise = deckY2 - holdY;
+    let comp = null;
+    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
+      for (let k = 0; k < 160 && !comp; k++) {
+        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
+        const t0 = tc - cRun / L3 / 2, t1 = tc + cRun / L3 / 2;
+        if (t0 < mainT0 + 0.5 / L3 || t1 > mainT1 - 1.8 / L3 || t0 < h0 + 1.8 / L3 || t1 > h1 - 0.3 / L3) continue;
+        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
+      }
+      if (comp) break;
+    }
+    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L3, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L3, ladder: true };
+    const cw = comp.ladder ? 0.9 : 1.3;
+    d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
+    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
+    d.hatchT = (comp.t0 + comp.t1) / 2;
+    const freeT = (want2, len, pad2) => {
+      for (let k = 0; k < 80; k++) {
+        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
+        const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
+        if (tc - len / L3 / 2 < mainT0 + 0.3 / L3 || tc + len / L3 / 2 > mainT1 - 0.3 / L3) continue;
+        if (!clearU(u0, u1, pad2)) continue;
+        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
+        return tc;
+      }
+      return null;
+    };
+    d.capstanT = L3 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
+    const bl2 = Math.min(6, L3 * 0.14), bt = L3 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
+    if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
+    else d.boat = bt !== null ? { u0: (bt - 0.5) * L3 - bl2 / 2, u1: (bt - 0.5) * L3 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
+    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
+    d.gunScale = gs;
+    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L3, t1: mainT1 - 1.5 / L3, lid: 0.42, open: 1.4, deck: true }];
+    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L3), t1: Math.min(0.86, h1 - 0.8 / L3), lid: 0.6, open: 1.05 });
+    const perSide = Math.ceil((def.cannons || 0) / 2);
+    const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L3 : null;
+    const centre = (u) => {
+      let w = 0;
+      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
+      if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
+      if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
+      if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
+      return w;
+    };
+    const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
+    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
+    const fitsGun = (t) => {
+      const u = (t - 0.5) * L3, reach3 = 0.5 * gs;
+      return [u - reach3, u, u + reach3].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
+    };
+    const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
+    const cand = [];
+    for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L3) if (fitsGun(t)) cand.push(t);
+    const pick6 = [], gap = (1.4 * gs + 0.35) / L3;
+    for (let i = 0; i < want && cand.length; i++) {
+      const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
+      let best = null;
+      for (const t of cand) if (pick6.every((q2) => Math.abs(q2 - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
+      if (best !== null) pick6.push(best);
+    }
+    pick6.sort((a, b) => a - b);
+    d.guns = [];
+    for (const t of pick6) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L3, v: s * offAt(t), s });
+    top.ts = pick6;
+    top.n = pick6.length;
+    for (const r4 of rows) if (!r4.deck) r4.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r4.t1 - r4.t0) * L3 / 1.9)));
+    d.gunRows = rows;
+    d.lowGuns = [];
+    const low = rows.find((r4) => !r4.deck);
+    if (low) {
+      for (let i = 0; i < low.n; i++) {
+        const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
+        const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
+        if (t > comp.t0 - 1.6 / L3 && t < comp.t1 + 0.5 / L3 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
+        for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L3, v: s * off, s });
+      }
+    }
+    const tS = 0.02 + 0.3 / L3;
+    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
+    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
+    d.rooms = [
+      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
+    ];
+    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
+    if (fore) {
+      let fe = 0.95;
+      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
+      const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
+      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
+    }
+    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
+    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
+    for (const r4 of d.rooms) if (r4.doors.length) roomFront(d, r4, d.stairs.filter((s) => s.la === upTo[r4.kind][0] && s.lb === upTo[r4.kind][1]));
+    for (const r4 of d.rooms) if (r4.kind === "cabin" || r4.kind === "captain") r4.windows = sternWindows(d, r4);
+    d.walls = [];
+    for (const r4 of d.rooms) {
+      if (!r4.doors.length) continue;
+      const u = xAt(d, r4.front.t), w = innerAt(d, r4.front.t, r4.floor + 1) + 0.1;
+      let v = -w;
+      for (const dr of [...r4.doors].sort((a, b) => a.v - b.v)) {
+        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r4.floor, y1: r4.ceil + 0.12 });
+        v = dr.v + dr.w / 2;
+      }
+      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12 });
+    }
+    for (const r4 of d.rooms) {
+      const hold = r4.kind === "hold";
+      for (const [t, off] of hold ? [[r4.t0, 0], [r4.t1, 0]] : r4.kind === "forecastle" ? [[r4.t1, 0]] : [[r4.t0, 0.05]]) {
+        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r4.floor + 0.3) : innerAt(d, t, r4.floor + 1)) + 0.1;
+        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12, end: true });
+      }
+    }
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
+    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main", h: 0.95 * gs });
+    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold", h: 0.95 * gs });
+    if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main", h: 1 });
+    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? "poop" : "quarter" });
+    if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter", h: 1.2 });
+    if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
+    if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main", h: 1.1 });
+    d.shotPile = null;
+    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
+    const S6 = FURNITURE.shot;
+    for (const m of mainFirst) {
+      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
+        const box2 = { u0: u - S6.w / 2, u1: u + S6.w / 2, v0: v - S6.dp / 2, v1: v + S6.dp / 2 };
+        if (deckClear(d, box2, 0.55)) {
+          d.shotPile = { u, v, ...box2 };
+          break;
+        }
+      }
+      if (d.shotPile) break;
+    }
+    if (d.shotPile) {
+      const p = d.shotPile;
+      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main", h: 0.6 });
+    }
+    furnish(d);
+    d.ladders = [];
+    for (const s of [1, -1]) {
+      const t = ladderT(d, def, s, mainT0, mainT1);
+      if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
+    }
+    return d;
+  }
+  var LADDER_W = 0.62;
+  function ladderT(d, def, s, t0, t1) {
+    const L3 = d.L, mid = (t0 + t1) / 2;
+    for (let k = 0; k < 600; k++) {
+      const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L3;
+      if (t < t0 + 1 / L3 || t > t1 - 1 / L3) continue;
+      const u = xAt(d, t);
+      if ([...d.guns, ...d.lowGuns || []].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
+      if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
+      if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L3) continue;
+      const v = s * (hbAt(t, d.B) * d.walk - 0.5);
+      if (levelAt(d, t, v) !== "main" || solidAt(d, u, v, 0.4, "main") > 0) continue;
+      return t;
+    }
+    return null;
+  }
+  var gunIn = (gs) => 0.92 * gs + 0.05;
+  function gunBox(g, gs) {
+    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
+    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
+  }
+  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
+  var nearRing = (a, u, v, r4) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r4;
+  function deckClear(d, b, pad2) {
+    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
+    if (t0 < d.tq || t1 > d.tf) return false;
+    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
+    const cp = d.comp;
+    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
+    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
+    for (const o of d.solids) {
+      if (o.lvl && o.lvl !== "main") continue;
+      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
+    }
+    return true;
+  }
+  function roomFront(d, r4, stairs2) {
+    const face = r4.kind === "forecastle" ? -1 : 1, t = face > 0 ? r4.t1 : r4.t0, u = xAt(d, t);
+    const w = innerAt(d, t, (r4.floor + r4.top) / 2) + 0.05, dh = Math.min(2.05, r4.top - r4.floor - 0.12);
+    const ds = [...r4.doors].sort((a, b) => a.v - b.v);
+    ds.forEach((dr, i) => {
+      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
+      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
+      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
+      dr.dh = dh;
+      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
+    });
+    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
+    const windows2 = [];
+    if (r4.top - r4.floor > 1.8) {
+      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
+        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
+        windows2.push(zz);
+      }
+    }
+    r4.front = { t, u, face, w, dh, windows: windows2 };
+  }
+  function sternWindows(d, r4) {
+    const w = innerAt(d, r4.t0, r4.floor + 1);
+    if (r4.ceil + 0.1 - r4.floor <= 1.9) return [];
+    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
+    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
+  }
+  var FURNITURE = {
+    table: { w: 1.6, dp: 0.9, h: 0.76 },
+    chair: { w: 0.46, dp: 0.46, h: 0.95 },
+    bench: { w: 1.5, dp: 0.36, h: 0.46 },
+    desk: { w: 1.4, dp: 0.75, h: 0.78 },
+    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
+    chest: { w: 0.9, dp: 0.55, h: 0.62 },
+    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
+    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
+    stove: { w: 1.2, dp: 0.9, h: 0.8 },
+    // (the range itself 0.9 × 0.7, on its stone hearth)
+    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
+    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
+    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
+    crate: { w: 0.8, dp: 0.8, h: 1.2 },
+    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
+    shot: { w: 0.6, dp: 0.45, h: 0.48 },
+    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
+  };
+  function footprint(it) {
+    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
+    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
+  }
+  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
+  function seatsOf(d) {
+    if (d.seats) return d.seats;
+    const out = [];
+    for (const it of d.furniture || []) {
+      const h2 = SEAT_H[it.kind];
+      if (!h2 || it.ghost || it.y) continue;
+      const face = Math.PI / 2 - (it.rot || 0);
+      if (it.kind !== "bench") {
+        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
+        continue;
+      }
+      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+      for (let i = 0; i < n; i++) {
+        const o = ((i + 0.5) / n - 0.5) * it.w;
+        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
+      }
+    }
+    return d.seats = out;
+  }
+  var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
+  function liningAt(d, r4, t, y) {
+    const ys = liningYs(r4);
+    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
+    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
+    for (let i = 0; i < ys.length - 1; i++) {
+      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
+    }
+    return at4(ys[ys.length - 1]);
+  }
+  function roomEnds(d, r4) {
+    const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
+    if (r4.kind === "forecastle") return [a + 0.07, b];
+    if (r4.kind === "hold") return [a, b];
+    return [a + 0.1, b - 0.07];
+  }
+  function roomPlacer(d, r4) {
+    const [ua, ub] = roomEnds(d, r4), H5 = r4.ceil - r4.floor;
+    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
+    const ys = liningYs(r4);
+    const P6 = { d, r: r4, ua, ub, H: H5, items: [], keep: [], low: [], rings: [] };
+    const reached = /* @__PURE__ */ new Map();
+    P6.reach = (u, y0, y1) => {
+      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
+      let m = reached.get(key2);
+      if (m === void 0) {
+        m = Infinity;
+        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r4, tOf(Math.round(u * 100) / 100), y));
+        reached.set(key2, m);
+      }
+      return m - 0.03;
+    };
+    const top = (o) => o.pipe ? H5 - 0.1 : (o.y || 0) + o.h;
+    P6.fits = (it) => {
+      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
+      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H5 - (it.y ? 0 : 0.06)) return false;
+      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
+        const w = P6.reach(u, y0, y1);
+        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
+      }
+      if (P6.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
+      if (y1 > 0.72 && P6.low.some((k) => hits(fp, k))) return false;
+      if (P6.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
+      for (const o of P6.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
+      return true;
+    };
+    P6.put = (it) => {
+      const x = { rot: 0, ...it, room: r4.kind, floor: r4.floor };
+      if (!P6.fits(x)) return null;
+      P6.items.push(x);
+      return x;
+    };
+    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
+    const sidePlace = (kind, s, u, extra) => {
+      const S6 = spec(kind, extra), y0 = S6.y || 0, y1 = S6.pipe ? H5 - 0.1 : y0 + S6.h;
+      const w = Math.min(P6.reach(u - S6.w / 2, y0, y1), P6.reach(u, y0, y1), P6.reach(u + S6.w / 2, y0, y1));
+      const it = { rot: s > 0 ? Math.PI : 0, ...S6, u, v: s * (w - 0.01 - S6.dp / 2), room: r4.kind, floor: r4.floor };
+      return { it, off: P6.reach(u, y0, y1) - w };
+    };
+    P6.onSide = (kind, s, u, extra = {}) => P6.put(sidePlace(kind, s, u, extra).it);
+    P6.alongSide = (kind, s, from, to, extra = {}) => {
+      const dir = to >= from ? 1 : -1;
+      let best = null;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const c = sidePlace(kind, s, u, extra);
+        if (!P6.fits(c.it)) continue;
+        if (c.off < 0.12) {
+          best = c;
+          break;
+        }
+        if (!best || c.off < best.off - 0.02) best = c;
+      }
+      if (!best) return null;
+      P6.items.push(best.it);
+      return best.it;
+    };
+    P6.row = (kinds, s, from, to, gap, extra = {}) => {
+      const out = [], dir = to >= from ? 1 : -1;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const kind = kinds[out.length % kinds.length], S6 = spec(kind, extra);
+        const it = P6.onSide(kind, s, u + dir * S6.w / 2, extra);
+        if (it) {
+          out.push(it);
+          u += dir * (S6.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
+        }
+      }
+      return out;
+    };
+    P6.onEnd = (kind, e, v, extra = {}) => {
+      const S6 = spec(kind, extra);
+      return P6.put({ ...S6, u: e < 0 ? ua + 0.01 + S6.dp / 2 : ub - 0.01 - S6.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
+    };
+    P6.around = (u0, v0, fn) => {
+      for (let k = 0; k < 160; k++) {
+        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
+        if (u < ua || u > ub) continue;
+        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
+          const g = fn(u, v0 + dv);
+          if (g) return g;
+        }
+      }
+      return null;
+    };
+    P6.group = (build5, clear3 = 0.55) => {
+      const mark = P6.items.length;
+      const g = build5();
+      const mine = P6.items.slice(mark);
+      if (g && mine.length) {
+        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+        if (!P6.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
+          P6.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
+          return mine;
+        }
+      }
+      P6.items.length = mark;
+      return null;
+    };
+    P6.table = (u, v, len, wid, seats = "chairs") => P6.group(() => {
+      if (!P6.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
+      let n = 0;
+      if (seats === "benches") {
+        for (const s of [-1, 1]) if (P6.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+      } else {
+        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
+        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P6.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+        for (const e of [-1, 1]) if (P6.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
+      }
+      return n >= 2;
+    });
+    P6.rug = (group7) => {
+      if (!group7) return null;
+      const b = group7.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
+        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
+        const fp = footprint(rug);
+        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
+        if (P6.items.some((o) => !group7.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
+        P6.items.push(rug);
+        return rug;
+      }
+      return null;
+    };
+    P6.lanterns = () => {
+      const S6 = FURNITURE.lantern, y = Math.min(H5 - 0.12, 2.25) - S6.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
+      const free = (lt2) => {
+        const fp = footprint(lt2);
+        return fp.u0 >= ua && fp.u1 <= ub && !P6.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S6.h && top(o) > lt2.y);
+      };
+      for (let i = 0; i < n; i++) {
+        const u = ua + len * (i + 0.5) / n;
+        let put2 = null;
+        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
+          const w = Math.min(P6.reach(u - S6.w / 2, y, y + S6.h), P6.reach(u, y, y + S6.h), P6.reach(u + S6.w / 2, y, y + S6.h)) + 0.02;
+          const lt2 = { kind: "lantern", ...S6, u, v: s * (w - S6.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r4.kind, floor: r4.floor };
+          if (free(lt2)) {
+            put2 = lt2;
+            break;
+          }
+        }
+        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
+          if (put2) break;
+          const lt2 = { kind: "lantern", ...S6, dp: S6.w, u, v: dv, y: H5 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r4.kind, floor: r4.floor };
+          if (free(lt2)) put2 = lt2;
+        }
+        if (put2) P6.items.push(put2);
+      }
+    };
+    for (const dr of r4.doors) {
+      const f = r4.front.face, u = r4.front.u;
+      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
+      P6.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
+      if (dr.leaf) P6.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
+    }
+    if (r4.front) for (const zz of r4.front.windows) P6.low.push({ ...r4.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
+    for (const wd of r4.windows || []) P6.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
+    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P6.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
+    if (r4.kind === "hold") {
+      const cp = d.comp;
+      P6.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
+      for (const g of d.lowGuns) {
+        const b = gunBox(g, d.gunScale);
+        P6.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
+      }
+    }
+    return P6;
+  }
+  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
+  var ROOMS = {
+    // the great cabin: a bunk along the starboard side with the sea chest at
+    // its foot, books and another chest to port (and on the bigger ships a
+    // second bunk, a water cask and a chest under the stern windows), the
+    // table down the middle with its chairs round it, a rug under it
+    cabin(P6) {
+      const { ua, ub } = P6, len = ub - ua;
+      const bunk = P6.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (bunk) P6.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
+      if (len > 5.5) P6.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (len > 5.5) P6.onEnd("chest", -1, 0);
+      const half2 = P6.reach((ua + ub) / 2, 0, 1);
+      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
+      let table = null;
+      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P6.around((ua + ub) / 2 - 0.2, 0, (u, v) => P6.table(u, v, l, w));
+      if (len > 5.5) P6.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
+      P6.rug(table);
+      P6.lanterns();
+    },
+    // the captain's cabin under the poop: the desk facing the door, his chair
+    // behind it (his back to the stern windows); a bunk with a chest at its
+    // foot, bookcases and another chest; a rug
+    captain(P6) {
+      const { ua, ub } = P6, C3 = FURNITURE.chair, D4 = FURNITURE.desk;
+      const bunk = P6.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
+      if (bunk) P6.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
+      let desk = null;
+      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
+        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
+          if (desk) break;
+          const cu = ua + 0.42 + du + C3.dp / 2;
+          desk = P6.group(() => P6.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P6.put({ ...D4, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D4.dp / 2, v, rot: Math.PI / 2 }));
+        }
+      }
+      P6.rug(desk);
+      P6.lanterns();
+    },
+    // the forecastle: the galley stove, the mess table and its benches, the
+    // crew's hammocks slung up under the deck beams and their sea chests below
+    forecastle(P6) {
+      const { ua, ub, H: H5 } = P6, len = ub - ua;
+      const stove = P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
+      if (stove) {
+        const f = footprint(stove);
+        P6.keep.push({ u0: f.u0 - 0.55, u1: f.u1 + 0.55, v0: f.v0 - 0.1, v1: f.v1 + 0.75, top: 1.2 });
+      }
+      P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
+      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.6, { loot: "crew" });
+      if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
+        const tl = clampN(len * 0.4, 1.1, 2.4);
+        for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
+      }
+      for (const s of [1, -1]) P6.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H5 - 0.64, ghost: true });
+      P6.lanterns();
+    },
+    // the hold: the treasure chest by the foot of the ladder (its lid thrown
+    // back, facing you as you come down), the cargo stowed along both sides —
+    // a second row in a wide hold — with the way down the middle clear (on a
+    // gun deck, what fits between the guns)
+    hold(P6) {
+      const { d, ua, ub } = P6, cp = d.comp, T5 = FURNITURE.treasure;
+      let chest = null;
+      for (let du = 0; du < 3 && !chest; du += 0.1) {
+        for (const s of [-1, 1]) {
+          if (!chest) chest = P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T5.dp / 2), rot: s < 0 ? 0 : Math.PI });
+        }
+      }
+      if (!chest) P6.around(cp.u0 - 2.2, 0, (u, v) => P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
+      let n = 0;
+      for (const s of [-1, 1]) n += P6.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
+      for (const o of P6.items.slice()) {
+        if (o.treasure || o.kind === "shot") continue;
+        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S6 = FURNITURE[kind];
+        const v = s > 0 ? f.v0 - 0.08 - S6.dp / 2 : f.v1 + 0.08 + S6.dp / 2;
+        if (Math.abs(v) - S6.dp / 2 >= 1.3) P6.put({ ...S6, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
+      }
+      P6.lanterns();
+    }
+  };
+  function furnish(d) {
+    d.furniture = [];
+    for (const r4 of d.rooms) {
+      const P6 = roomPlacer(d, r4);
+      ROOMS[r4.kind](P6);
+      d.furniture.push(...P6.items);
+    }
+    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room, h: it.h });
+  }
+  var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
+  function hullProfile(d, t) {
+    const top = topAt(d, t), dk3 = d.deckY, D4 = d.D;
+    return [
+      [0.875, top],
+      [0.89, top - 0.14],
+      [0.93, dk3 + 0.95],
+      [0.975, dk3 - 0.25],
+      [1, dk3 * 0.42],
+      [0.985, 0],
+      [0.9, -D4 * 0.3],
+      [0.68, -D4 * 0.64],
+      [0.36, -D4 * 0.9],
+      [0, keelAt(d, t)]
+    ];
+  }
+  function smallProfile(d, t) {
+    const top = topAt(d, t), dk3 = d.deckY;
+    return [
+      [0.965, top],
+      [0.975, top - 0.1],
+      [0.995, dk3 + (d.open ? 0.02 : 0)],
+      [1, dk3 - 0.12],
+      [1, dk3 * 0.55],
+      [0.975, dk3 * 0.12],
+      [0.9, -d.D * 0.25],
+      [0.68, -d.D * 0.62],
+      [0.36, -d.D * 0.9],
+      [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))]
+    ];
+  }
+  function profileWidth(pr, hb, y) {
+    if (y >= pr[0][1]) return pr[0][0] * hb;
+    for (let i = 0; i < pr.length - 1; i++) {
+      const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
+      if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
+    }
+    return 0;
+  }
+  function skinAt(d, t, y) {
+    return profileWidth(hullProfile(d, t), hbAt(t, d.B), y);
+  }
+  function sideAt(d, t, y) {
+    return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y);
+  }
+  var innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
+  function roomHalf(d, r4, t) {
+    return r4.kind === "hold" ? skinAt(d, t, r4.floor + 0.3) - 0.3 : innerAt(d, t, r4.floor + 1) - 0.08;
+  }
+  function roomAt(d, t, h2) {
+    if (!d.rooms) return null;
+    for (const r4 of d.rooms) if (t >= r4.t0 && t <= r4.t1 && h2 > r4.floor - 0.7 && h2 < r4.ceil - 0.9) return r4;
+    return null;
+  }
+  function wallDepth(d, u, v, fl2, margin) {
+    let depth = 0;
+    for (const w of d.walls || []) {
+      if (fl2 < w.y0 - 0.3 || fl2 > w.y1 - 1) continue;
+      const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
+      const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
+      const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
+      depth = Math.max(depth, margin + 0.08 - dd);
+    }
+    return depth;
+  }
+  function wheelSpec(d) {
+    if (d.open) return null;
+    if (d._wheel) return d._wheel;
+    let w;
+    if (d.big) w = { u: d.wheelU, floor: d.helmFloor, hub: d.helmFloor + 0.92, R: 0.56, grip: 0.66 };
+    else {
+      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
+      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
+    }
+    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
+    return w;
+  }
+  function helmPoint(def) {
+    const d = shipDims(def);
+    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
+    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
+  }
+  function hbAt(t, B5) {
+    if (t > 0.58) {
+      const k = (t - 0.58) / 0.42;
+      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
+    }
+    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
+    return B5 / 2;
+  }
+  function topAt(d, t) {
+    let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
+    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
+    if (d.poop) y += d.hp * (1 - smooth2(d.tp - 0.012, d.tp + 0.03, t));
+    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
+    return y;
+  }
+  var xAt = (d, t) => -d.L / 2 + t * d.L;
+  function rakeDx(d, x, y) {
+    if (!d.big) return 0;
+    const t = (x + d.L / 2) / d.L;
+    const hold = d.rooms?.find((r4) => r4.kind === "hold");
+    const tb = hold ? hold.t1 + 5e-3 : 0.9, ts = hold ? hold.t0 - 5e-3 : 0.08;
+    const eb = smooth2(tb, 1, t), es = smooth2(ts, 0, t);
+    if (eb <= 0 && es <= 0) return 0;
+    const top = topAt(d, Math.min(1, Math.max(0, t)));
+    const f = Math.max(0, Math.min(1, (top - y) / (top + d.D)));
+    return -d.L * 0.045 * eb * Math.pow(f, 1.6) + d.L * 0.03 * es * Math.pow(f, 1.4);
+  }
+  function stairAt(d, t, v) {
+    for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
+    return null;
+  }
+  function floorAt(d, t, v = null, h2 = null) {
+    if (v !== null && d.stairs.length) {
+      const s = stairAt(d, t, v);
+      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
+    }
+    if (h2 !== null) {
+      const r4 = roomAt(d, t, h2);
+      if (r4) return r4.floor;
+    }
+    if (d.poop && t < d.tp) return d.yp;
+    if (d.castle && t < d.tq) return d.yq;
+    if (d.fore && t > d.tf) return d.yf;
+    return d.deckY;
+  }
+  function levelAt(d, t, v, h2 = null) {
+    const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
+    if (s) return s;
+    if (h2 !== null) {
+      const r4 = roomAt(d, t, h2);
+      if (r4) return r4.kind;
+    }
+    if (d.poop && t < d.tp) return "poop";
+    if (d.castle && t < d.tq) return "quarter";
+    if (d.fore && t > d.tf) return "fore";
+    return "main";
+  }
+  function solidAt(d, u, v, margin = 0, lvl = null, above = 0) {
+    let depth = 0;
+    for (const o of d.solids) {
+      if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
+      if (o.h !== void 0 && above > o.h - 0.1) continue;
+      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
+      else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
+    }
+    return depth;
+  }
+  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
+  var RIDE_V = [-0.8, 0, 0.8];
+  var softClamp = (x, m) => m * Math.tanh(x / m);
+  var _rs = [0, 0];
+  function rideTarget(ship, time, out) {
+    out[0] = out[1] = out[2] = 0;
+    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
+    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
+    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
+    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
+    const z = _rz;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, k = i * 3 + j;
+        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
+        W4 += hb;
+        Z2 += hb * z[k];
+      }
+    }
+    const h2 = Z2 / W4;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
+        Wu += hb * u * u;
+        Zu += hb * u * dz;
+        Wv += hb * v * v;
+        Zv += hb * v * dz;
+      }
+    }
+    out[0] = h2;
+    out[1] = Math.atan(Zu / Wu);
+    out[2] = Math.atan(-Zv / Wv);
+    return out;
+  }
+  var _rz = new Float64Array(15);
+  var _rt = [0, 0, 0];
+  function waveRide(ship, time) {
+    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
+    if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
+    if (c.t !== time) {
+      c.s0.set(c.s);
+      c.t0 = c.t;
+    }
+    c.t = time;
+    c.x = ship.x;
+    c.y = ship.y;
+    c.hd = ship.heading;
+    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
+    if (!c.ok || !(dt > 0) || dt > 0.5) {
+      for (let k = 0; k < 3; k++) {
+        S6[k * 2] = T5[k];
+        S6[k * 2 + 1] = 0;
+        S6[6 + k] = T5[k];
+        S6[9 + k] = 0;
+      }
+      c.ok = true;
+    } else {
+      const F4 = BOAT_FEEL, L3 = ship.def?.length || 6;
+      const w = Math.max(1.6, F4.rideRate + F4.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F4.rideDamp)), lead = 2 * z / w * F4.rideLead;
+      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
+      for (let k = 0; k < 3; k++) {
+        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
+        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
+        S6[k * 2] = _rs[0];
+        S6[k * 2 + 1] = _rs[1];
+        S6[6 + k] = T5[k];
+        S6[9 + k] = vS;
+      }
+    }
+    c.h = S6[0];
+    const Ls = ship.def?.length || 6, small = Math.max(0.3, Math.min(1, Ls / 12));
+    c.p = softClamp(S6[2] * small, BOAT_FEEL.pitchMax * small);
+    c.r = softClamp(S6[4] * (0.5 + 0.5 * small), BOAT_FEEL.rollMax);
+    return c;
+  }
+  function shipBob(ship, time) {
+    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h;
+  }
+  function shipRock(ship, time) {
+    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
+    const w = waveRide(ship, time);
+    return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5 + (ship.surge || 0), Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
+  }
+  function shipLift(ship, time, u, v, h2) {
+    const [a, b] = shipRock(ship, time);
+    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+  }
+  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
+    const [a, b] = shipRock(ship, time);
+    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
+    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
+    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
+    out[0] = x2 * ch - z2 * shd;
+    out[1] = shipBob(ship, time) + y2;
+    out[2] = x2 * shd + z2 * ch;
+    return out;
+  }
+  function deckSwing(dk3, time, out = [0, 0]) {
+    out[0] = 0;
+    out[1] = 0;
+    const s = dk3?.ship;
+    if (!s?.def || dk3.plank) return out;
+    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
+    out[0] = q2[0] - (u * c - v * sn);
+    out[1] = q2[2] - (u * sn + v * c);
+    return out;
+  }
+  var _swq = [0, 0, 0];
+  function deckLift(dk3, time) {
+    return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
+  }
+  function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0.02 || t > 0.97) return null;
+    const room2 = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
+    if (room2) {
+      const lv = levelAt(d, t, v, hRef);
+      const out2 = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room2, t) - Math.abs(v), lvl: lv, room: room2 };
+      const depth = Math.max(margin - out2.edge, solidAt(d, u, v, Math.max(0, margin), room2.kind, Math.max(0, hRef - out2.h)), wallDepth(d, u, v, room2.floor, margin));
+      if (depth > 0) out2.solid = depth;
+      return out2;
+    }
+    const hb = hbAt(t, d.B) * d.walk - margin;
+    if (hb <= 0 || Math.abs(v) > hb) return null;
+    const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
+    if (d.big) out.lvl = levelAt(d, t, v, hRef);
+    if (d.solids.length) {
+      const lv = typeof out.lvl === "string" ? out.lvl : null;
+      let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? "stairs" : null, hRef === null ? 0 : Math.max(0, hRef - out.h));
+      if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
+      if (depth > 0) out.solid = depth;
+    }
+    return out;
+  }
+  function hullPoint(ship, dx, dy, pad2 = 0) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L, tc = clamp013(t);
+    if (Math.abs(t - tc) * d.L > pad2) return null;
+    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
+    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
+  }
+  var MAST_KS = (n) => n >= 4 ? [0.92, 1, 0.86, 0.7] : n === 3 ? [0.92, 1, 0.8] : n === 2 ? [1, 0.84] : [1];
+  function mastNest(d) {
+    if (!d.big || !d.mastU?.length) return null;
+    if (d._nest !== void 0) return d._nest;
+    const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
+    const k = MAST_KS(n)[m], base2 = floorAt(d, (mu + d.L / 2) / d.L);
+    const H5 = d.mastH * k, h2 = base2 + (H5 - base2) * 0.76, mr = d.mastR * Math.sqrt(k);
+    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 1.15, mu, base: base2, mr };
+    Object.defineProperty(d, "_nest", { value: out, enumerable: false });
+    return out;
+  }
+  function deckToWorld(ship, t, v) {
+    const d = shipDims(ship.def);
+    const u = -d.L / 2 + t * d.L;
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    return { x: ship.x + u * c - v * s, y: ship.y + u * s + v * c, h: floorAt(d, t, v) };
+  }
+  function hullSolid(ship, dx, dy, h2) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = Math.abs(-dx * s + dy * c);
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0 || t > 1 || h2 < -d.D) return false;
+    if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
+    const hb = hbAt(t, d.B);
+    if (v > hb) return false;
+    if (d.rooms) {
+      for (const r4 of d.rooms) if (t > r4.t0 + 4e-3 && t < r4.t1 - 4e-3 && h2 > r4.floor - 0.05 && h2 < r4.ceil - 0.02 && v < roomHalf(d, r4, t) + 0.05) return false;
+      const cp = d.comp;
+      if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
+    }
+    const rail = d.big ? 0.75 : 0.6, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
+    if (h2 > topAt(d, t)) return false;
+    if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
+    if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
+    if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
+    if (d.fore && t > d.tf) return h2 < d.yf - 0.1;
+    return false;
+  }
+  function hullGap(ship, dx, dy) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = clamp013((u + d.L / 2) / d.L);
+    const along2 = Math.max(0, Math.abs(u) - d.L / 2);
+    return Math.hypot(along2, Math.max(0, Math.abs(v) - hbAt(t, d.B)));
   }
 
   // src/game/difficulty.js
@@ -15702,6 +14098,863 @@
     if (!(w > 0)) return w;
     if (chained) return Math.max(T5.chainWindup, w);
     return Math.max(T5.windupMin, w * T5.windupMul + T5.windupAdd);
+  }
+
+  // src/data/races.js
+  var RARITY = {
+    common: { label: "Common", color: "#b2bec3" },
+    uncommon: { label: "Uncommon", color: "#55efc4" },
+    rare: { label: "Rare", color: "#74b9ff" },
+    epic: { label: "Epic", color: "#a29bfe" },
+    legendary: { label: "Legendary", color: "#fdcb6e" }
+  };
+  var RACES = {
+    human: {
+      name: "Human",
+      rarity: "common",
+      weight: 52,
+      desc: "The most numerous people of the Blue Planet. Adaptable, stubborn, and capable of anything \u2014 the Pirate King himself was human.",
+      origin: "Born on any island of the four Blues.",
+      stats: { str: 0, agi: 0, end: 0, vit: 0, wil: 1 },
+      lives: 3,
+      traits: ["Adaptable: trainers teach you 15% cheaper", "Stubborn Will: +1 Willpower"],
+      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
+      swim: 1,
+      hpMul: 1,
+      jump: 7.6,
+      charge: 1.6,
+      leap: 1
+    },
+    fishman: {
+      name: "Fish-Man",
+      rarity: "uncommon",
+      weight: 13,
+      desc: "Born with ten times the strength of a human and the sea in their blood. Many followed Arlong to the East Blue.",
+      origin: "Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.",
+      stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
+      lives: 3,
+      traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water \u2014 and, swimming hard, on forward like a dolphin"],
+      spawnSeas: ["east_blue"],
+      spawnTowns: ["cocoyasi"],
+      swim: 3,
+      hpMul: 1.1,
+      gills: true,
+      jump: 7.4,
+      charge: 1.65,
+      leap: 1.35
+    },
+    mink: {
+      name: "Mink",
+      rarity: "uncommon",
+      weight: 12,
+      desc: "The Warrior Beast Tribe. Every Mink is born a fighter and can channel Electro through their fur.",
+      origin: "Born among wandering Mink traders who settled in the wilds of the South Blue.",
+      stats: { str: 1, agi: 4, end: 1, vit: 0, wil: 0 },
+      lives: 3,
+      traits: ["Electro: bare-handed basic attacks crackle, and now and then shock (innate)", "Keen senses: a dodge leaves you untouchable a little longer", "Sulong: in a fight under the full moon, at night, you become a battle beast (hidden)", "Springy: jumps high, and a charged leap goes higher still"],
+      spawnSeas: ["south_blue"],
+      spawnTowns: ["torino_village", "karate_dojo_town"],
+      swim: 1,
+      hpMul: 1,
+      electro: true,
+      jump: 8.6,
+      charge: 1.7,
+      leap: 1
+    },
+    skypiean: {
+      name: "Skypiean",
+      rarity: "uncommon",
+      weight: 10,
+      desc: "A winged people of the White Sea. You fell from the clouds as a child and washed ashore at Lvneel, homeland of Noland the Liar.",
+      origin: "Fell from a sky island; raised in Lvneel (North Blue).",
+      stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
+      lives: 3,
+      traits: ["Mantra: once their sixth sense awakens, it grows twice as fast", "Light-footed: dodge travels 30% further", "Dial-savvy: dials hit 25% harder", "Little wings: not for flying \u2014 no Skypiean can"],
+      spawnSeas: ["north_blue"],
+      spawnTowns: ["lvneel_town"],
+      swim: 0.9,
+      hpMul: 0.95,
+      jump: 8.6,
+      charge: 1.55,
+      leap: 1
+    },
+    buccaneer: {
+      name: "Buccaneer",
+      rarity: "epic",
+      weight: 2.2,
+      desc: "A giant-framed race hunted almost to extinction. Bartholomew Kuma was born to your people in the South Blue.",
+      origin: "Born in the Sorbet Kingdom (South Blue).",
+      stats: { str: 5, agi: -2, end: 5, vit: 4, wil: 0 },
+      lives: 3,
+      traits: ["Huge frame: +35% HP", "Unshakable: light blows can't stagger you, and knockback barely moves you", "Slow: -8% move speed"],
+      spawnSeas: ["south_blue"],
+      spawnTowns: ["sorbet_town"],
+      swim: 0.9,
+      hpMul: 1.35,
+      scale: 1.3,
+      jump: 6.6,
+      charge: 1.85,
+      leap: 1
+    },
+    three_eye: {
+      name: "Three-Eye Tribe",
+      rarity: "legendary",
+      weight: 0.8,
+      desc: "A vanishingly rare people whose third eye may one day hear the Voice of All Things.",
+      origin: "Born among the scholars sheltering in the ruins of Ohara (West Blue).",
+      stats: { str: 0, agi: 1, end: 0, vit: 0, wil: 6 },
+      lives: 3,
+      traits: ["Third Eye: Observation Haki from birth", "Voice of All Things: once the Third Eye has grown (Observation 20), reads Poneglyphs without an archaeologist"],
+      spawnSeas: ["west_blue"],
+      spawnTowns: ["ohara_camp"],
+      swim: 1,
+      hpMul: 1,
+      jump: 7.4,
+      charge: 1.65,
+      leap: 1
+    },
+    lunarian: {
+      name: "Lunarian",
+      rarity: "legendary",
+      weight: 0.5,
+      desc: 'A people of the "Land of Gods" atop the Red Line, believed extinct. Black wings, white hair, and a flame that never goes out.',
+      origin: "Washed up alone on an uncharted islet in one of the Blues.",
+      stats: { str: 2, agi: 1, end: 5, vit: 5, wil: 2 },
+      lives: 4,
+      traits: ["Ignition: bare blows can set foes alight, and while the flame on your back burns, harm done to you is halved \u2014 the sea puts it out, and it lights again once you're dry", "Tremendous vitality: +1 life", "Wings: fly (Space again in the air) \u2014 and a dodge is a wing-beat that carries you further, even over water"],
+      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
+      spawnIslet: true,
+      swim: 1,
+      hpMul: 1.15,
+      jump: 8.2,
+      charge: 1.6,
+      leap: 1,
+      flight: { style: "wings", gauge: 22, speed: 10, climb: 6, ceiling: 40, sea: 3.5, refill: 6, color: "#ff7043" }
+    }
+  };
+  var RACE_IDS = Object.keys(RACES);
+  var RETIRED = { longarm: { arms: 1.8 }, longleg: { legs: 1.9 } };
+  function liveRace(rec) {
+    if (!rec || !RETIRED[rec.race]) return rec;
+    const was = RETIRED[rec.race];
+    rec.race = "human";
+    const L3 = rec.look;
+    if (L3) {
+      if (L3.race) L3.race = "human";
+      for (const k of Object.keys(was)) if (L3[k] === was[k]) delete L3[k];
+    }
+    return rec;
+  }
+  function rollRace(rng4, boosts = {}) {
+    const list = RACE_IDS.map((id) => [id, RACES[id].weight * (boosts[id] || 1)]);
+    return rng4.weighted(list);
+  }
+  var HUMAN_SKIN = ["#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"];
+  var HAIR = ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#2ecc71", "#2980b9", "#e84393", "#dfe6e9", "#8e44ad", "#16a085"];
+  var TOPS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#b2bec3", "#a0522d"];
+  var BOTTOMS = ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#2f3542"];
+  var HAIRSTYLES = ["short", "short", "spiky", "messy", "crop", "crop", "sidefringe", "slick", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald", "pompadour"];
+  var FISHMAN_KINDS = [
+    { id: "shark", name: "Saw Shark", skin: "#7fa7c9" },
+    { id: "great_white", name: "Great White Shark", skin: "#9fb4c7" },
+    { id: "whale_shark", name: "Whale Shark", skin: "#4a69bd" },
+    { id: "octopus", name: "Octopus", skin: "#e17b77" },
+    { id: "sea_bream", name: "Sea Bream", skin: "#f3a683" },
+    { id: "manta", name: "Manta Ray", skin: "#546de5" },
+    { id: "sunfish", name: "Sunfish", skin: "#c7ecee" },
+    { id: "goldfish", name: "Goldfish", skin: "#f5b041" }
+  ];
+  var MINK_KINDS = [
+    { id: "cat", name: "Cat", ears: "pointy", fur: "#f0932b", tail: "thin" },
+    { id: "dog", name: "Dog", ears: "pointy", fur: "#dfe6e9", tail: "fluffy", muzzle: true },
+    { id: "rabbit", name: "Rabbit", ears: "long", fur: "#f5f6fa", tail: "fluffy" },
+    { id: "bear", name: "Bear", ears: "round", fur: "#6d4c41", tail: null, muzzle: true },
+    { id: "fox", name: "Fox", ears: "pointy", fur: "#e67e22", tail: "fluffy", muzzle: true },
+    { id: "lion", name: "Lion", ears: "round", fur: "#f6b93b", tail: "thin", muzzle: true },
+    { id: "panda", name: "Panda", ears: "round", fur: "#f5f6fa", tail: null },
+    { id: "jaguar", name: "Jaguar", ears: "round", fur: "#e1b12c", tail: "thin" },
+    { id: "wolf", name: "Wolf", ears: "pointy", fur: "#7f8fa6", tail: "fluffy", muzzle: true }
+  ];
+  var W2 = (s) => s.split(" ").map((t) => {
+    const [k, w] = t.split(":");
+    return [k, +w || 1];
+  });
+  var DRESS = {
+    civilian: {
+      m: { top: W2("tee:4 shirt:3 open:1 striped:1 vest:0.5"), bottom: W2("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W2("belt:3 none:3 sash:1"), shoes: W2("shoes:3 sandals:3 boots:2") },
+      f: { top: W2("tee:3 tank:2 shirt:2 dress:3 crop:1"), bottom: W2("skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1"), waist: W2("none:3 belt:2 sash:1"), shoes: W2("shoes:3 sandals:3 boots:1") }
+    },
+    pirate: {
+      m: { top: W2("striped:3 open:3 vest:2 tee:2 bare:1"), bottom: W2("baggy:4 capri:2 shorts:2 trousers:2"), waist: W2("sash:5 belt:3"), shoes: W2("boots:5 sandals:2") },
+      f: { top: W2("crop:3 tank:2 open:1 striped:1 bikini:1"), bottom: W2("trousers:2 shorts:2 capri:2 skirt:1 baggy:1"), waist: W2("sash:4 belt:3"), shoes: W2("boots:5 sandals:2") }
+    },
+    bandit: {
+      m: { top: W2("vest:3 open:2 bare:1"), bottom: W2("baggy:4 trousers:2 capri:1"), waist: W2("sash:4 belt:2"), shoes: W2("boots:3 sandals:2") },
+      f: { top: W2("crop:2 tank:2 vest:1"), bottom: W2("trousers:2 baggy:2 shorts:1"), waist: W2("sash:3 belt:2"), shoes: W2("boots:3 sandals:1") }
+    },
+    marine: {
+      m: { top: W2("shirt:1"), bottom: W2("trousers:1"), waist: W2("belt:1"), shoes: W2("boots:1") },
+      f: { top: W2("shirt:1"), bottom: W2("trousers:3 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1") }
+    },
+    officer: {
+      m: { top: W2("jacket:2 shirt:1"), bottom: W2("trousers:2 slim:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") },
+      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") }
+    },
+    agent: {
+      m: { top: W2("jacket:1"), bottom: W2("slim:1"), waist: W2("belt:1"), shoes: W2("shoes:1") },
+      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("shoes:2 boots:1") }
+    },
+    swordsman: {
+      m: { top: W2("kimono:3 open:2 tee:1"), bottom: W2("hakama:3 baggy:1 trousers:1"), waist: W2("obi:2 sash:2"), shoes: W2("geta:2 sandals:2 boots:1") },
+      f: { top: W2("kimono:3 tank:1"), bottom: W2("hakama:2 slim:1"), waist: W2("obi:2 sash:1"), shoes: W2("geta:1 sandals:2 boots:1") }
+    },
+    wano: {
+      m: { top: W2("kimono:6 open:1"), bottom: W2("hakama:4 baggy:1 capri:1"), waist: W2("obi:4 sash:1"), shoes: W2("geta:3 sandals:3") },
+      f: { top: W2("kimono:6 dress:1"), bottom: W2("longskirt:3 hakama:2"), waist: W2("obi:4 none:1"), shoes: W2("geta:3 sandals:2") }
+    },
+    desert: {
+      m: { top: W2("shirt:3 open:2 vest:1 kimono:1"), bottom: W2("baggy:4 trousers:2"), waist: W2("sash:4 belt:1"), shoes: W2("sandals:4 boots:1") },
+      f: { top: W2("dress:2 crop:2 shirt:1"), bottom: W2("longskirt:2 baggy:2 skirt:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4") }
+    },
+    snow: {
+      m: { top: W2("coat:3 shirt:2 jacket:1"), bottom: W2("trousers:3 baggy:1"), waist: W2("belt:2 none:1"), shoes: W2("boots:1") },
+      f: { top: W2("coat:3 shirt:1 dress:1"), bottom: W2("trousers:2 longskirt:1 slim:1"), waist: W2("belt:1 none:1"), shoes: W2("boots:1") }
+    },
+    sky: {
+      m: { top: W2("tee:2 open:2 vest:1"), bottom: W2("baggy:3 shorts:2 capri:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4 bare:1") },
+      f: { top: W2("dress:2 tank:2 crop:2"), bottom: W2("skirt:2 longskirt:2 baggy:1"), waist: W2("sash:2 none:2"), shoes: W2("sandals:4") }
+    },
+    fishman: {
+      m: { top: W2("open:3 bare:2 vest:1 shirt:1"), bottom: W2("shorts:3 baggy:2 trousers:1"), waist: W2("sash:2 belt:2 none:1"), shoes: W2("sandals:3 bare:2 boots:1") },
+      f: { top: W2("crop:2 tank:2 bikini:2 dress:1"), bottom: W2("skirt:2 shorts:2 longskirt:1"), waist: W2("none:2 sash:1"), shoes: W2("sandals:3 bare:1") }
+    }
+  };
+  var SASH = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"];
+  var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
+  var STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
+  var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
+  var FRAME_ROLL = {
+    m: {
+      civilian: W2("average:5 lean:2 slim:2 heavy:2 stocky:2 lanky:1 athletic:1"),
+      pirate: W2("average:3 lean:2 athletic:2 brawny:2 heavy:2 stocky:2 lanky:1"),
+      bandit: W2("average:2 lean:2 brawny:2 heavy:2 stocky:2 lanky:1"),
+      marine: W2("average:3 athletic:4 lean:2 brawny:1 stocky:1"),
+      officer: W2("average:3 athletic:3 brawny:1 heavy:1 slim:1"),
+      agent: W2("athletic:3 slim:2 lean:2 average:2"),
+      swordsman: W2("lean:3 athletic:3 average:2 slim:1 lanky:1"),
+      wano: W2("average:3 lean:2 athletic:2 stocky:1 heavy:1 brawny:1"),
+      desert: W2("average:3 lean:3 slim:2 heavy:1 lanky:1"),
+      snow: W2("average:3 heavy:2 stocky:2 brawny:1 lean:1"),
+      sky: W2("average:3 slim:2 lean:2 lanky:1"),
+      fishman: W2("athletic:3 brawny:3 average:2 heavy:1 stocky:1")
+    },
+    f: {
+      civilian: W2("average:4 slim:2 curvy:2 petite:2 heavy:1"),
+      fighter: W2("average:3 athletic:3 slim:2 curvy:2 petite:1"),
+      other: W2("average:4 slim:2 curvy:2 petite:1 heavy:1 athletic:1")
+    }
+  };
+  var FIGHTERS = /* @__PURE__ */ new Set(["pirate", "bandit", "marine", "officer", "agent", "swordsman"]);
+  var FRAME_MUS = { average: 0.55, lean: 0.75, athletic: 1, slim: 0.45, brawny: 1.2, heavy: 0.3, lanky: 0.28, stocky: 0.8 };
+  function dress(look, rng4, role = "civilian", over = {}) {
+    if (role === "beast") {
+      Object.assign(look, { fem: false, topStyle: "bare", bottomStyle: "slim", waist: "none", shoeStyle: "bare", muscle: 0.8 });
+      return look;
+    }
+    const set = DRESS[role] || DRESS.civilian;
+    const fem = over.fem ?? rng4.chance(FEM_ROLES[role] ?? 0.45);
+    const T5 = set[fem ? "f" : "m"];
+    look.fem = fem;
+    const legacyTop = over.openShirt !== void 0 || over.noSleeves || over.sleeve || over.vest;
+    if (!over.topStyle && !legacyTop) look.topStyle = rng4.weighted(T5.top);
+    if (!over.bottomStyle) look.bottomStyle = rng4.weighted(T5.bottom);
+    if (!over.waist) look.waist = rng4.weighted(T5.waist);
+    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng4.weighted(T5.shoes);
+    if (!over.top2) look.top2 = look.topStyle === "striped" ? rng4.pick(LIGHT) : look.topStyle === "jacket" ? rng4.pick(["#f5f5f5", "#f5f5f5", "#90caf9", "#fce4ec"]) : void 0;
+    if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng4.pick(SASH);
+    if (look.topStyle === "jacket" && !over.tie && rng4.chance(0.5)) look.tie = rng4.pick(["#212121", "#c62828", "#1e3a8a"]);
+    if (look.topStyle === "coat" && !over.coat) look.coat = rng4.pick(["#5d4037", "#37474f", "#6d4c41", "#1b5e20", "#4a148c", "#263238"]);
+    if (over.frame === void 0 && !((over.bulk ?? look.bulk ?? 1) > 1.1)) {
+      let set2 = fem ? FRAME_ROLL.f[role === "civilian" ? "civilian" : FIGHTERS.has(role) ? "fighter" : "other"] : FRAME_ROLL.m[role] || FRAME_ROLL.m.civilian;
+      if (look.legs > 1.2) set2 = set2.filter(([k]) => k !== "lanky" && k !== "stocky" && k !== "petite");
+      look.frame = rng4.weighted(set2);
+    }
+    if (fem) {
+      if (!over.hair && rng4.chance(0.75)) look.hair = rng4.pick(["long", "long", "wavy", "ponytail", "bun", "bob", "twintails", "braid", "short", "curly", "sidefringe"]);
+      if (!over.eyeShape) look.eyeShape = rng4.pick(["soft", "round", "round", "sharp"]);
+      look.bust = +(0.8 + rng4.next() * 0.45).toFixed(2);
+    } else if (over.muscle === void 0) {
+      const m = (FRAME_MUS[look.frame] ?? 0.55) + (rng4.next() - 0.5) * 0.4;
+      look.muscle = +Math.min(1.2, Math.max(0.15, m)).toFixed(2);
+    }
+    if (over.frown === void 0 && rng4.chance(STERN[role] ?? 0.15)) look.frown = true;
+    return look;
+  }
+  function makeLook(raceId, seed, overrides = {}) {
+    const rng4 = new RNG(seed);
+    const race = RACES[raceId] || RACES.human;
+    const look = {
+      race: raceId,
+      seed: rng4.int(0, 1e3),
+      skin: rng4.pick(HUMAN_SKIN),
+      hairColor: rng4.pick(HAIR),
+      hair: rng4.pick(HAIRSTYLES),
+      top: rng4.pick(TOPS),
+      bottom: rng4.pick(BOTTOMS),
+      shoes: rng4.pick(["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878"]),
+      // (most eyes are dark, as in the manga; a few are coloured)
+      eyeColor: rng4.pick(["#222", "#222", "#3b2a1a", "#3b2a1a", "#4a3426", "#2b2f3a", "#1e3799", "#27ae60"]),
+      scale: race.scale || 1,
+      hat: null,
+      openShirt: rng4.chance(0.25)
+    };
+    if (raceId === "fishman") {
+      const k = rng4.pick(FISHMAN_KINDS);
+      look.skin = k.skin;
+      look.fin = true;
+      look.gills = true;
+      look.kind = k.name;
+      look.grin = rng4.chance(0.5);
+      look.sharpTeeth = true;
+      look.hairColor = rng4.pick(["#1e1e1e", "#2c3e50", "#16a085", "#8e44ad"]);
+    } else if (raceId === "mink") {
+      const k = rng4.pick(MINK_KINDS);
+      look.ears = k.ears;
+      look.fur = k.fur;
+      look.tail = k.tail;
+      look.muzzle = k.muzzle;
+      look.kind = k.name;
+      look.furFace = rng4.chance(0.6);
+      look.skin = k.fur;
+      look.hairColor = k.fur;
+      look.hand = k.fur;
+    } else if (raceId === "skypiean") {
+      look.wings = "sky";
+      look.hairColor = rng4.pick(["#f5f6fa", "#fdcb6e", "#dfe6e9", "#74b9ff", "#f7d794"]);
+      look.top = rng4.pick(["#f5f6fa", "#dff9fb", "#f6e58d"]);
+    } else if (raceId === "buccaneer") {
+      look.bulk = 1.25;
+      look.skin = rng4.pick(["#c68642", "#a0643a", "#7a4a2a"]);
+    } else if (raceId === "three_eye") {
+      look.thirdEye = true;
+      look.eyeColor = "#8e44ad";
+    } else if (raceId === "lunarian") {
+      look.wings = "lunar";
+      look.backFlame = true;
+      look.skin = rng4.pick(["#7a4a2a", "#5c3a21", "#8d5524"]);
+      look.hairColor = "#f5f6fa";
+      look.hair = rng4.pick(["long", "spiky", "short"]);
+    }
+    const { role, ...over } = overrides;
+    dress(look, rng4, role || (raceId === "fishman" ? "fishman" : raceId === "skypiean" ? "sky" : "civilian"), over);
+    if (look.race === "buccaneer" || look.race === "giant") look.fem = over.fem ?? look.fem;
+    return Object.assign(look, over);
+  }
+  function raceLabel(look) {
+    const r4 = RACES[look.race] || RACES.human;
+    return look.kind ? `${r4.name} (${look.kind})` : r4.name;
+  }
+
+  // src/game/flight.js
+  var DEF = { speed: 10, climb: 6, dive: 9, ceiling: 35, drain: 1, sea: 3.5, refill: 6 };
+  var SEA_CEILING = 14;
+  var LOW = 3.5;
+  var helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
+  var timeOf = (game) => game.env?.time ?? game.time ?? 0;
+  var FLY_MASTERY = 40;
+  function flightOf(a) {
+    let best = null;
+    const f = a?.fruitDef;
+    if (f) {
+      const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
+      const form = (a.buffs || []).find((b) => b.form)?.form;
+      for (const t of f.techniques) {
+        if (!t.flight) continue;
+        let fl2 = t.flight;
+        if (fl2.forms && !fl2.forms.includes(form)) {
+          if (!fl2.otherwise) continue;
+          fl2 = { ...fl2, ...fl2.otherwise };
+        }
+        const s = { ...DEF, ...fl2, fruit: true, tech: t.id };
+        s.gauge = Math.round(s.gauge * k * 10) / 10;
+        if (!best || s.gauge > best.gauge) best = s;
+      }
+    }
+    const R5 = RACES[a?.race]?.flight;
+    if (R5 && (!best || R5.gauge > best.gauge)) best = { ...DEF, ...R5, fruit: false };
+    return best;
+  }
+  function groundBase(game, x, y) {
+    return game.view3d ? Math.max(0, game.view3d.ground(x, y)) : 0;
+  }
+  function feetOf(a, game) {
+    if (a.flying && a.alt != null) return a.alt;
+    return a.feetH ? a.feetH(game) : a.z || 0;
+  }
+  function overOpenSea(game, x, y) {
+    const w = game.world;
+    if (!w.isLiquid?.(x, y) || w.isOverlay?.(x, y)) return false;
+    if (game.deckAt && game.ships?.length && game.deckAt(x, y, 0)) return false;
+    return true;
+  }
+  function flyableAt(a, game, x, y, alt = a.alt ?? feetOf(a, game)) {
+    const w = game.world;
+    if (y < 1 || y > w.height - 1) return false;
+    if (w.interiorAt?.(x, y)) return false;
+    const g = groundBase(game, x, y);
+    if (g > alt + 0.6) return false;
+    const roof = game.view3d?.roofAt?.(x, y);
+    if (roof && roof.h > alt + 0.5) return false;
+    if (alt - g < LOW && (w.solid?.(x, y) || w.hitsProp?.(x, y, (a.r || 0.28) * 0.9))) return false;
+    if (game.inShip && game.ships?.length) {
+      for (const s of game.ships) if (game.inShip(s, x, y, alt + 0.9, true)) return false;
+    }
+    return true;
+  }
+  function floorUnder(a, game, x, y) {
+    let f = groundBase(game, x, y);
+    const roof = game.view3d?.roofAt?.(x, y, a.alt + 0.3);
+    if (roof && roof.h > f) f = roof.h;
+    if (game.deckAt && game.ships?.length) {
+      const dk3 = game.deckAt(x, y, 0.1);
+      if (dk3) {
+        const h2 = deckLift(dk3, timeOf(game));
+        if (h2 > f && h2 <= a.alt + 0.3) f = h2;
+      }
+    }
+    return f;
+  }
+  function cantTakeOff(a, game) {
+    const S6 = flightOf(a);
+    if (!S6) return "nowings";
+    if (a.flying) return "flying";
+    if (a.state !== "idle" || a.onShip || a.climb || helpless(a) || a.hitstun > 0.25 || a.status?.grounded) return "busy";
+    if (a.inWater) return "water";
+    const zone = game.world.zone;
+    if (zone === 2 || zone === 3) return "nosky";
+    if (game.world.interiorAt?.(a.x, a.y) && !a.roofed) return "indoors";
+    if (S6.fruit && a.seastoned) return "seastone";
+    if ((a.flightGauge ?? 1) < 0.25) return "tired";
+    return "";
+  }
+  var WHY = {
+    water: "You can't take off from the water.",
+    nosky: "There's no sky to fly in down here.",
+    indoors: "No room to fly in here.",
+    seastone: "Seastone holds your power down.",
+    tired: "Too tired to fly \u2014 catch your breath on solid ground.",
+    busy: ""
+  };
+  function takeOff(a, game) {
+    const why = cantTakeOff(a, game);
+    if (why) {
+      if (a.isPlayer && WHY[why]) game.log(WHY[why], "#ff8a80");
+      return false;
+    }
+    const S6 = flightOf(a);
+    const alt = feetOf(a, game);
+    if (a.deck) {
+      a.deck.ship.aboard?.delete(a);
+      a.deck = null;
+    }
+    a.flying = true;
+    a.flightStyle = S6.style;
+    a.flightRide = S6.ride || null;
+    a.flight = { spec: S6, t: 0, lift: (a.z || 0) > 0.6 ? 0.15 : 0.4, tired: false, landing: false };
+    a.alt = alt;
+    a.vz = 0;
+    a.charging = 0;
+    a.wading = 0;
+    if (!a.dash?.dodge) a.dash = null;
+    if (a.flightGauge === void 0) a.flightGauge = 1;
+    a.flightTired = false;
+    a.takeoffT = timeOf(game);
+    takeoffFx(a, game, S6);
+    game.audio?.sfx("jump_big", a);
+    if (a.isPlayer) {
+      game.emit?.("playerTakeOff", S6.style);
+      game.hint?.("flight", S6.fruit ? "FLYING! Space climbs, Alt dives, Shift for speed. Come down onto the ground (or double-tap Space) to land." : "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
+    }
+    return true;
+  }
+  function land(a, game, quiet = false) {
+    if (!a.flying || !a.flight) return;
+    endFlight(a, game, -0.01);
+    a.landT = timeOf(game);
+    if (!quiet && (a.z || 0) < 0.6) {
+      game.fx.burst(a.x, a.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.2, g: 1.2, z: 0.1, vz: 0.5, life: 0.45, kind: "dust", size: 0.18, grow: 0.4 });
+      game.audio?.sfx("land", a);
+    }
+  }
+  function fall(a, game) {
+    if (!a.flying || !a.flight) return;
+    endFlight(a, game, Math.min(-1, a.flightClimb || -1));
+  }
+  function endFlight(a, game, vz) {
+    const g = a.groundAt ? a.groundAt(game, a.x, a.y) : 0;
+    a.flying = false;
+    a.flight = null;
+    a.flightStyle = null;
+    a.flightRide = null;
+    a.flightTired = false;
+    a.flightClimb = 0;
+    a.flightBank = 0;
+    a.lightBeam = false;
+    a.swingAnchor = null;
+    a.z = Math.max(0, (a.alt ?? g) - g);
+    a.vz = a.z > 0.02 ? vz : 0;
+    a.alt = null;
+    a.airT = 0;
+    a.lastG = g;
+    a.lastGX = a.x;
+    a.lastGY = a.y;
+  }
+  function downFlyer(a, game) {
+    if (!a.flying || !a.flight) return;
+    fall(a, game);
+    game.fx.text(a.x, a.y - 1.6, "DOWNED!", "#ff8a80", 0.34);
+  }
+  function toggleFlight(a, game) {
+    if (a.flying && a.flight) {
+      a.flight.landing = true;
+      return true;
+    }
+    return takeOff(a, game);
+  }
+  function flyStep(a, dt, game) {
+    const F4 = a.flight, S6 = F4.spec, i = a.intent, w = game.world;
+    F4.t += dt;
+    a.inWater = false;
+    a.under = false;
+    a.depth = 0;
+    a.wading = 0;
+    if (a.alt == null) a.alt = feetOf(a, game);
+    if (a.flightOut || helpless(a) || a.status.grounded || S6.fruit && a.seastoned || w.zone === 2 || w.zone === 3) {
+      a.flightOut = false;
+      fall(a, game);
+      return;
+    }
+    if (S6.forms && !S6.forms.includes((a.buffs || []).find((b) => b.form)?.form) && !F4.landing) F4.landing = true;
+    const sea = overOpenSea(game, a.x, a.y);
+    const moving = Math.hypot(i.mx, i.my) > 0.1;
+    let rate = S6.drain;
+    if (i.sprint && moving) rate *= 1.7;
+    if (F4.lift > 0 || i.mz > 0 && !F4.tired) rate *= 1.3;
+    else if (i.mz < 0 || F4.landing || F4.tired) rate *= 0.5;
+    if (sea) rate *= S6.sea;
+    if (S6.fruit) rate = 0;
+    a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
+    if (a.flightGauge <= 0 && !F4.tired) {
+      F4.tired = true;
+      a.flightTired = true;
+      if (a.isPlayer) game.log(sea ? "Your strength gives out over the open sea \u2014 you're coming down!" : "Your strength gives out \u2014 you're coming down.", "#ff8a80");
+    }
+    if (S6.style === "swing" && !F4.landing && !F4.tired && swingStep(a, dt, game, S6, F4)) return;
+    if (S6.style === "swing") {
+      F4.sw = null;
+      a.swingAnchor = null;
+    }
+    const beam2 = !!S6.beam && i.sprint && moving && !F4.tired && !a.action;
+    if (beam2 && !a.lightBeam) {
+      game.audio?.sfx("light", a);
+      game.fx.ring(a.x, a.y, 0.2, 2.2, "#fff59d", 0.25, 0.1, { z: (a.z || 0) + 1, add: true });
+    }
+    a.lightBeam = beam2;
+    let sp = S6.speed * (beam2 ? S6.beam : i.sprint && !F4.tired ? 1.6 : 1) * (F4.tired ? 0.7 : 1);
+    if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
+    if (a.hitstun > 0) sp = 0;
+    if (a.status.slowmo) sp *= 0.2;
+    if (a.status.chill) sp *= 0.6;
+    if (a.zoneSlow) sp *= a.zoneSlow;
+    const k = Math.min(1, dt * (beam2 ? 9 : 3.5));
+    const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
+    a.vx += (i.mx * sp - a.vx) * k;
+    a.vy += (i.my * sp - a.vy) * k;
+    let vx = a.vx, vy = a.vy;
+    if (a.dash) {
+      vx = a.dash.vx;
+      vy = a.dash.vy;
+      a.dash.t -= dt;
+      if (a.dash.t <= 0) {
+        a.dash = null;
+        a.vx *= 0.3;
+        a.vy *= 0.3;
+      }
+    }
+    vx += a.kb.x;
+    vy += a.kb.y;
+    const decay = Math.exp(-dt * 8);
+    a.kb.x *= decay;
+    a.kb.y *= decay;
+    if (Math.abs(a.kb.x) < 0.05) a.kb.x = 0;
+    if (Math.abs(a.kb.y) < 0.05) a.kb.y = 0;
+    let vz;
+    if (F4.lift > 0) {
+      F4.lift -= dt;
+      vz = S6.climb * 1.2;
+    } else if (F4.landing) vz = -S6.dive;
+    else if (F4.tired) vz = -3.5;
+    else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S6.climb : S6.dive);
+    if (S6.style === "swing" && !i.mz && !F4.lift) vz = -2;
+    const sw2 = swoopAlt(a, game);
+    if (sw2 !== null) vz = clamp((sw2 - a.alt) * 6, -16, Math.max(vz, 3));
+    a.alt += vz * dt;
+    const n = Math.max(1, Math.ceil(Math.hypot(vx, vy) * dt / 0.25));
+    for (let s = 0; s < n; s++) {
+      const nx = w.wx(a.x + vx * dt / n), ny = a.y + vy * dt / n;
+      if (flyableAt(a, game, nx, a.y)) a.x = nx;
+      else {
+        a.vx *= 0.2;
+        a.kb.x *= -0.3;
+        if (a.dash) a.dash.vx = 0;
+      }
+      if (flyableAt(a, game, a.x, ny)) a.y = ny;
+      else {
+        a.vy *= 0.2;
+        a.kb.y *= -0.3;
+        if (a.dash) a.dash.vy = 0;
+      }
+    }
+    const g = groundBase(game, a.x, a.y);
+    const ceil = g + (sea ? SEA_CEILING : S6.ceiling);
+    if (a.alt > ceil) a.alt = Math.max(ceil, a.alt - 6 * dt);
+    const floor2 = floorUnder(a, game, a.x, a.y);
+    if (a.alt < floor2) a.alt = floor2;
+    a.z = a.alt - g;
+    const sp2 = Math.hypot(vx, vy);
+    a.flightSpeed = sp2;
+    a.flightClimb = vz;
+    const turn = s0 > 1 && sp2 > 1 ? angleDiff(hv0, Math.atan2(a.vy, a.vx)) / Math.max(dt, 1e-3) : 0;
+    a.flightBank = clamp((a.flightBank || 0) + (clamp(turn * 0.35, -1, 1) - (a.flightBank || 0)) * Math.min(1, dt * 5), -1, 1);
+    a.moving = sp2 > 0.4;
+    a.speed = sp2;
+    if (a.moving && !a.action && !a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(vy, vx)) * Math.min(1, dt * 8);
+    trailFx(a, game, S6, dt);
+    if (a.alt <= floor2 + 0.05 && vz <= 0 && F4.t > 0.3 && (F4.landing || F4.tired || (i.mz || 0) < 0)) land(a, game);
+  }
+  function swingStep(a, dt, game, S6, F4) {
+    const i = a.intent, w = game.world;
+    const m = Math.hypot(i.mx, i.my);
+    let W4 = F4.sw;
+    if (!W4 || W4.u >= 1) {
+      if (m < 0.2) return false;
+      const L3 = i.sprint ? 12.5 : 9.5, th0 = 0.95;
+      const dx = i.mx / m, dy = i.my / m;
+      const ax = w.wx(a.x + dx * L3 * Math.sin(th0)), ay = a.y + dy * L3 * Math.sin(th0);
+      const g2 = Math.max(groundBase(game, a.x, a.y), groundBase(game, ax, ay), floorUnder(a, game, ax, ay));
+      let ah = a.alt + L3 * Math.cos(th0) + ((i.mz || 0) > 0 ? S6.climb * 0.45 : (i.mz || 0) < 0 ? -2.5 : 0);
+      ah = Math.max(ah, g2 + 1.4 + L3);
+      const ceil = groundBase(game, a.x, a.y) + (overOpenSea(game, a.x, a.y) ? SEA_CEILING : S6.ceiling) + L3;
+      ah = Math.min(ah, Math.max(ceil, a.alt + L3 * Math.cos(th0)));
+      W4 = F4.sw = { ax, ay, ah, dx, dy, L: L3, th0, u: 0, T: (i.sprint ? 0.95 : 1.15) * Math.sqrt(L3 / 9.5), h0: a.alt, x0: a.x, y0: a.y };
+      game.audio?.sfx("string", a, { vol: 0.5 });
+      const sw2 = W4;
+      game.fx.add("rope", { x: a.x, y: a.y, follow: a, sw: sw2, color: S6.color || "#f8bbd0", life: W4.T + 0.2, until: () => F4.sw === sw2 && a.flying });
+    }
+    W4.u = Math.min(1, W4.u + dt / W4.T);
+    const th = W4.th0 * (2 * W4.u - 1);
+    const tx = w.wx(W4.ax + W4.dx * W4.L * Math.sin(th)), ty = W4.ay + W4.dy * W4.L * Math.sin(th);
+    const blend2 = Math.min(1, W4.u * 3.5);
+    const arcH = W4.ah - W4.L * Math.cos(th);
+    const nh = W4.h0 + (arcH - W4.h0) * (blend2 * blend2 * (3 - 2 * blend2));
+    const ox = a.x, oy = a.y, oh = a.alt;
+    const mx = w.dx(a.x, tx), my = ty - a.y;
+    const n = Math.max(1, Math.ceil(Math.hypot(mx, my) / 0.25));
+    let blocked = false;
+    a.alt = nh;
+    for (let s = 0; s < n && !blocked; s++) {
+      const nx = w.wx(a.x + mx / n), ny = a.y + my / n;
+      if (flyableAt(a, game, nx, ny)) {
+        a.x = nx;
+        a.y = ny;
+      } else blocked = true;
+    }
+    const floor2 = floorUnder(a, game, a.x, a.y);
+    if (a.alt < floor2 + 0.3) a.alt = floor2 + 0.3;
+    const vx = w.dx(ox, a.x) / Math.max(dt, 1e-3), vy = (a.y - oy) / Math.max(dt, 1e-3);
+    a.vx = vx;
+    a.vy = vy;
+    if (blocked) {
+      F4.sw = null;
+      a.swingAnchor = null;
+      a.vx *= 0.2;
+      a.vy *= 0.2;
+      return true;
+    }
+    const g = groundBase(game, a.x, a.y);
+    a.z = a.alt - g;
+    const sp = Math.hypot(vx, vy);
+    a.flightSpeed = sp;
+    a.flightClimb = (a.alt - oh) / Math.max(dt, 1e-3);
+    a.flightBank = 0;
+    a.moving = sp > 0.4;
+    a.speed = sp;
+    if (!a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(W4.dy, W4.dx)) * Math.min(1, dt * 8);
+    a.swingAnchor = { x: W4.ax, y: W4.ay, h: W4.ah };
+    a.swingTh = th / W4.th0;
+    return true;
+  }
+  function swoopAlt(a, game) {
+    const act2 = a.action;
+    if (!act2) return null;
+    const def = act2.def;
+    const melee = (def.steps || []).some((s) => s.hit && s.hit.shape !== "line" && !s.proj || s.dash?.hit);
+    if (!melee || act2.t > (def.windup ?? 0.1) + 0.45) return null;
+    const t = act2.target && act2.target.alive !== void 0 && act2.target.state === "idle" ? act2.target : foeBelow(a, game);
+    if (!t) return a.dash?.dive ? groundBase(game, a.x, a.y) + 0.4 : null;
+    return feetOf(t, game) + 0.3;
+  }
+  function foeBelow(a, game) {
+    let best = null, bd = Infinity;
+    for (const e of game.actorsNear(a.x, a.y, 4.5)) {
+      if (e === a || e.state !== "idle" || !game.combat.canHit(a, e, { vx: 0 })) continue;
+      const dx = game.world.dx(a.x, e.x), dy = e.y - a.y;
+      if (Math.abs(angleDiff(a.facing, Math.atan2(dy, dx))) > 1.3) continue;
+      const d = Math.hypot(dx, dy);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+  function reachesUp(att, tgt, h2, game) {
+    if (!(att?.flying || tgt.flying)) return true;
+    if (h2.vx !== void 0 || h2.isProj || h2.shape === "line") return true;
+    const groundRef = h2.zone || h2.radial && !h2.follow;
+    const from = groundRef ? groundBase(game, h2.x ?? tgt.x, (h2.y ?? tgt.y) + 0.4) : feetOf(att, game);
+    const gap = Math.abs(from - feetOf(tgt, game));
+    const reach3 = h2.reachZ ?? (h2.radial || h2.shape === "circle" ? Math.max(2.4, (h2.range || 1) * 0.7) : 2.4);
+    return gap <= reach3 * Math.max(att?.look?.scale || 1, tgt.look?.scale || 1);
+  }
+  function refill(a, dt, game) {
+    if (a.flying || !(a.flightGauge < 1)) return;
+    if (a.inWater || (a.z || 0) > 0.05 || a.vz || a.state !== "idle") return;
+    const S6 = flightOf(a);
+    if (!S6) return;
+    a.flightGauge = Math.min(1, a.flightGauge + dt / S6.refill);
+  }
+  function geppoSteps(a) {
+    const t = a.techniques || [];
+    let n = 0;
+    if (t.includes("roku_geppo")) n = Math.max(n, 2 + Math.floor((a.masteries?.rokushiki || 0) / 35));
+    if (t.includes("bleg_skywalk")) n = Math.max(n, 2 + Math.floor((a.masteries?.black_leg || 0) / 35));
+    return n;
+  }
+  function airStep(a, game) {
+    const n = geppoSteps(a);
+    if (!n || a.flying || (a.airSteps || 0) >= n) return false;
+    if (a.state !== "idle" || helpless(a) || a.hitstun > 0 || a.inWater || a.climb || a.onShip) return false;
+    if (!((a.z || 0) > 0.35 || a.vz > 0.5)) return false;
+    const J = a.jumpStats();
+    a.vz = J.v * 0.9;
+    const l = Math.hypot(a.intent.mx, a.intent.my);
+    const dx = l > 0.2 ? a.intent.mx / l : Math.cos(a.facing), dy = l > 0.2 ? a.intent.my / l : Math.sin(a.facing);
+    a.dash = { vx: dx * 9, vy: dy * 9, t: 0.22, ignoreWater: true };
+    a.airSteps = (a.airSteps || 0) + 1;
+    a.flightStyle = "geppo";
+    a.airStepT = timeOf(game);
+    for (let k = 0; k < 2; k++) game.fx.add("ring", { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: "#ffffff", width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
+    game.audio?.sfx("jump", a);
+    return true;
+  }
+  function takeoffFx(a, game, S6) {
+    const fx = game.fx, z = Math.max(0.05, a.z || 0);
+    fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
+    fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
+    const c = S6.color || "#ffffff";
+    if (S6.style === "phoenix") {
+      fx.burst(a.x, a.y, 10, { color: ["#29b6f6", "#4fc3f7"], hot: "#e6fbff", speed: 2.5, g: -1, z: z + 1, vz: 1.5, life: 0.55, kind: "fire", size: 0.18 });
+      fx.burst(a.x, a.y, 8, { color: "#ffd54a", speed: 4, g: 0, z: z + 1.1, vz: 1, life: 0.4, kind: "spark", size: 0.05 });
+    } else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
+    else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
+    else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
+  }
+  function trailFx(a, game, S6, dt) {
+    const p = game.player;
+    if (!p || a !== p && game.world.dist2(a.x, a.y, p.x, p.y) > 40 * 40) return;
+    a._flyFxT = (a._flyFxT || 0) - dt;
+    if (a._flyFxT > 0) return;
+    a._flyFxT = 0.05;
+    const fx = game.fx, z = a.z || 0, r4 = () => Math.random() - 0.5;
+    const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
+    switch (S6.style) {
+      case "phoenix":
+        if (Math.random() < 0.6) {
+          const side = Math.random() < 0.5 ? 1 : -1, c = Math.cos(a.facing), s = Math.sin(a.facing);
+          fx.particle({ x: a.x - s * side * 1.3 - c * 0.5, y: a.y + c * side * 1.3 - s * 0.5, z: z + 1.1 + r4() * 0.3, ...back, vz: 0.3, g: 0, life: 0.35, size: 0.05, color: Math.random() < 0.25 ? "#ffd54a" : "#80e4ff", kind: "spark" });
+        }
+        break;
+      case "dragon":
+        fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
+        if (Math.random() < 0.08) fx.burst(a.x, a.y, 3, { color: "#90caf9", speed: 3, g: 0, z: z + 1, life: 0.15, kind: "line", size: 0.05 });
+        break;
+      case "wings":
+        if (Math.random() < 0.25) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.4, z: z + 1.3, ...back, vz: -0.3, g: 0.6, life: 1.2, size: 0.1, color: "#212121", kind: "leaf", rot: Math.random() * TAU, vr: r4() * 6 });
+        break;
+      case "ride":
+        fx.particle({ x: a.x + r4() * 0.6, y: a.y + r4() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S6.ride === "rock" ? 0.12 : 0.35, grow: S6.ride === "rock" ? 0 : 0.4, color: S6.color || "#eceff1", kind: S6.ride === "sand" ? "sand" : S6.ride === "rock" ? "dust" : "smoke" });
+        break;
+      case "jet": {
+        const fsp = a.flightSpeed || 0, cruise = Math.min(1, Math.max(0, (fsp - 1.2) / 8)), rr = 0.1 + 0.95 * cruise * (1 - Math.max(0, Math.min(1, (a.flightClimb || 0) / 6)) * 0.6);
+        const c = Math.cos(a.facing), s = Math.sin(a.facing), up = [Math.sin(rr) * c, Math.sin(rr) * s, Math.cos(rr)];
+        const fx0 = a.x - up[0] * 0.95, fy0 = a.y - up[1] * 0.95, fz = z + 0.95 - up[2] * 0.95;
+        const jet = (sp, k) => ({ vx: -up[0] * sp + (a.vx || 0) * k, vy: -up[1] * sp + (a.vy || 0) * k, vz: -up[2] * sp });
+        if (S6.ride === "light") {
+          if (a.lightBeam) {
+            fx.particle({ x: a.x, y: a.y, z: z + 1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.07, size: 1.1, color: "#fff8e1", kind: "star" });
+            for (let k = 0; k < 3; k++) fx.particle({ x: a.x - (a.vx || 0) * 0.016 * k, y: a.y - (a.vy || 0) * 0.016 * k, z: z + 1 + r4() * 0.1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.6, size: 0.45 - k * 0.08, color: k ? "#ffd54f" : "#fff59d", kind: "glow" });
+            fx.particle({ x: a.x, y: a.y, z: z + 1, vx: -(a.vx || 0) * 0.08, vy: -(a.vy || 0) * 0.08, vz: 0, g: 0, life: 0.3, size: 0.06, color: "#ffffff", kind: "line" });
+          } else {
+            for (let k = 0; k < 2; k++) fx.particle({ x: fx0, y: fy0, z: fz - 0.05 - k * 0.1, ...jet(1.5, 1), g: 0, life: 0.07, size: 0.24 - k * 0.07, color: k ? "#fff59d" : "#ffffff", kind: "glow" });
+          }
+          break;
+        }
+        if (S6.ride === "fire") {
+          for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r4() * 0.15, y: fy0 + r4() * 0.15, z: fz, ...jet(8 + Math.random() * 3, 0.8), g: -1, life: 0.2 + Math.random() * 0.08, size: 0.17, grow: 0.8, color: k ? "#ff7043" : "#ffca28", kind: "fire" });
+          if (Math.random() < 0.3) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(6, 0.6), vz: -up[2] * 6 + 1.5, g: 2, life: 0.5, size: 0.04, color: "#ffe082", kind: "spark" });
+        } else if (S6.ride === "magma") {
+          for (let k = 0; k < 2; k++) fx.particle({ x: fx0 + r4() * 0.15, y: fy0 + r4() * 0.15, z: fz, ...jet(5 + Math.random() * 2, 0.6), g: -0.5, life: 0.28, size: 0.2, grow: 0.6, color: k ? "#e64a19" : "#ff6f00", kind: "fire" });
+          if (Math.random() < 0.5) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(3, 0.5), g: 14, life: 1.2, size: 0.08 + Math.random() * 0.05, color: Math.random() < 0.5 ? "#ff5722" : "#ffab40", kind: "spark" });
+          if (Math.random() < 0.35) fx.particle({ x: fx0, y: fy0, z: fz + 0.2, vx: back.vx, vy: back.vy, vz: 0.8, g: 0, life: 1.1, size: 0.3, grow: 0.8, color: "#3e2723", kind: "smoke" });
+          if (z < 8 && Math.random() < 0.06) game.fx.add("scorch", { x: a.x + r4(), y: a.y + r4(), r: 0.5 + Math.random() * 0.4, life: 8, color: "rgba(40,18,10,1)", rim: "#ff6f00", seed: Math.random() * 100 });
+        } else {
+          for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r4() * 0.2, y: fy0 + r4() * 0.2, z: fz, ...jet(6 + Math.random() * 2, 0.6), g: 1, life: 0.45, size: 0.22, grow: 0.7, color: k ? "#e1c16e" : "#cdae5a", kind: "sand" });
+        }
+        break;
+      }
+      case "swing":
+        if (a.swingAnchor && Math.random() < 0.3) fx.particle({ x: a.x, y: a.y, z: z + 1.9, ...back, vz: 0, g: 0, life: 0.25, size: 0.04, color: "#f8bbd0", kind: "line" });
+        break;
+      case "float":
+        if (S6.ride === "strings") for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.5, y: a.y + r4() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: "#f8bbd0", kind: "line" });
+        else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? "#ffffff" : S6.color || "#fff59d", kind: "glow" });
+        break;
+      default:
+        break;
+    }
+  }
+  function aiFlight(a, ctl, t, dist, game, sorties = false) {
+    if (!a.flying) a.intent.mz = 0;
+    const S6 = flightOf(a);
+    if (!S6) return;
+    const now3 = game.time || 0;
+    if (!a.flying) {
+      if (ctl.flyNext === void 0) ctl.flyNext = now3 + 6 + Math.random() * 8;
+      const above = !!t.flying && feetOf(t, game) - feetOf(a, game) > 2.2;
+      const sortie = a.boss && sorties && now3 >= ctl.flyNext && dist < 14;
+      if ((above || sortie) && !cantTakeOff(a, game)) {
+        takeOff(a, game);
+        ctl.flyChase = above;
+        ctl.flyUntil = now3 + (above ? 30 : 5 + Math.random() * 3);
+        ctl.flyNext = now3 + 16 + Math.random() * 10;
+      }
+      return;
+    }
+    if (!a.flight) return;
+    if (a.flightGauge < 0.2 || now3 > (ctl.flyUntil ?? 0) && !t.flying || ctl.flyChase && !t.flying) a.flight.landing = true;
+    const want = t.flying ? feetOf(t, game) : feetOf(t, game) + (a.flight.landing ? 0 : 4.5);
+    a.intent.mz = clamp((want - a.alt) / 2, -1, 1);
   }
 
   // src/game/room.js
@@ -17464,6 +16717,753 @@
       }
     }
   }
+
+  // src/world/bframe.js
+  var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
+  function bw(b, lx, lz) {
+    switch (rotOf(b)) {
+      case 1:
+        return { x: b.x + lz, y: b.y - lx };
+      case 2:
+        return { x: b.x - lx, y: b.y - lz };
+      case 3:
+        return { x: b.x - lz, y: b.y + lx };
+      default:
+        return { x: b.x + lx, y: b.y + lz };
+    }
+  }
+  function bl(b, x, y, world = null) {
+    const dx = world ? world.dx(b.x, x) : x - b.x, dy = y - b.y;
+    switch (rotOf(b)) {
+      case 1:
+        return { lx: -dy, lz: dx };
+      case 2:
+        return { lx: -dx, lz: -dy };
+      case 3:
+        return { lx: dy, lz: -dx };
+      default:
+        return { lx: dx, lz: dy };
+    }
+  }
+  function bbox(b, x0, x1, z0, z1) {
+    const a = bw(b, x0, z0), c = bw(b, x1, z1);
+    return { x0: Math.min(a.x, c.x), x1: Math.max(a.x, c.x), y0: Math.min(a.y, c.y), y1: Math.max(a.y, c.y) };
+  }
+  function bfoot(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    return bbox(b, -fw / 2, fw / 2, -fd, 0);
+  }
+  function bfront(b) {
+    const f = FRONT[rotOf(b)];
+    return { x: f[0], y: f[1] };
+  }
+  function bfacing(b) {
+    const f = FRONT[rotOf(b)];
+    return Math.atan2(f[1], f[0]);
+  }
+  function bangle(b) {
+    return rotOf(b) * Math.PI / 2;
+  }
+
+  // src/world/interiors.js
+  var WALL_T = 0.22;
+  var PLINTH = 0.35;
+  var STEPS_MAX = 3;
+  var WIN = {
+    village: "cross",
+    town: "cross",
+    port: "cross",
+    city: "tall",
+    desert: "arch",
+    snow: "cross",
+    wano: "shoji",
+    chinese: "lattice",
+    sky: "round",
+    candy: "round",
+    fishman: "round",
+    marine: "tall",
+    noble: "tall",
+    spooky: "gothic",
+    future: "round",
+    tribal: "none",
+    mink: "round",
+    giant: "cross",
+    ruins: "hole"
+  };
+  var DOOR = {
+    village: "plank",
+    town: "panel",
+    port: "plank",
+    city: "panel",
+    desert: "arch",
+    snow: "plank",
+    wano: "noren",
+    chinese: "panel",
+    sky: "arch",
+    candy: "arch",
+    fishman: "arch",
+    marine: "panel",
+    noble: "panel",
+    spooky: "plank",
+    future: "panel",
+    tribal: "hide",
+    mink: "plank",
+    giant: "plank",
+    ruins: "hole"
+  };
+  var winKind = (b) => WIN[b.style] || "cross";
+  var doorKind = (b) => DOOR[b.style] || "plank";
+  var styleScale = (b) => Math.max(b.style === "giant" ? 2.1 : 1, b.tall || 1);
+  var lowStyle = (b) => b.style === "wano";
+  var HOURS = {
+    shop: [7, 21],
+    market: [6, 20],
+    weapons: [8, 20],
+    bank: [8, 18],
+    bounty: [7, 21],
+    library: [8, 20],
+    cafe: [7, 21],
+    restaurant: [10, 23],
+    tavern: [0, 24],
+    bar: [0, 24],
+    inn: [0, 24],
+    doctor: [0, 24],
+    marine_base: [0, 24],
+    church: [6, 22],
+    dojo: [6, 21],
+    trainer: [6, 21],
+    shipwright: [7, 20]
+  };
+  var NOT_ENTERABLE = /* @__PURE__ */ new Set(["palace", "hall", "lighthouse"]);
+  var HUTS = /* @__PURE__ */ new Set(["tribal", "ruins"]);
+  function isEnterable(b) {
+    if (!b || b.kind !== "building" || b.noEnter) return false;
+    const role = b.role || "house";
+    if (NOT_ENTERABLE.has(role) || HUTS.has(b.style)) return false;
+    if (b.roofType === "hut" || b.roofType === "ruin") return false;
+    return (b.fw || 3) >= 3.5 && (b.fd || 3) >= 2.5;
+  }
+  function doorOf(b) {
+    const fw = Math.max(2, b.fw || 3), g = styleScale(b);
+    const role = b.role || "house";
+    const big2 = (role === "marine_base" || role === "palace" || role === "hall" || role === "church") && fw >= 5;
+    const wide = !big2 && role !== "house" && fw >= 4;
+    const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
+    return { x, dw: (big2 ? 1.7 : wide ? 1.4 : 1.05) * g, dh: (big2 ? 2.5 : wide ? 2.3 : 2.15) * g, big: big2, kind: doorKind(b) };
+  }
+  function doorLocalX(b) {
+    if (b.doorX !== void 0) return b.doorX;
+    return b.door ? bl(b, b.door.x, b.door.y).lx : 0;
+  }
+  function heightsOf(b) {
+    const g = styleScale(b);
+    const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
+    const storeyH = 2.75 * g;
+    return { g, storeys, storeyH, ceil: storeys > 1 ? storeyH : 3 * g, H: 3 * g + (storeys - 1) * storeyH };
+  }
+  var hasShutters = (b) => b.style === "village" || b.style === "town";
+  function windowSlots(b, floor2 = 0) {
+    const kind = winKind(b);
+    const none = { front: [], left: [], right: [], w: 0, reach: 0 };
+    if (kind === "none" || kind === "hole") return none;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
+    const d = doorOf(b);
+    const winW = 0.85 * g;
+    const reach3 = winW / 2 + (hasShutters(b) && (kind === "cross" || kind === "tall") ? 0.1 + winW * 0.45 : 0.14);
+    const pitch = 2 * reach3 + 0.3 * g;
+    const spread2 = (len) => {
+      const usable = len - 2 * (0.3 + reach3);
+      if (usable < 0) return [];
+      const n = Math.floor(usable / pitch) + 1;
+      return n === 1 ? [0] : Array.from({ length: n }, (_, i) => -usable / 2 + i * usable / (n - 1));
+    };
+    let front = spread2(fw);
+    if (floor2 === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach3);
+    const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
+    const at4 = b.attach || {};
+    return { front, left: at4.left ? [] : zs, right: at4.right ? [] : zs, w: winW, reach: reach3 };
+  }
+  function groundWindows(b) {
+    const kind = winKind(b);
+    if (kind === "none" || kind === "hole") return [];
+    const g = styleScale(b);
+    const winW = 0.85 * g, winH = 1.05 * g;
+    const h2 = kind === "tall" ? winH * 1.2 : winH;
+    const y = 1.55 * g;
+    const W4 = windowSlots(b, 0);
+    const out = [];
+    for (const x of W4.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
+    for (const face of ["left", "right"]) for (const z of W4[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
+    return out;
+  }
+  function interiorRect(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    return bbox(b, -fw / 2 + WALL_T, fw / 2 - WALL_T, -fd + WALL_T, -WALL_T);
+  }
+  function hash(a, b = 0, c = 0) {
+    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  }
+  function rng(seed) {
+    let s = Math.floor(seed * 2654435761) >>> 0 || 1;
+    return () => {
+      s ^= s << 13;
+      s >>>= 0;
+      s ^= s >> 17;
+      s ^= s << 5;
+      s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+  function isPirateHouse(b) {
+    return (b.role || "house") === "house" && !b.npc && isEnterable(b) && hash(b.x, b.y, 7.7) < 0.09;
+  }
+  var rectOf = (x, z, rot, w, d) => {
+    const side = Math.abs(Math.sin(rot)) > 0.5;
+    const hx = (side ? d : w) / 2, hz = (side ? w : d) / 2;
+    return { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz };
+  };
+  var overlap = (a, b, m = 0) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
+  var Placer = class {
+    constructor(L3, R5) {
+      this.L = L3;
+      this.R = R5;
+      this.rects = [];
+      this.keep = [];
+      this.low = [];
+      this.fronts = [];
+    }
+    fits(r4, tall) {
+      const L3 = this.L;
+      if (r4.x0 < L3.x0 - 1e-3 || r4.x1 > L3.x1 + 1e-3 || r4.z0 < L3.z0 - 1e-3 || r4.z1 > L3.z1 + 1e-3) return false;
+      for (const q2 of this.keep) if (overlap(r4, q2)) return false;
+      if (tall) {
+        for (const q2 of this.low) if (overlap(r4, q2)) return false;
+      }
+      for (const q2 of this.rects) if (overlap(r4, q2, 0.04)) return false;
+      for (const q2 of this.fronts) if (overlap(r4, q2)) return false;
+      return true;
+    }
+    /** The floor in front of an item that has to be got at (or null). */
+    frontOf(item, x, z, rot) {
+      if (item.ghost || !ACCESS.has(item.k)) return null;
+      const f = [Math.round(Math.sin(rot)), Math.round(Math.cos(rot))], dd = 0.55;
+      const cx = x + f[0] * (item.d / 2 + dd / 2), cz = z + f[1] * (item.d / 2 + dd / 2);
+      return rectOf(cx, cz, rot, item.w * 0.8, dd);
+    }
+    /** Try to put an item at (x, z) facing `rot`; returns the item or null. */
+    at(item, x, z, rot = 0) {
+      const r4 = rectOf(x, z, rot, item.w, item.d);
+      if (!this.fits(r4, (item.h || 0) > 1.05)) return null;
+      const fr = this.frontOf(item, x, z, rot);
+      if (fr) {
+        for (const q2 of this.rects) if (overlap(fr, q2)) return null;
+      }
+      const it = { ...item, x, z, rot, rect: r4 };
+      if (!item.ghost) this.rects.push(r4);
+      if (fr) this.fronts.push(fr);
+      this.L.items.push(it);
+      return it;
+    }
+    /** Slide an item along a wall ('back' | 'left' | 'right' | 'front'), in the given order. */
+    wall(item, wall, order = "center", gap = 0.02) {
+      const L3 = this.L;
+      let rot, fixed, a0, a1;
+      if (wall === "back") {
+        rot = 0;
+        fixed = L3.z0 + item.d / 2 + gap;
+        a0 = L3.x0 + item.w / 2;
+        a1 = L3.x1 - item.w / 2;
+      } else if (wall === "front") {
+        rot = Math.PI;
+        fixed = L3.z1 - item.d / 2 - gap;
+        a0 = L3.x0 + item.w / 2;
+        a1 = L3.x1 - item.w / 2;
+      } else if (wall === "left") {
+        rot = Math.PI / 2;
+        fixed = L3.x0 + item.d / 2 + gap;
+        a0 = L3.z0 + item.w / 2;
+        a1 = L3.z1 - item.w / 2;
+      } else {
+        rot = -Math.PI / 2;
+        fixed = L3.x1 - item.d / 2 - gap;
+        a0 = L3.z0 + item.w / 2;
+        a1 = L3.z1 - item.w / 2;
+      }
+      if (a1 < a0 - 1e-6) return null;
+      const cands = [];
+      const n = Math.max(1, Math.round((a1 - a0) / 0.1));
+      for (let i = 0; i <= n; i++) cands.push(a0 + (a1 - a0) * (i / n));
+      if (order === "center") {
+        const m = (a0 + a1) / 2;
+        cands.sort((p, q2) => Math.abs(p - m) - Math.abs(q2 - m));
+      } else if (order === "end") cands.reverse();
+      else if (order === "random") cands.sort(() => this.R() - 0.5);
+      for (const a of cands) {
+        const it = wall === "back" || wall === "front" ? this.at(item, a, fixed, rot) : this.at(item, fixed, a, rot);
+        if (it) return it;
+      }
+      return null;
+    }
+    /** Anywhere on the floor (free-standing tables), nearest to (px, pz) first. */
+    free(item, px2 = 0, pz2 = null, rot = 0) {
+      const L3 = this.L;
+      const cz = pz2 ?? (L3.z0 + L3.z1) / 2;
+      const cands = [];
+      for (let x = L3.x0 + item.w / 2; x <= L3.x1 - item.w / 2 + 1e-6; x += 0.15) {
+        for (let z = L3.z0 + item.d / 2; z <= L3.z1 - item.d / 2 + 1e-6; z += 0.15) cands.push([x, z]);
+      }
+      cands.sort((a, b) => Math.hypot(a[0] - px2, a[1] - cz) - Math.hypot(b[0] - px2, b[1] - cz));
+      for (const [x, z] of cands) {
+        const it = this.at(item, x, z, rot);
+        if (it) return it;
+      }
+      return null;
+    }
+    /** Things that don't take floor space (rugs, wall pictures, lamps). */
+    deco(item, x, z, rot = 0) {
+      const it = { ...item, x, z, rot, ghost: true };
+      this.L.items.push(it);
+      return it;
+    }
+  };
+  var F = {
+    bed: { k: "bed", w: 1, d: 2, h: 0.6 },
+    futon: { k: "futon", w: 1, d: 2, h: 0.14, ghost: true },
+    table: { k: "table", w: 0.95, d: 0.8, h: 0.76 },
+    lowTable: { k: "lowtable", w: 1, d: 0.7, h: 0.36 },
+    roundTable: { k: "roundtable", w: 0.9, d: 0.9, h: 0.76 },
+    chair: { k: "chair", w: 0.44, d: 0.44, h: 0.92, ghost: true },
+    stool: { k: "stool", w: 0.38, d: 0.38, h: 0.7, ghost: true },
+    cushion: { k: "cushion", w: 0.5, d: 0.5, h: 0.1, ghost: true },
+    cupboard: { k: "cupboard", w: 0.95, d: 0.45, h: 1.85 },
+    dresser: { k: "dresser", w: 1, d: 0.45, h: 0.9 },
+    tansu: { k: "tansu", w: 0.95, d: 0.45, h: 1.1 },
+    shelf: { k: "shelf", w: 1.2, d: 0.34, h: 1.9 },
+    lowShelf: { k: "lowshelf", w: 1.1, d: 0.36, h: 1 },
+    bookcase: { k: "bookcase", w: 1.2, d: 0.36, h: 2.1 },
+    stove: { k: "stove", w: 0.75, d: 0.6, h: 0.95 },
+    fireplace: { k: "fireplace", w: 1.3, d: 0.5, h: 1.35 },
+    hibachi: { k: "hibachi", w: 0.55, d: 0.55, h: 0.35 },
+    chest: { k: "chest", w: 0.8, d: 0.5, h: 0.55 },
+    barrel: { k: "barrel", w: 0.62, d: 0.62, h: 0.95 },
+    crate: { k: "crate", w: 0.62, d: 0.62, h: 0.6 },
+    sacks: { k: "sacks", w: 0.8, d: 0.55, h: 0.6 },
+    plant: { k: "plant", w: 0.45, d: 0.45, h: 1.1 },
+    counter: { k: "counter", w: 2, d: 0.48, h: 1.02 },
+    desk: { k: "desk", w: 1.3, d: 0.62, h: 0.78 },
+    medbed: { k: "medbed", w: 0.9, d: 1.95, h: 0.68 },
+    // (its head to the wall, as in a ward)
+    cabinet: { k: "medcabinet", w: 1, d: 0.36, h: 1.8 },
+    screen: { k: "screen", w: 1.1, d: 0.12, h: 1.6 },
+    rack: { k: "rack", w: 1.3, d: 0.3, h: 1.6 },
+    armor: { k: "armorstand", w: 0.6, d: 0.5, h: 1.75 },
+    dummy: { k: "dummy", w: 0.55, d: 0.55, h: 1.75 },
+    shrine: { k: "shrine", w: 1.2, d: 0.4, h: 1.2 },
+    pew: { k: "pew", w: 1.9, d: 0.5, h: 0.92 },
+    altar: { k: "altar", w: 1.4, d: 0.6, h: 1 },
+    safe: { k: "safe", w: 0.8, d: 0.7, h: 1.2 },
+    bench: { k: "bench", w: 1.4, d: 0.42, h: 0.46 },
+    board: { k: "board", w: 1.3, d: 0.06, h: 1, ghost: true },
+    filing: { k: "filing", w: 0.6, d: 0.5, h: 1.3 },
+    flag: { k: "flag", w: 1.1, d: 0.05, h: 1.6, ghost: true },
+    stairs: { k: "stairs", w: 2.6, d: 0.95, h: 2.4 },
+    workbench: { k: "workbench", w: 1.7, d: 0.7, h: 0.9 },
+    lumber: { k: "lumber", w: 1.8, d: 0.6, h: 0.7 },
+    hull: { k: "hull", w: 2.4, d: 1.2, h: 1.1 },
+    produce: { k: "produce", w: 1.1, d: 0.6, h: 0.8 }
+  };
+  var ACCESS = /* @__PURE__ */ new Set(["cupboard", "dresser", "tansu", "shelf", "lowshelf", "bookcase", "stove", "fireplace", "medcabinet", "safe", "filing", "workbench", "rack", "shrine", "altar"]);
+  var sized = (it, g) => g === 1 ? it : { ...it, w: it.w * g, d: it.d * g, h: it.h * g };
+  var GROUP = {
+    house: "house",
+    shop: "shop",
+    market: "market",
+    weapons: "weapons",
+    bank: "bank",
+    bounty: "bounty",
+    library: "library",
+    tavern: "tavern",
+    bar: "tavern",
+    inn: "inn",
+    restaurant: "restaurant",
+    cafe: "restaurant",
+    doctor: "doctor",
+    dojo: "dojo",
+    trainer: "dojo",
+    church: "church",
+    marine_base: "marine",
+    shipwright: "shipwright"
+  };
+  var roomOf = (b) => GROUP[b.role || "house"] || "house";
+  var KEEPER = {
+    shop: "Shopkeeper",
+    market: "Grocer",
+    weapons: "Armourer",
+    bank: "Banker",
+    bounty: "Bounty Clerk",
+    library: "Librarian",
+    tavern: "Barkeep",
+    inn: "Innkeeper",
+    restaurant: "Cook",
+    doctor: "Doctor",
+    dojo: "Sensei",
+    church: "Priest",
+    marine: "Marine Officer",
+    shipwright: "Shipwright"
+  };
+  function layoutOf(b) {
+    if (b._layout) return b._layout;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
+    const T5 = WALL_T;
+    const door = doorOf(b);
+    const L3 = { x0: -fw / 2 + T5, x1: fw / 2 - T5, z0: -fd + T5, z1: -T5, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
+    const R5 = rng(hash(b.x, b.y, (b.v || 0) + 1));
+    const P6 = new Placer(L3, R5);
+    P6.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L3.z1 - Math.max(1, door.dw) - 0.06, z1: L3.z1 + 1 });
+    for (const w of groundWindows(b)) {
+      const hw = w.w / 2 + 0.12;
+      if (w.face === "front") P6.low.push({ x0: w.u - hw, x1: w.u + hw, z0: L3.z1 - 0.7, z1: L3.z1 + 1 });
+      else if (w.face === "left") P6.low.push({ x0: L3.x0 - 1, x1: L3.x0 + 0.7, z0: w.u - hw, z1: w.u + hw });
+      else P6.low.push({ x0: L3.x1 - 0.7, x1: L3.x1 + 1, z0: w.u - hw, z1: w.u + hw });
+    }
+    const S6 = (k) => sized(F[k], g);
+    (ROOMS2[L3.room] || ROOMS2.house)(P6, L3, b, R5, S6, g);
+    P6.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
+    b._layout = L3;
+    return L3;
+  }
+  function counterRoom(P6, L3, S6, g, { shelf = "goods", len = 2.2, gapBehind = 0.58 } = {}) {
+    const width = L3.x1 - L3.x0;
+    const bd = 0.26 * g;
+    const cw = Math.min(len * g, width - 0.75 * g);
+    const cz = L3.z0 + bd + gapBehind * g + S6("counter").d / 2;
+    const counter2 = P6.at({ ...S6("counter"), w: cw }, L3.x0 + cw / 2 + 0.02, cz, 0) || P6.at({ ...S6("counter"), w: cw * 0.8 }, L3.x0 + cw * 0.4 + 0.02, cz, 0);
+    if (!counter2) return null;
+    const bw2 = Math.min(width - 0.1, cw + 0.4 * g);
+    P6.deco({ k: shelf, w: bw2, d: bd, h: 1.9 * g }, L3.x0 + bw2 / 2 + 0.02, L3.z0 + bd / 2 + 0.01, 0);
+    P6.rects.push({ x0: L3.x0, x1: L3.x0 + bw2 + 0.02, z0: L3.z0, z1: counter2.rect.z0 });
+    P6.keep.push({ x0: counter2.x - 0.55, x1: counter2.x + 0.55, z0: counter2.rect.z1, z1: counter2.rect.z1 + 0.85 });
+    L3.keeper = { x: counter2.x, z: L3.z0 + bd + gapBehind * g * 0.5 };
+    L3.use.push({ kind: "service", x: counter2.x, z: counter2.rect.z1 + 0.45, label: null });
+    return counter2;
+  }
+  function bedIn(P6, S6, low, order) {
+    const k = low ? "futon" : "bed";
+    return P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "start") || P6.wall(S6(k), "right", "start");
+  }
+  function searchable(L3, it, label) {
+    if (!it) return null;
+    const f = [Math.sin(it.rot), Math.cos(it.rot)];
+    L3.use.push({ kind: "loot", x: it.x + f[0] * (it.d / 2 + 0.42), z: it.z + f[1] * (it.d / 2 + 0.42), label });
+    return it;
+  }
+  function stash(P6, L3, S6, k, walls, label) {
+    for (const [wall, order] of walls) {
+      const it = P6.wall({ ...S6(k), loot: true }, wall, order);
+      if (it) return searchable(L3, it, label);
+    }
+    return null;
+  }
+  function footChest(P6, L3, S6, bed2, label) {
+    if (!bed2 || bed2.rot !== 0) return null;
+    const c = S6("chest"), r4 = bed2.rect;
+    const it = P6.at({ ...c, loot: true }, (r4.x0 + r4.x1) / 2, r4.z1 + c.d / 2 + 0.05, 0);
+    if (it) L3.use.push({ kind: "loot", x: it.x, z: it.rect.z1 + 0.45, label });
+    return it;
+  }
+  function hearthIn(P6, L3, b, S6, low, order) {
+    const k = b.style === "snow" || b.style === "village" || b.style === "giant" ? "fireplace" : low ? "hibachi" : "stove";
+    const st = P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "end") || P6.wall(S6(k), "right", "end");
+    if (st) L3.residents.push({ x: st.x + Math.sin(st.rot) * (st.d / 2 + 0.35), z: st.z + Math.cos(st.rot) * (st.d / 2 + 0.35) });
+    return st;
+  }
+  function tableIn(P6, L3, S6, low, kind, x, z, seat) {
+    const tb = P6.free(S6(low ? "lowTable" : kind), x, z);
+    if (!tb) return null;
+    for (const s of [-1, 1]) {
+      const st = S6(low ? "cushion" : seat);
+      const sx = tb.x + s * (tb.w / 2 + st.w * 0.45);
+      if (sx - st.w / 2 < L3.x0 || sx + st.w / 2 > L3.x1) continue;
+      P6.deco(st, sx, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+      L3.residents.push({ x: sx, z: tb.z, sit: true, face: s < 0 ? 0 : Math.PI });
+    }
+    return tb;
+  }
+  var sides = (R5) => R5() < 0.5 ? ["start", "end"] : ["end", "start"];
+  var HOMES = {
+    family(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      if (bed2 && L3.x1 - L3.x0 > 5) P6.wall(S6(low ? "futon" : "bed"), "back", other);
+      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
+      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["left", "random"], ["right", "random"], ["front", "start"]], "Search the cupboard");
+      hearthIn(P6, L3, b, S6, low, other);
+      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.8 : -0.8), L3.z0 + (L3.z1 - L3.z0) * 0.55, "chair");
+      P6.wall(S6("shelf"), "right", "random") || P6.wall(S6("lowShelf"), "front", "end");
+      if (R5() < 0.6) P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
+      if (R5() < 0.5) P6.wall(S6("plant"), "front", "end");
+    },
+    // nets, floats and barrels of salt fish; a sea chest by the bed
+    fisher(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
+      hearthIn(P6, L3, b, S6, low, other);
+      P6.wall(S6("rack"), "left", "random");
+      P6.wall(S6("barrel"), "right", "start");
+      P6.wall(S6("barrel"), "right", "start");
+      P6.wall(S6("crate"), "front", R5() < 0.5 ? "start" : "end");
+      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.6, "stool");
+      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
+    },
+    // a carpenter or smith who works at home: a workbench, timber, tools
+    crafter(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const wb = P6.wall(S6("workbench"), "back", other) || P6.wall(S6("workbench"), "left", "random") || P6.wall(S6("workbench"), "right", "random");
+      if (wb) {
+        const f = [Math.sin(wb.rot), Math.cos(wb.rot)];
+        L3.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI });
+      }
+      P6.wall(S6("rack"), "right", "random") || P6.wall(S6("rack"), "left", "random");
+      P6.wall(S6("lumber"), "front", R5() < 0.5 ? "start" : "end") || P6.wall(S6("crate"), "front", "start");
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the tool chest");
+      stash(P6, L3, S6, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
+      hearthIn(P6, L3, b, S6, low, "center");
+      if (R5() < 0.7) P6.wall(S6("crate"), "right", "end");
+    },
+    // books everywhere, a desk under the lamp
+    scholar(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      P6.wall(S6("bookcase"), "back", other) || P6.wall(S6("shelf"), "back", other);
+      P6.wall(S6("bookcase"), "left", "random") || P6.wall(S6("lowShelf"), "left", "random");
+      const desk = P6.wall(S6("desk"), "right", "random") || P6.free(S6("desk"), 0, (L3.z0 + L3.z1) / 2);
+      if (desk) {
+        const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S6("chair");
+        const cx = desk.x + f[0] * (desk.d / 2 + ch.d * 0.4), cz = desk.z + f[1] * (desk.d / 2 + ch.d * 0.4);
+        P6.deco(ch, cx, cz, desk.rot + Math.PI);
+        L3.residents.push({ x: cx, z: cz, sit: true, face: desk.rot + Math.PI });
+      }
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the chest") || stash(P6, L3, S6, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
+      hearthIn(P6, L3, b, S6, low, "center");
+      if (R5() < 0.7) P6.wall(S6("plant"), "front", "end");
+    },
+    // sacks of grain, barrels, baskets of produce
+    farmer(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
+      hearthIn(P6, L3, b, S6, low, other);
+      P6.wall(S6("sacks"), "left", "start");
+      P6.wall(S6("sacks"), "left", "end");
+      P6.wall(S6("produce"), "right", "random") || P6.wall(S6("barrel"), "right", "random");
+      P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
+      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.58, "chair");
+      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
+    },
+    // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
+    sailor(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["left", "random"]], "Search the sea chest");
+      P6.wall(S6("barrel"), "back", other);
+      P6.wall(S6("barrel"), "right", "start");
+      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.5 : -0.5), L3.z0 + (L3.z1 - L3.z0) * 0.55, "stool");
+      P6.wall(S6("lowShelf"), "left", "random") || P6.wall(S6("shelf"), "right", "random");
+      hearthIn(P6, L3, b, S6, low, "center");
+      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
+    }
+  };
+  var ROOMS2 = {
+    house(P6, L3, b, R5, S6, g) {
+      const low = lowStyle(b);
+      const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
+      const kind = b.npc ? "family" : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
+      L3.kind = kind;
+      HOMES[kind](P6, L3, b, R5, S6, g, low);
+      if (!L3.use.some((u) => u.kind === "loot")) {
+        const walls = [["left", "random"], ["right", "random"], ["front", "start"], ["front", "end"], ["back", "center"]];
+        if (!stash(P6, L3, S6, "chest", walls, "Search the chest")) {
+          const it = P6.free({ ...S6("chest"), loot: true }, 0, (L3.z0 + L3.z1) / 2);
+          if (it) searchable(L3, it, "Search the chest");
+        }
+      }
+      P6.deco({ k: low ? "tatami" : "rug", w: Math.min(2.2 * g, (L3.x1 - L3.x0) * 0.6), d: Math.min(1.5 * g, (L3.z1 - L3.z0) * 0.5), h: 0.02 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2 + 0.2);
+      P6.deco({ k: R5() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L3.x0 + (L3.x1 - L3.x0) * (0.3 + R5() * 0.4), L3.z0 + 0.02, 0);
+      if (!L3.residents.length) L3.residents.push({ x: (L3.x0 + L3.x1) / 2, z: (L3.z0 + L3.z1) / 2 });
+    },
+    shop(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods" });
+      P6.wall(S6("shelf"), "left", "start") || P6.wall(S6("lowShelf"), "left", "start");
+      P6.wall(S6("shelf"), "right", "start") || P6.wall(S6("lowShelf"), "right", "start");
+      P6.wall(S6("barrel"), "front", "start");
+      P6.wall(S6("crate"), "front", "end");
+      if (L3.z1 - L3.z0 > 3) P6.free(S6("produce"), 0, L3.z1 - 1.4);
+      P6.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L3.door.x, L3.z1 - 0.7);
+    },
+    market(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods" });
+      P6.wall(S6("produce"), "left", "start");
+      P6.wall(S6("produce"), "right", "start");
+      P6.wall(S6("sacks"), "front", "start");
+      P6.wall(S6("barrel"), "front", "end");
+      P6.wall(S6("crate"), "left", "end");
+    },
+    weapons(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "wallrack" });
+      P6.wall(S6("rack"), "left", "start") || P6.wall(S6("rack"), "left", "end");
+      P6.wall(S6("rack"), "right", "start") || P6.wall(S6("armor"), "right", "start");
+      P6.wall(S6("armor"), "front", "start");
+      P6.wall(S6("barrel"), "front", "end");
+    },
+    bank(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 2.6 });
+      P6.wall(S6("safe"), "right", "start");
+      P6.wall(S6("bench"), "left", "end") || P6.wall(S6("bench"), "front", "start");
+      P6.wall(S6("plant"), "front", "end");
+    },
+    bounty(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 1.6 });
+      P6.deco({ k: "wanted", w: Math.min(1.8, L3.z1 - L3.z0 - 0.4), d: 0.04, h: 1 }, L3.x0 + 0.03, (L3.z0 + L3.z1) / 2 + 0.2, Math.PI / 2);
+      P6.wall(S6("filing"), "right", "start");
+      P6.wall(S6("bench"), "front", "start");
+    },
+    library(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "books", len: 1.6 });
+      P6.wall(S6("bookcase"), "left", "start");
+      P6.wall(S6("bookcase"), "left", "end");
+      P6.wall(S6("bookcase"), "right", "start");
+      P6.wall(S6("bookcase"), "right", "end");
+      const tb = P6.free(S6("table"), 0.6, L3.z1 - 1.5);
+      if (tb) for (const s of [-1, 1]) P6.deco(S6("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+      L3.use.push({ kind: "read", x: L3.x0 + 0.7, z: (L3.z0 + L3.z1) / 2, label: "Browse the shelves" });
+    },
+    tavern(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 3 });
+      const bar2 = L3.items.find((it) => it.k === "counter");
+      if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P6.deco(S6("stool"), x, bar2.rect.z1 + 0.3, 0);
+      for (const px2 of [L3.x0 + 0.9, L3.x1 - 0.9]) {
+        const t = P6.free(S6("roundTable"), px2, L3.z1 - 1.05);
+        if (!t) continue;
+        for (const a of [0, 2.1, 4.2]) {
+          const x = t.x + Math.cos(a) * 0.62, z = t.z + Math.sin(a) * 0.62;
+          if (x < L3.x0 + 0.15 || x > L3.x1 - 0.15 || z < L3.z0 + 0.15 || z > L3.z1 - 0.15) continue;
+          P6.deco(S6("stool"), x, z, 0);
+        }
+        L3.residents.push({ x: t.x + 0.62, z: t.z, sit: true, face: Math.PI / 2 });
+      }
+      P6.wall(S6("barrel"), "right", "end") || P6.wall(S6("barrel"), "front", "end");
+      P6.wall(S6("barrel"), "left", "end");
+      P6.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2, -Math.PI / 2);
+      L3.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L3.z1 - 1 };
+    },
+    inn(P6, L3, b, R5, S6, g) {
+      ROOMS2.tavern(P6, L3, b, R5, S6, g);
+      P6.wall(S6("stairs"), "left", "start") || P6.wall(S6("stairs"), "right", "start");
+    },
+    restaurant(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 2.2 });
+      const W4 = L3.x1 - L3.x0, D4 = L3.z1 - L3.z0;
+      const cols = Math.max(2, Math.floor((W4 - 1) / (3.2 * g)));
+      const small = cols === 2 && D4 - 3 * g < 5.6 * g;
+      const rows = small ? 1 : Math.max(1, Math.min(4, 1 + Math.floor((D4 - 3.7 * g) / (2.4 * g))));
+      let diners = 0;
+      for (let r4 = 0; r4 < rows; r4++) {
+        for (let c = 0; c < cols; c++) {
+          const px2 = small ? c ? L3.x1 - 0.8 : L3.x0 + 0.8 : L3.x0 + 0.5 + (c + 0.5) * (W4 - 1) / cols;
+          const pz2 = L3.z1 - (small ? 1.1 : 1.1 * g + r4 * 2.4 * g);
+          const t = small ? P6.free(S6("table"), px2, pz2) : P6.at(S6("table"), px2, pz2, 0);
+          if (!t) continue;
+          for (const s of [-1, 1]) {
+            const x = t.x + s * (t.w / 2 + 0.22);
+            if (x < L3.x0 + 0.2 || x > L3.x1 - 0.2) continue;
+            P6.deco(S6("chair"), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+          }
+          if (small || diners < 6 && (r4 + c) % 2 === 0) {
+            L3.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 });
+            diners++;
+          }
+        }
+      }
+      P6.wall(S6("plant"), "front", "end");
+    },
+    doctor(P6, L3, b, R5, S6, g) {
+      const desk = P6.wall(S6("desk"), "back", "start", 0.62 * g);
+      if (desk) {
+        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
+        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
+        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
+        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
+      }
+      P6.wall(S6("cabinet"), "back", "end");
+      const b1 = P6.wall(S6("medbed"), "right", "start") || P6.wall(S6("medbed"), "left", "start");
+      if (b1) L3.residents.push({ x: b1.x, z: b1.z, lie: true, rot: b1.rot });
+      P6.wall(S6("medbed"), "left", "start");
+      P6.wall(S6("screen"), "right", "end");
+      P6.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L3.z0 + 0.02, 0);
+      P6.wall(S6("plant"), "front", "end");
+    },
+    dojo(P6, L3, b, R5, S6, g) {
+      P6.deco({ k: "mats", w: L3.x1 - L3.x0 - 0.4, d: L3.z1 - L3.z0 - 0.3, h: 0.03 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
+      const sh = P6.wall(S6("shrine"), "back", "center");
+      L3.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L3.z0) + 0.55 };
+      P6.rects.push({ x0: L3.keeper.x - 0.4, x1: L3.keeper.x + 0.4, z0: L3.keeper.z - 0.35, z1: L3.keeper.z + 0.35 });
+      P6.wall(S6("rack"), "left", "start");
+      P6.wall(S6("rack"), "right", "start");
+      P6.free(S6("dummy"), L3.x0 + 1, L3.z1 - 1.2);
+      P6.free(S6("dummy"), L3.x1 - 1, L3.z1 - 1.2);
+      L3.use.push({ kind: "service", x: L3.keeper.x, z: L3.keeper.z + 0.9, label: null });
+    },
+    church(P6, L3, b, R5, S6, g) {
+      const al = P6.wall(S6("altar"), "back", "center", 0.6 * g);
+      if (al) {
+        L3.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
+        P6.rects.push({ x0: al.rect.x0, x1: al.rect.x1, z0: L3.z0, z1: al.rect.z0 });
+        L3.use.push({ kind: "service", x: al.x, z: al.rect.z1 + 0.5, label: null });
+      }
+      for (let z = (al ? al.rect.z1 : L3.z0) + 0.9; z < L3.z1 - 1.2; z += 0.95) {
+        for (const s of [-1, 1]) {
+          const w = Math.min(1.9 * g, (L3.x1 - L3.x0) / 2 - 0.7);
+          if (w < 0.8) continue;
+          P6.at({ ...S6("pew"), w }, s * ((L3.x1 - L3.x0) / 4 + 0.15), z, Math.PI);
+        }
+      }
+      P6.wall(S6("plant"), "front", "start");
+      P6.wall(S6("plant"), "front", "end");
+    },
+    marine(P6, L3, b, R5, S6, g) {
+      const desk = P6.wall(S6("desk"), "back", "center", 0.62 * g);
+      if (desk) {
+        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
+        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
+        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
+        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
+        P6.deco({ ...S6("flag"), k: "marineflag" }, desk.x, L3.z0 + 0.03, 0);
+      }
+      P6.wall(S6("filing"), "back", "start");
+      P6.wall(S6("filing"), "back", "end");
+      P6.wall(S6("rack"), "left", "start");
+      P6.wall(S6("bench"), "right", "end") || P6.wall(S6("bench"), "front", "start");
+      P6.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2 - 0.3, -Math.PI / 2);
+      L3.residents.push({ x: L3.x0 + 0.8, z: L3.z1 - 1, guard: true });
+    },
+    shipwright(P6, L3, b, R5, S6, g) {
+      const wb = P6.wall(S6("workbench"), "back", "start", 0.62 * g);
+      if (wb) {
+        L3.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
+        P6.rects.push({ x0: wb.rect.x0, x1: wb.rect.x1, z0: L3.z0, z1: wb.rect.z0 });
+        L3.use.push({ kind: "service", x: wb.x, z: wb.rect.z1 + 0.45, label: null });
+      }
+      P6.free(S6("hull"), L3.x1 - 1.6, (L3.z0 + L3.z1) / 2);
+      P6.wall(S6("lumber"), "front", "start") || P6.wall(S6("lumber"), "left", "end");
+      P6.wall(S6("rack"), "right", "start");
+      P6.wall(S6("barrel"), "front", "end");
+    }
+  };
 
   // src/world/objects.js
   var CHUNK = 32;
@@ -26661,6 +26661,13 @@
       if (att && att.isPlayer) this.provoked = true;
       if (this.controller && this.controller.onHurt) this.controller.onHurt(this, att, game);
       if (game.onDamage) game.onDamage(this, att, n, h2);
+      if (this.onYield && this.hp <= (this.yieldHp ?? 1)) {
+        this.hp = Math.max(1, this.yieldHp ?? 1);
+        const f = this.onYield;
+        this.onYield = null;
+        f(this, att, game);
+        return;
+      }
       if (this.hp <= 0) {
         this.killingBlow = h2 ? { fruit: !!(h2.def?.source?.startsWith("fruit") || h2.def?.source?.startsWith("haki")), crush: !!h2.crush, over: -this.hp > this.d.maxHp * 0.5 } : null;
         this.hp = 0;
@@ -28524,6 +28531,188 @@
         g.strokeText(qm, 0, -2.5 * s + bob);
         g.fillStyle = main2 ? "#ff9100" : qm === "!" ? "#ffd54f" : "#90caf9";
         g.fillText(qm, 0, -2.5 * s + bob);
+      }
+    }
+  };
+
+  // src/game/dugongs.js
+  var TROOP = 5;
+  var NEAR = 70;
+  function installDugongs(game) {
+    const D4 = { troop: [], island: null, farewell: false };
+    game.dugongs = D4;
+    const clear3 = () => {
+      for (const k of D4.troop) k.alive = false;
+      D4.troop.length = 0;
+      D4.island = null;
+    };
+    game.on("characterStart", clear3);
+    game.on("enterZone", clear3);
+    game.on("tick", (dt) => {
+      const p = game.player, c = game.state?.char;
+      if (!p || !c || game.world !== game.surface) return;
+      const isl = game.currentIsland;
+      const beach = isl?.spots?.dugong_beach;
+      D4.troop = D4.troop.filter((k) => k.alive);
+      if (!beach) {
+        if (D4.troop.length && !D4.farewell && c.flags?.dugongMaster) {
+          D4.farewell = true;
+          game.log("Back on the shore, the Kung-Fu Dugongs line up at the water's edge, waving their flippers and sobbing as their master sails away.", "#ffe082");
+        }
+        if (D4.troop.length && D4.island && game.world.distance(p.x, p.y, D4.island.x, D4.island.y) > (D4.island.radius || 120) + 150) clear3();
+        return;
+      }
+      D4.farewell = false;
+      const d = game.world.distance(p.x, p.y, beach.x, beach.y);
+      if (!D4.troop.length && d < NEAR + 40) spawnTroop(game, D4, isl, beach);
+    });
+    return D4;
+  }
+  function spawnTroop(game, D4, isl, beach) {
+    const w = game.world, c = game.state.char;
+    D4.island = isl;
+    for (let i = 0; i < TROOP; i++) {
+      let x = beach.x, y = beach.y;
+      for (let tries = 0; tries < 30; tries++) {
+        const a = Math.random() * Math.PI * 2, r4 = 3 + Math.random() * 9;
+        const tx = w.wx(beach.x + Math.cos(a) * r4), ty = beach.y + Math.sin(a) * r4;
+        if (!w.isBlocked(tx, ty) && !w.isLiquid(tx, ty)) {
+          x = tx;
+          y = ty;
+          break;
+        }
+      }
+      const k = game.addActor(makeDugong(game, x, y, i));
+      k.home = { x, y };
+      if (c.flags?.dugongMaster) k.disciple = true;
+      D4.troop.push(k);
+    }
+  }
+  function makeDugong(game, x, y, i = 0) {
+    const k = new Actor({
+      x,
+      y,
+      name: "Kung-Fu Dugong",
+      title: "Master of the Sandora shore",
+      faction: "beast",
+      look: { race: "dugong" },
+      attrs: { str: 8, agi: 12, end: 6, vit: 6, wil: 3 },
+      hpMul: 1.4
+    });
+    k.game = game;
+    k.r = 0.45;
+    k.dugong = true;
+    k.seed = i * 1.37 + Math.random();
+    k.kbResist = 0.8;
+    k.controller = new DugongBrain(i);
+    k.showName = true;
+    k.yieldHp = 1;
+    k.onYield = (a, att, g) => becomeMaster(g, a, att);
+    return k;
+  }
+  function becomeMaster(game, k, att) {
+    const c = game.state?.char;
+    k.provoked = false;
+    k.challenger = false;
+    k.action = null;
+    k.hp = k.d.maxHp;
+    k.bowT = 2.2;
+    game.combat?.cancelBlows?.(k);
+    if (!att?.isPlayer) return;
+    if (c) {
+      c.flags || (c.flags = {});
+      c.flags.dugongMaster = true;
+    }
+    for (const o of game.dugongs?.troop || []) {
+      o.disciple = true;
+      o.provoked = false;
+      o.challenger = false;
+      o.bowT = 2.2;
+    }
+    game.fx.text(k.x, k.y - 1.2, "MASTER!", "#ffe082", 0.5, { life: 1.6 });
+    game.ui?.banner?.("KUNG-FU DUGONGS", "", "It bows to you \u2014 you're their master now! The whole troop follows you.", 3);
+    game.log("The Kung-Fu Dugong drops its stance and bows low. The whole troop bows with it: you're their master now.", "#ffe082");
+    game.audio?.sfx("reveal");
+  }
+  var DugongBrain = class {
+    constructor(i) {
+      this.i = i;
+      this.t = 1 + Math.random() * 2;
+      this.kata = 0;
+    }
+    update(k, dt, game) {
+      const p = game.player, w = game.world;
+      k.intent.mx = 0;
+      k.intent.my = 0;
+      if (k.state !== "idle") return;
+      k.bowT = Math.max(0, (k.bowT || 0) - dt);
+      k.kataT = Math.max(0, (k.kataT || 0) - dt);
+      const dx = w.dx(k.x, p.x), dy = p.y - k.y, d = Math.hypot(dx, dy) || 1;
+      if (k.bowT > 0) {
+        k.facing = Math.atan2(dy, dx);
+        return;
+      }
+      if (k.disciple) {
+        const back = p.facing + Math.PI + (this.i - 2) * 0.35, r4 = 2.2 + this.i * 0.7;
+        const tx = p.x + Math.cos(back) * r4, ty = p.y + Math.sin(back) * r4;
+        const ex = w.dx(k.x, tx), ey = ty - k.y, ed = Math.hypot(ex, ey);
+        const home2 = k.home && w.distance(k.x, k.y, k.home.x, k.home.y) > NEAR;
+        if (ed > 0.8 && !p.inWater && !home2 && !p.ship) {
+          k.intent.mx = ex / ed * Math.min(1, ed / 3);
+          k.intent.my = ey / ed * Math.min(1, ed / 3);
+        }
+        if (ed < 3) k.facing += Math.atan2(Math.sin(p.facing - k.facing), Math.cos(p.facing - k.facing)) * Math.min(1, dt * 4);
+        else k.facing = Math.atan2(ey, ex);
+        if (p.action && !k.kataT) {
+          k.kataT = 0.6;
+          k.mimic = game.time;
+        }
+        return;
+      }
+      if (!k.challenger && k.provoked) k.challenger = true;
+      if (!k.challenger) {
+        this.t -= dt;
+        if (this.t <= 0) {
+          this.t = 2 + Math.random() * 3;
+          k.kataT = 1.2;
+          k.mimic = game.time;
+        }
+        if (d < 7 && p.state === "idle" && !p.inWater && !p.ship && game.dugongs?.troop.every((o) => !o.challenger)) {
+          k.challenger = true;
+          k.bowT = 1.2;
+          k.provoked = true;
+          game.fx.text(k.x, k.y - 1.1, "HYAAH!", "#ffcc80", 0.42, { life: 1.2 });
+          game.log("A Kung-Fu Dugong bows, then drops into a fighting stance. It's challenging you!", "#ffcc80");
+          game.hint?.("dugong", "Beat a Kung-Fu Dugong in a fair fight and it becomes your disciple \u2014 and so does its whole troop.");
+        }
+        return;
+      }
+      if (d > 25 || p.inWater || p.state !== "idle") {
+        k.challenger = false;
+        k.provoked = false;
+        return;
+      }
+      k.facing = Math.atan2(dy, dx);
+      if (k.action) return;
+      this.t -= dt;
+      if (d > 1.6) {
+        k.intent.mx = dx / d;
+        k.intent.my = dy / d;
+      }
+      if (this.t <= 0 && d < 2.2) {
+        const spin = Math.random() < 0.35;
+        this.t = 1.1 + Math.random() * 0.9;
+        const def = { anim: "light", steps: [], windup: spin ? 0.4 : 0.28, recover: 0.35, dugong: spin ? "spin" : "chop" };
+        k.action = { def, t: 0, step: 0, total: def.windup + def.recover, mult: 1, angle: k.facing };
+        setTimeout(() => {
+          if (!k.alive || k.state !== "idle" || k.disciple || !k.challenger) return;
+          const hx = k.x + Math.cos(k.facing) * 0.9, hy = k.y + Math.sin(k.facing) * 0.9;
+          game.combat.hitbox({ owner: k, x: spin ? k.x : hx, y: spin ? k.y : hy, shape: "circle", range: spin ? 1.6 : 1, damage: spin ? 9 : 6, knockback: spin ? 6 : 3, stun: 0.25, duration: 0.1, radial: spin });
+          game.audio?.sfx("punch", { x: hx, y: hy });
+        }, def.windup * 1e3);
+      } else if (this.t <= 0 && d < 3.5 && Math.random() < 0.02) {
+        k.dash = { vx: -dx / d * 7, vy: -dy / d * 7, t: 0.25 };
+        k.flipT = game.time;
       }
     }
   };
@@ -62065,7 +62254,7 @@ uniform int uNumLights;
 
 out vec4 outColor;
 
-const float WW = ${W2}.0;
+const float WW = ${W}.0;
 const float HH = ${H}.0;
 const float EQY = ${EQ}.0;
 const float GLH = ${GL_HALF}.0;
@@ -62881,7 +63070,7 @@ void main() {
   };
 
   // src/render3d/curvature.js
-  var PLANET_R = W2 / (2 * Math.PI);
+  var PLANET_R = W / (2 * Math.PI);
   var CURVE_K = 1 / (2 * PLANET_R);
   var CURVE_K_GLSL = CURVE_K.toExponential(6);
   var curveStmt = (p) => `${p}.y -= dot(${p}.xz, ${p}.xz) * ${CURVE_K_GLSL};`;
@@ -66563,7 +66752,7 @@ void main() {
 
   // src/render3d/sunshadow.js
   var SIZE = 2048;
-  var NEAR = 16;
+  var NEAR2 = 16;
   var RATIO = 4;
   var AHEAD = 0.35;
   var DIST = 120;
@@ -66583,8 +66772,8 @@ void main() {
     /* glsl */
     `
 	const float SUN_RATIO = ${RATIO.toFixed(1)};
-	const float SUN_BLEND = ${(BLEND / (2 * NEAR)).toFixed(5)};
-	const float SUN_FADE = ${(FADE2 / (2 * NEAR * RATIO)).toFixed(5)};
+	const float SUN_BLEND = ${(BLEND / (2 * NEAR2)).toFixed(5)};
+	const float SUN_FADE = ${(FADE2 / (2 * NEAR2 * RATIO)).toFixed(5)};
 	#ifndef SUN_SELF
 	#define SUN_SELF 0.0
 	#endif
@@ -66677,7 +66866,7 @@ ${GLSL}
     }
     /** Each cascade is drawn through its own window; the shaders read both through the coarse one's matrix. */
     updateMatrices(light, vp = 0) {
-      const r4 = vp ? NEAR * RATIO : NEAR, cam = this.camera;
+      const r4 = vp ? NEAR2 * RATIO : NEAR2, cam = this.camera;
       cam.left = cam.bottom = -r4;
       cam.right = cam.top = r4;
       cam.updateProjectionMatrix();
@@ -66692,11 +66881,11 @@ ${GLSL}
      * same texels however you move. dir: toward the light.
      */
     follow(light, dir, x, y, z, fx, fz, ox, oy) {
-      let cx = x + fx * NEAR * AHEAD, cy = y, cz = z + fz * NEAR * AHEAD;
+      let cx = x + fx * NEAR2 * AHEAD, cy = y, cz = z + fz * NEAR2 * AHEAD;
       const h2 = Math.hypot(dir.x, dir.z) || 1;
       const rx = dir.z / h2, rz = -dir.x / h2;
       const ux = dir.y * rz, uy = dir.z * rx - dir.x * rz, uz = -dir.y * rx;
-      const t = 2 * NEAR * RATIO / this.mapSize.x;
+      const t = 2 * NEAR2 * RATIO / this.mapSize.x;
       const X2 = (cx + ox) * rx + (cz + oy) * rz, Y2 = (cx + ox) * ux + cy * uy + (cz + oy) * uz;
       const dX = Math.round(X2 / t) * t - X2, dY = Math.round(Y2 / t) * t - Y2;
       cx += rx * dX + ux * dY;
@@ -68077,7 +68266,7 @@ ${GLSL}
      *               [b1, b2, b3, b4, w2, w3, w4]: the bones it follows instead
      *               (still placed from `bone`'s frame) }
      */
-    add(g, m, color, bone = 0, part8 = 0, opts = null) {
+    add(g, m, color, bone = 0, part9 = 0, opts = null) {
       const P6 = g.attributes.position, N8 = g.attributes.normal;
       const UV = opts && opts.uv || g.userData && g.userData.detail ? g.attributes.uv : null;
       const blend2 = opts && opts.blend, skin = opts && opts.skin;
@@ -68109,7 +68298,7 @@ ${GLSL}
           this.bone2.push(0);
           this.w2.push(0);
         }
-        this.part.push(part8);
+        this.part.push(part9);
         if (UV) this.uv.push(UV.getX(i), UV.getY(i));
         else this.uv.push(this.blankUV[0], this.blankUV[1]);
       }
@@ -82756,15 +82945,15 @@ vec3 paneView(vec3 dir, float night) {
   var WHITE2 = new Color(1, 1, 1);
   var VIEW2 = { x: 0, y: 0, world: null };
   var Batch = class {
-    constructor(home2, key2, part8) {
+    constructor(home2, key2, part9) {
       this.home = home2;
       this.key = key2;
-      this.geo = part8.geo;
-      this.farGeo = part8.far || part8.geo.userData.far || null;
-      this.tinted = !!part8.tinted;
-      this.material = part8.material || vcMat({ sway: part8.sway, side: part8.side, inst: this.tinted ? "c" : "i" });
-      this.castShadow = !home2.isSuper && part8.castShadow !== false;
-      this.receiveShadow = !home2.isSuper && part8.receiveShadow !== false;
+      this.geo = part9.geo;
+      this.farGeo = part9.far || part9.geo.userData.far || null;
+      this.tinted = !!part9.tinted;
+      this.material = part9.material || vcMat({ sway: part9.sway, side: part9.side, inst: this.tinted ? "c" : "i" });
+      this.castShadow = !home2.isSuper && part9.castShadow !== false;
+      this.receiveShadow = !home2.isSuper && part9.receiveShadow !== false;
       this.count = 0;
       this.refs = [];
       this.minY = Infinity;
@@ -82898,7 +83087,7 @@ vec3 paneView(vec3 dir, float night) {
     c.sup = s;
     c.merged = true;
   }
-  function partMatrix(u, part8, home2, out) {
+  function partMatrix(u, part9, home2, out) {
     const o = u.o;
     _p4.set(o.x - home2.x0, u.y, o.y - home2.y0);
     _e4.set(0, u.yaw, 0);
@@ -82906,44 +83095,44 @@ vec3 paneView(vec3 dir, float night) {
     if (u.tilt) _q4.premultiply(u.tilt);
     _s3.setScalar(u.scale);
     out.compose(_p4, _q4, _s3);
-    if (part8.local) out.multiply(part8.local);
+    if (part9.local) out.multiply(part9.local);
     return out;
   }
-  function claim(u, part8) {
+  function claim(u, part9) {
     const cell = u.cell, home2 = cell.merged ? cell.sup : cell;
-    if (cell.merged && part8.nearOnly) {
-      part8.ref = null;
+    if (cell.merged && part9.nearOnly) {
+      part9.ref = null;
       return;
     }
-    if (u.faded && !part8.material) {
-      part8.apart = apart(u, part8, home2);
+    if (u.faded && !part9.material) {
+      part9.apart = apart(u, part9, home2);
       return;
     }
-    let b = home2.batches.get(part8.key);
+    let b = home2.batches.get(part9.key);
     if (!b) {
-      b = new Batch(home2, part8.key, part8);
-      home2.batches.set(part8.key, b);
+      b = new Batch(home2, part9.key, part9);
+      home2.batches.set(part9.key, b);
     }
-    part8.ref = { slot: -1, batch: b };
-    b.push(part8.ref, partMatrix(u, part8, home2, _m5), part8.color, u.y);
+    part9.ref = { slot: -1, batch: b };
+    b.push(part9.ref, partMatrix(u, part9, home2, _m5), part9.color, u.y);
   }
-  function release2(part8) {
-    if (part8.apart) {
-      const m = part8.apart.mesh;
+  function release2(part9) {
+    if (part9.apart) {
+      const m = part9.apart.mesh;
       m.removeFromParent();
       spareFade(m.material);
       m.dispose();
-      part8.apart = null;
+      part9.apart = null;
     }
-    if (!part8.ref) return;
-    part8.ref.batch.remove(part8.ref.slot);
-    part8.ref = null;
+    if (!part9.ref) return;
+    part9.ref.batch.remove(part9.ref.slot);
+    part9.ref = null;
   }
   var faded = /* @__PURE__ */ new Set();
   var spares = /* @__PURE__ */ new Map();
-  function fadeMatFor(part8) {
-    const key2 = `${part8.sway ? "s" : ""}|${part8.side || 0}|${part8.tinted ? "c" : "i"}`;
-    const m = spares.get(key2)?.pop() || fadeMat({ sway: part8.sway, side: part8.side, inst: part8.tinted ? "c" : "i" });
+  function fadeMatFor(part9) {
+    const key2 = `${part9.sway ? "s" : ""}|${part9.side || 0}|${part9.tinted ? "c" : "i"}`;
+    const m = spares.get(key2)?.pop() || fadeMat({ sway: part9.sway, side: part9.side, inst: part9.tinted ? "c" : "i" });
     m.userData.spareKey = key2;
     return m;
   }
@@ -82952,18 +83141,18 @@ vec3 paneView(vec3 dir, float night) {
     if (!spares.has(key2)) spares.set(key2, []);
     spares.get(key2).push(m);
   }
-  function apart(u, part8, home2) {
-    const m = new InstancedMesh(part8.geo, fadeMatFor(part8), 1);
-    m.setMatrixAt(0, partMatrix(u, part8, home2, _m5));
-    if (part8.tinted) {
+  function apart(u, part9, home2) {
+    const m = new InstancedMesh(part9.geo, fadeMatFor(part9), 1);
+    m.setMatrixAt(0, partMatrix(u, part9, home2, _m5));
+    if (part9.tinted) {
       m.instanceColor = new InstancedBufferAttribute(new Float32Array(3), 3);
-      m.setColorAt(0, part8.color || WHITE2);
+      m.setColorAt(0, part9.color || WHITE2);
     }
-    m.castShadow = part8.castShadow !== false;
-    m.receiveShadow = part8.receiveShadow !== false;
+    m.castShadow = part9.castShadow !== false;
+    m.receiveShadow = part9.receiveShadow !== false;
     m.renderOrder = 5;
     m.computeBoundingSphere();
-    m.name = "faded:" + part8.key;
+    m.name = "faded:" + part9.key;
     m.material.userData.fade.value = u.fade;
     m.position.set(home2.px, 0, home2.pz);
     home2.parent?.add(m);
@@ -83132,12 +83321,12 @@ vec3 paneView(vec3 dir, float night) {
     dynAt = (dynAt + step2) % n;
   }
   registerFrameHook(frame2, "instancer");
-  function setPartVisible(u, part8, on) {
-    if (on === !part8.hidden) return;
-    part8.hidden = !on;
+  function setPartVisible(u, part9, on) {
+    if (on === !part9.hidden) return;
+    part9.hidden = !on;
     if (!u.live) return;
-    if (on) claim(u, part8);
-    else release2(part8);
+    if (on) claim(u, part9);
+    else release2(part9);
   }
   function instanced(o, ctx, parts, opts = {}) {
     bindCtx(ctx);
@@ -83827,8 +84016,8 @@ vec3 paneView(vec3 dir, float night) {
     const model2 = treeModel(sub, v);
     const pal = paletteOf(sub);
     const color = pal ? jitter(pal[v % pal.length], o) : null;
-    const part8 = { key: `t:${sub}:${v % 2}:${sub === "cactus" ? v % 4 : 0}`, geo: model2.geo, sway: model2.sway, tinted: !!pal, color, receiveShadow: false };
-    const parts = [part8];
+    const part9 = { key: `t:${sub}:${v % 2}:${sub === "cactus" ? v % 4 : 0}`, geo: model2.geo, sway: model2.sway, tinted: !!pal, color, receiveShadow: false };
+    const parts = [part9];
     let dyn = null;
     const fr = fruitOf(o);
     const yaw = hash3(o.x, o.y) * Math.PI * 2;
@@ -83874,8 +84063,8 @@ vec3 paneView(vec3 dir, float night) {
     const m = bushModel(sub, v);
     const pal = sub === "fern" ? ["#2e7d32", "#33873a", "#2a7430", "#388e3c"] : ["#4caf50", "#43a047", "#66bb6a", "#388e3c"];
     const color = m.tinted ? jitter(pal[v % 4], o) : null;
-    const part8 = { key: `b:${sub}:${sub === "bush" && v === 1 ? 1 : 0}`, geo: m.geo, tinted: m.tinted, color, castShadow: false, receiveShadow: false };
-    return instanced(o, ctx, [part8], { yaw: hash3(o.x, o.y) * Math.PI * 2, scale: o.s || 1 });
+    const part9 = { key: `b:${sub}:${sub === "bush" && v === 1 ? 1 : 0}`, geo: m.geo, tinted: m.tinted, color, castShadow: false, receiveShadow: false };
+    return instanced(o, ctx, [part9], { yaw: hash3(o.x, o.y) * Math.PI * 2, scale: o.s || 1 });
   });
   registerPropBuilder("rock", (o, ctx) => {
     const v = o.v || 0;
@@ -83886,8 +84075,8 @@ vec3 paneView(vec3 dir, float night) {
     if (clim === "ash") col6 = C("#5d5652").clone();
     else if (clim === "sand") col6 = C("#c2a27a").clone();
     col6.multiplyScalar(0.92 + hash3(o.x, o.y, 3) * 0.16);
-    const part8 = { key: `r:${shape}:${cap3}`, geo: rockModel(shape, cap3), tinted: true, color: col6 };
-    return instanced(o, ctx, [part8], { yaw: hash3(o.x, o.y) * Math.PI * 2, scale: o.s || 1, ...rockBed(o, ctx) });
+    const part9 = { key: `r:${shape}:${cap3}`, geo: rockModel(shape, cap3), tinted: true, color: col6 };
+    return instanced(o, ctx, [part9], { yaw: hash3(o.x, o.y) * Math.PI * 2, scale: o.s || 1, ...rockBed(o, ctx) });
   });
   var _up2 = new Vector3(0, 1, 0);
   var _n3 = new Vector3();
@@ -83929,9 +84118,9 @@ vec3 paneView(vec3 dir, float night) {
     return g;
   }
   function simple(o, ctx, key2, geo2, opts = {}) {
-    const part8 = { key: key2, geo: geo2, tinted: !!opts.color, color: opts.color ? C(opts.color).clone() : null, castShadow: opts.castShadow !== false, local: opts.local };
+    const part9 = { key: key2, geo: geo2, tinted: !!opts.color, color: opts.color ? C(opts.color).clone() : null, castShadow: opts.castShadow !== false, local: opts.local };
     const yaw = opts.yaw ?? (opts.randomYaw ? hash3(o.x, o.y) * Math.PI * 2 : 0);
-    return instanced(o, ctx, [part8, ...opts.more || []], { yaw, scale: opts.scale ?? (o.s || 1), y: opts.y });
+    return instanced(o, ctx, [part9, ...opts.more || []], { yaw, scale: opts.scale ?? (o.s || 1), y: opts.y });
   }
   function footY(o, ctx, feet2, yaw = 0, s = o.s || 1) {
     if (!ctx?.ground) return void 0;
@@ -92215,7 +92404,7 @@ vec3 paneView(vec3 dir, float night) {
 
   // src/render3d/glints.js
   var FAR = 90;
-  var NEAR2 = 3;
+  var NEAR3 = 3;
   var TEX = null;
   function starTexture() {
     if (TEX) return TEX;
@@ -92306,7 +92495,7 @@ vec3 paneView(vec3 dir, float night) {
         k++;
         const ph = (t + (o.x * 0.37 + o.y * 0.61) % 2.3) % 2.3 / 2.3;
         const tw = Math.exp(-Math.pow((ph - 0.12) / 0.045, 2));
-        const fade2 = Math.min(1, (FAR - d) / 20) * Math.min(1, (d - 0.6) / (NEAR2 - 0.6));
+        const fade2 = Math.min(1, (FAR - d) / 20) * Math.min(1, (d - 0.6) / (NEAR3 - 0.6));
         const size2 = Math.max(0.5, d * 0.034) * (0.7 + 0.9 * tw);
         const back = Math.min(0.35, d * 0.05) / d;
         sp.position.set(sx - dx * back, fh - dh * back, sz - dz * back);
@@ -93133,7 +93322,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const w = 1 - hipsW(y);
       return w > 2e-3 ? [B.chest, w] : null;
     } };
-    const add7 = (g, m, col6, bone, part8 = 0, opts) => add0(g, m, col6, bone, part8, opts ?? (bone === B.chest ? onChest : bone === B.hips ? onHips : null));
+    const add7 = (g, m, col6, bone, part9 = 0, opts) => add0(g, m, col6, bone, part9, opts ?? (bone === B.chest ? onChest : bone === B.hips ? onHips : null));
     const TR = bd === 2 ? [1, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.83, 0.8, 0.765, 0.73, 0.7, 0.67, 0.645, 0.62, 0.6, 0.575, 0.55, 0.52, 0.49, 0.46, 0.43, 0.4, 0.37, 0.34, 0.31, 0.28, 0.24, 0.2, 0.16, 0.12, 0.07, 0.02, -0.04, -0.1] : bd === 1 ? [1, 0.97, 0.93, 0.89, 0.84, 0.78, 0.72, 0.67, 0.62, 0.57, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
     const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
     const skinTorso = tpt(1);
@@ -93305,7 +93494,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const Lk = Math.sqrt(d.Am);
     const frows = bd === 2 ? 12 : lrows;
     const rubTA = [0, 0];
-    for (const [s, Ub, Fb, part8, k] of [[1, B.uarmR, B.farmR, 1, 0], [-1, B.uarmL, B.farmL, 2, 1]]) {
+    for (const [s, Ub, Fb, part9, k] of [[1, B.uarmR, B.farmR, 1, 0], [-1, B.uarmL, B.farmL, 2, 1]]) {
       const sl = o.sleeves;
       const mA = sl === "long" || sl === "wide" ? o.muscle * 0.35 : o.muscle;
       const oA = mA === o.muscle ? o : { ...o, muscle: mA };
@@ -93316,8 +93505,8 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       rubTA[k] = tA;
       const FR = { blend: F12.blend, skin: rubberSkin(d.A2, tA, Fb, RUB[k], [Ub, 0.5, 0.075 * Lk]) };
       const skU = o.fem ? null : "uarm", skF = o.fem ? null : "farm";
-      const up = (g, col6, m = M()) => add7(g, m, col6, Ub, 0, U1), fore = (g, col6, m = M()) => add7(g, m, col6, Fb, part8, F12);
-      const bare = (g, col6, m = M()) => add7(g, m, col6, Fb, part8, FR);
+      const up = (g, col6, m = M()) => add7(g, m, col6, Ub, 0, U1), fore = (g, col6, m = M()) => add7(g, m, col6, Fb, part9, F12);
+      const bare = (g, col6, m = M()) => add7(g, m, col6, Fb, part9, FR);
       if (sl === "none") {
         up(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true, capK: 0.6, uv: skU, side: s }), skin);
         bare(limbSeg(fa, d.A2, rs, frows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
@@ -93341,12 +93530,12 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     }
     const bot = o.bottom;
     const bcol = pal.bottom, cuffCol = shade(pal.bottom, -0.22);
-    for (const [T5, S6, Ft, part8, s] of [[B.thighR, B.shinR, B.footR, 3, 1], [B.thighL, B.shinL, B.footL, 4, -1]]) {
+    for (const [T5, S6, Ft, part9, s] of [[B.thighR, B.shinR, B.footR, 3, 1], [B.thighL, B.shinL, B.footL, 4, -1]]) {
       const th = limbFn("thigh", o, d, s), sn = limbFn("shin", o, d, s);
       const T1 = { blend: limbBlend(d.T1, [B.hips, 0.35, 0.09], [S6, 0.5, 0.09]) };
       const S1 = { blend: limbBlend(d.T2, [T5, 0.5, 0.09], null), skin: rubberSkin(d.T2, 0, S6, RUBL[s > 0 ? 0 : 1], [T5, 0.5, 0.09]) };
       const skT = o.fem ? null : "thigh", skS = o.fem ? null : "shin";
-      const thigh = (g, col6, m = M()) => add7(g, m, col6, T5, 0, T1), shin = (g, col6, m = M()) => add7(g, m, col6, S6, part8, S1);
+      const thigh = (g, col6, m = M()) => add7(g, m, col6, T5, 0, T1), shin = (g, col6, m = M()) => add7(g, m, col6, S6, part9, S1);
       const boots = o.shoes === "boots";
       if (skirtPelvis) {
         thigh(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skT, side: s }), skin);
@@ -93389,7 +93578,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         const bareAnkle = (skirtPelvis || bot === "shorts" || bot === "capri") && !boots && o.bottom !== "longskirt";
         if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) shin(Prim.sphere(q2.sph[0], q2.sph[1]), skin, M(4e-3, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk));
       }
-      feet(add7, o, pal, d, q2, Ft, part8);
+      feet(add7, o, pal, d, q2, Ft, part9);
     }
     let coatInfo = null;
     if (look.coat && TOP2 !== "coat" || TOP2 === "coat" && !look.top2 && look.coat) coatInfo = coat(add7, sh, look.coat, TR, U4, cloth, d, q2);
@@ -93444,29 +93633,29 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       add7(Prim.rbox(0.4, 6, 5), mul(M(p[0], p[1], p[2], 0, 0, 0), M(0, 0, 0, side * 0.5, -side * 0.3, 0.35, [0.03, 0.045, 6e-3])), shade(col6, -0.05), B.chest);
     }
   }
-  function feet(add7, o, pal, d, q2, Ft, part8) {
+  function feet(add7, o, pal, d, q2, Ft, part9) {
     const k = o.fem ? 0.9 : 1.06;
     const w = (o.fem ? 0.048 : 0.058) * d.Bk;
     const S6 = (x, y, z) => [x * k, y, z];
     const skin = pal.skin;
     const rb = (small = true) => Prim.rbox(0.42, ...small ? q2.rboxS : q2.rbox);
     if (o.shoes === "sandals" || o.shoes === "geta" || o.shoes === "bare") {
-      add7(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S6(0.11, 0.034, w * 0.9)), skin, Ft, part8);
-      add7(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S6(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part8);
-      add7(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.042 * d.Bk, 0.05, 0.042 * d.Bk]), skin, Ft, part8);
+      add7(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S6(0.11, 0.034, w * 0.9)), skin, Ft, part9);
+      add7(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S6(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part9);
+      add7(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.042 * d.Bk, 0.05, 0.042 * d.Bk]), skin, Ft, part9);
       if (o.shoes === "bare") return;
       const sole2 = o.shoes === "geta" ? "#8d6e4a" : shade(pal.shoes, -0.1);
-      add7(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S6(0.125, 8e-3, w * 1.02)), sole2, Ft, part8);
-      add7(Prim.torus(0.28, 3, 10), M(0.078 * k, -0.05, 0, 0, Math.PI / 2, 0, [w * 0.98, 0.03, 0.022 / 0.28]), o.shoes === "geta" ? "#c62828" : pal.shoes, Ft, part8);
-      if (o.shoes === "geta") for (const x of [-0.02, 0.1]) add7(Prim.box(), M(x * k, -0.1, 0, 0, 0, 0, [0.012, 0.014, w * 0.9]), "#6d4c41", Ft, part8);
+      add7(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S6(0.125, 8e-3, w * 1.02)), sole2, Ft, part9);
+      add7(Prim.torus(0.28, 3, 10), M(0.078 * k, -0.05, 0, 0, Math.PI / 2, 0, [w * 0.98, 0.03, 0.022 / 0.28]), o.shoes === "geta" ? "#c62828" : pal.shoes, Ft, part9);
+      if (o.shoes === "geta") for (const x of [-0.02, 0.1]) add7(Prim.box(), M(x * k, -0.1, 0, 0, 0, 0, [0.012, 0.014, w * 0.9]), "#6d4c41", Ft, part9);
       return;
     }
     const boot2 = o.shoes === "boots";
     const col6 = pal.shoes, sole = shade(col6, -0.4);
-    add7(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S6(0.128, 0.045, w)), col6, Ft, part8);
-    add7(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S6(0.132, 0.01, w * 1.04)), sole, Ft, part8);
-    if (!boot2) add7(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col6, Ft, part8);
-    else add7(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col6, Ft, part8);
+    add7(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S6(0.128, 0.045, w)), col6, Ft, part9);
+    add7(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S6(0.132, 0.01, w * 1.04)), sole, Ft, part9);
+    if (!boot2) add7(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col6, Ft, part9);
+    else add7(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col6, Ft, part9);
   }
   function coat(add7, sh, c, TR, U4, cloth, d, q2) {
     const lining2 = shade(c, -0.3);
@@ -94952,13 +95141,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const b = add3(a, n, len);
     lock(h2, a, add3(b, [-0.12, -0.06, 0], len), w, { bulge: 0.12, flat: flat3, anchor: a });
   }
-  function bangs(h2, n, spread2, th2, w, { th = 24, sweep: sweep2 = 0, ragged = 0, part: part8 = 0, k2 = 1.1 } = {}) {
+  function bangs(h2, n, spread2, th2, w, { th = 24, sweep: sweep2 = 0, ragged = 0, part: part9 = 0, k2 = 1.1 } = {}) {
     if (!h2.q.fringe) n = Math.max(3, Math.round(n * 0.6));
     for (let i = 0; i < n; i++) {
       const u = n === 1 ? 0 : i / (n - 1) - 0.5;
       const ph = u * spread2;
       const jag = ragged ? (i * 7919 % 5 - 2) * ragged : 0;
-      flow(h2, th, part8 + ph * 0.55, th2 + jag - Math.abs(u) * 6, ph + sweep2 + u * 10, w, { k2, bulge: 0.16 });
+      flow(h2, th, part9 + ph * 0.55, th2 + jag - Math.abs(u) * 6, ph + sweep2 + u * 10, w, { k2, bulge: 0.16 });
     }
   }
   var HAIR2 = {
@@ -95421,7 +95610,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const bind = bindPose(d);
     const b = new Builder(bind, BLANK_UV);
     const Bk = d.Bk;
-    const add7 = (g, m, col6, bone, part8 = 0, opts) => b.add(g, m, col6, bone, part8, opts);
+    const add7 = (g, m, col6, bone, part9 = 0, opts) => b.add(g, m, col6, bone, part9, opts);
     const rb = (k = 0.4, small = true) => Prim.rbox(k, ...small ? q2.rboxS : q2.rbox);
     const outfit = buildFigure(add7, look, d, pal, q2);
     for (let k = 0; k < 2; k++) {
@@ -95445,7 +95634,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       col: hairCol,
       bone: hb,
       hatted: !!cover3 && style !== "afro",
-      add(g, m, col6, bone, part8, anchor2) {
+      add(g, m, col6, bone, part9, anchor2) {
         if (cover3 && anchor2 && anchor2[1] > 0.5 && style !== "afro") return;
         if (bone === B.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R5), m), col6, bone, 0);
         else b.add(g, HM(m), col6, bone, 0);
@@ -95500,7 +95689,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       HATS2[kind](hh, look.hatColor, look, meta.top);
     }
     const fingers = {};
-    for (const [s, Hd, part8] of [[1, "R", 1], [-1, "L", 2]]) fingers[Hd] = hands(b, Hd, s, pal.hand, Bk, part8, q2, outfit.fem ? 0.9 : 1.12);
+    for (const [s, Hd, part9] of [[1, "R", 1], [-1, "L", 2]]) fingers[Hd] = hands(b, Hd, s, pal.hand, Bk, part9, q2, outfit.fem ? 0.9 : 1.12);
     if (look.drums) {
       for (let k = 0; k < 6; k++) {
         const a = Math.PI * 0.55 + k / 5 * Math.PI * 0.9;
@@ -95594,7 +95783,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
     }
   }
-  function hands(b, H5, s, col6, Bk, part8, q2, kMul = 1) {
+  function hands(b, H5, s, col6, Bk, part9, q2, kMul = 1) {
     const k = (0.95 + (Bk - 1) * 0.6) * kMul;
     const th = -s;
     const fist = B["fist" + H5], palm = B["palm" + H5], finger = B["finger" + H5];
@@ -95602,7 +95791,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const dark = shade(col6, -0.08);
     if (q2.hands === 2) {
       const hand = B["hand" + H5];
-      b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S6(0.019, 0.047, 0.043)), col6, hand, part8);
+      b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S6(0.019, 0.047, 0.043)), col6, hand, part9);
       const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
       const hb0 = b.bind && b.bind[hand];
       const at4 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
@@ -95618,24 +95807,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           b.setBind(B["j" + (f + 1) + H5], at4(km, [0, -lp, 0]));
         }
         const c = f % 2 ? col6 : dark;
-        b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B["k" + (f + 1) + H5], part8);
-        b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B["j" + (f + 1) + H5], part8);
+        b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B["k" + (f + 1) + H5], part9);
+        b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B["j" + (f + 1) + H5], part9);
       }
       if (hb0) {
         const tm = at4(hb0, rest.thumb);
         b.setBind(B["tb" + H5], tm);
         b.setBind(B["tc" + H5], at4(tm, [0, -rest.lt, 0]));
       }
-      b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col6, B["tb" + H5], part8);
-      b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B["tc" + H5], part8);
+      b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col6, B["tb" + H5], part9);
+      b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B["tc" + H5], part9);
       return rest;
     }
-    b.add(Prim.rbox(0.42, ...q2.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S6(0.033, 0.046, 0.043)), col6, fist, part8);
-    b.add(Prim.sphere(q2.sph[0], q2.sph[1]), M(-0.012 * k, -0.055 * k, th * 0.036 * k, 0, 0, 0, S6(0.016, 0.03, 0.016)), dark, fist, part8);
+    b.add(Prim.rbox(0.42, ...q2.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S6(0.033, 0.046, 0.043)), col6, fist, part9);
+    b.add(Prim.sphere(q2.sph[0], q2.sph[1]), M(-0.012 * k, -0.055 * k, th * 0.036 * k, 0, 0, 0, S6(0.016, 0.03, 0.016)), dark, fist, part9);
     if (!q2.hands) return;
-    b.add(tcap(0.011 * k, 9e-3 * k, 0.07 * k, 5, 1), M(0.02 * k, -0.085 * k, -th * 0.02 * k), col6, finger, part8);
-    b.add(Prim.rbox(0.4, ...q2.rboxS), M(0, -0.075 * k, 0, 0, 0, 0, S6(0.017, 0.08, 0.045)), col6, palm, part8);
-    b.add(tcap(0.011 * k, 9e-3 * k, 0.05 * k, 5, 1), mul(M(-4e-3, -0.03 * k, th * 0.04 * k), M(0, 0, 0, th * 0.7, 0, 0)), col6, palm, part8);
+    b.add(tcap(0.011 * k, 9e-3 * k, 0.07 * k, 5, 1), M(0.02 * k, -0.085 * k, -th * 0.02 * k), col6, finger, part9);
+    b.add(Prim.rbox(0.4, ...q2.rboxS), M(0, -0.075 * k, 0, 0, 0, 0, S6(0.017, 0.08, 0.045)), col6, palm, part9);
+    b.add(tcap(0.011 * k, 9e-3 * k, 0.05 * k, 5, 1), mul(M(-4e-3, -0.03 * k, th * 0.04 * k), M(0, 0, 0, th * 0.7, 0, 0)), col6, palm, part9);
   }
   var BODIES = /* @__PURE__ */ new Map();
   function hipSword(add7, SL, j, d) {
@@ -97742,8 +97931,113 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
   };
 
+  // src/render3d/chars/dugong.js
+  var SPH5 = new SphereGeometry(1, 18, 12);
+  function part7(geo2, mat, s, p, parent, outline = 0.025, r4 = null) {
+    const m = new Mesh(geo2, mat);
+    m.scale.set(...s);
+    m.position.set(...p);
+    if (r4) m.rotation.set(...r4);
+    m.castShadow = true;
+    if (outline) addOutline(m, outline);
+    parent.add(m);
+    return m;
+  }
+  var easeTo2 = (cur, to, k, dt) => cur + (to - cur) * Math.min(1, dt * k);
+  var DugongView = class {
+    constructor(a) {
+      this.a = a;
+      const tan = toon("#c9a57a"), belly = toon("#f1dfc2"), shell2 = toon("#5c8f3e"), shellDk = toon("#3f6a2a"), shellRim = toon("#8fb86a");
+      const black = toon("#1a1210"), white = toon("#ffffff"), nose = toon("#6d4a3a"), blush = toon("#e8a08a");
+      this.root = new Group();
+      this.yaw = new Group();
+      this.root.add(this.yaw);
+      this.body = new Group();
+      this.yaw.add(this.body);
+      part7(SPH5, tan, [0.34, 0.16, 0.3], [0.12, 0.1, 0], this.body, 0.025);
+      part7(SPH5, tan, [0.18, 0.08, 0.32], [0.38, 0.06, 0], this.body, 0.02, [0, 0, 0.2]);
+      part7(SPH5, tan, [0.36, 0.5, 0.36], [0, 0.6, 0], this.body, 0.03);
+      part7(SPH5, belly, [0.26, 0.4, 0.3], [0.13, 0.58, 0], this.body, 0);
+      part7(SPH5, shellRim, [0.3, 0.48, 0.4], [-0.16, 0.62, 0], this.body, 0.03);
+      part7(SPH5, shell2, [0.3, 0.44, 0.37], [-0.2, 0.64, 0], this.body, 0.02);
+      for (const [y, z] of [[0.82, 0], [0.55, 0.16], [0.55, -0.16], [0.4, 0]]) part7(SPH5, shellDk, [0.06, 0.1, 0.1], [-0.47, y, z], this.body, 0);
+      this.head = new Group();
+      this.head.position.set(0.04, 1.12, 0);
+      this.body.add(this.head);
+      part7(SPH5, tan, [0.3, 0.27, 0.3], [0, 0, 0], this.head, 0.03);
+      part7(SPH5, belly, [0.16, 0.13, 0.2], [0.22, -0.08, 0], this.head, 0.02);
+      part7(SPH5, nose, [0.05, 0.035, 0.08], [0.37, -0.03, 0], this.head, 0);
+      for (const s of [-1, 1]) {
+        part7(SPH5, black, [0.075, 0.095, 0.07], [0.22, 0.07, s * 0.13], this.head, 0.012);
+        part7(SPH5, white, [0.022, 0.026, 0.022], [0.28, 0.1, s * 0.15], this.head, 0);
+        part7(SPH5, blush, [0.03, 0.025, 0.05], [0.25, -0.05, s * 0.2], this.head, 0);
+        for (let w = 0; w < 3; w++) part7(SPH5, nose, [0.012, 0.012, 0.012], [0.33, -0.08 + w * 0.025, s * (0.06 + w * 0.012)], this.head, 0);
+      }
+      this.flips = [-1, 1].map((s) => {
+        const g = new Group();
+        g.position.set(0.05, 0.85, s * 0.3);
+        this.body.add(g);
+        part7(SPH5, tan, [0.1, 0.24, 0.07], [0.08, -0.12, s * 0.02], g, 0.02, [0, 0, -0.5]);
+        return { g, s };
+      });
+      this.label = new Label();
+      this.root.add(this.label.sprite);
+      this.bow = 0;
+      this.chop = 0;
+      this.spin = 0;
+      this.flip = 0;
+      this.kata = 0;
+      this.lastT = null;
+      this.spinA = 0;
+    }
+    update(a, env2, ctx) {
+      const t = env2.time + (a.seed || 0) * 5;
+      const dt = Math.min(0.2, Math.max(0, env2.time - (this.lastT ?? env2.time - 1 / 60)));
+      this.lastT = env2.time;
+      const game = a.game, now3 = game?.time ?? 0;
+      this.yaw.rotation.y = -(a.facing || 0);
+      const act2 = a.action, kind = act2?.def?.dugong;
+      let chop = 0, spin = 0;
+      if (act2) {
+        const w = act2.def.windup || 0.3, p = act2.t < w ? act2.t / w : 1, post = Math.max(0, act2.t - w);
+        if (kind === "spin") spin = p < 1 ? p * 0.3 : Math.min(1, 0.3 + post * 4);
+        else chop = act2.t < w ? -p : Math.max(0, 1 - post / 0.3);
+      }
+      const knocked = a.state === "knocked" || a.state === "dead";
+      this.bow = easeTo2(this.bow, (a.bowT || 0) > 0.15 ? 1 : 0, 8, dt);
+      this.chop = easeTo2(this.chop, chop, 18, dt);
+      this.spin = spin;
+      const kata = (a.kataT || 0) > 0 ? Math.sin((now3 - (a.mimic || 0)) * 9) : 0;
+      this.kata = easeTo2(this.kata, kata, 12, dt);
+      const flipT = now3 - (a.flipT ?? -9), flip = flipT < 0.45 ? flipT / 0.45 : 0;
+      const sway = Math.sin(t * 2.4) * 0.05, bounce = Math.abs(Math.sin(t * 4.8)) * 0.04 * (a.moving ? 2 : 1);
+      this.body.position.y = bounce + Math.sin(flip * Math.PI) * 0.6;
+      this.body.rotation.z = -this.bow * 0.7 + sway * 0.4 + this.chop * 0.2 + flip * Math.PI * 2 + (knocked ? -1.4 : 0);
+      this.spinA = spin > 0 && spin < 1 ? spin * Math.PI * 2 : 0;
+      this.body.rotation.y = this.spinA;
+      this.head.rotation.set(0, sway * 0.5, this.bow * 0.3 + sway * 0.3);
+      for (const F4 of this.flips) {
+        const lead = F4.s > 0;
+        const guard2 = 0.9 + Math.sin(t * 2.4 + F4.s) * 0.1;
+        const z = guard2 - this.bow * 0.9 + (lead ? this.chop * 1.6 : -this.chop * 0.3) + this.kata * (lead ? 0.6 : -0.6) - (knocked ? 1 : 0);
+        F4.g.rotation.set(F4.s * 0.2, 0, z);
+      }
+      const showBar = a.damageShown > 0 && a.state === "idle" && !a.disciple;
+      this.label.set(showBar ? a.name : null, "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350", showBar ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
+      this.label.sprite.position.set(0, 1.7, 0);
+      const cam = ctx.camera;
+      const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
+      const k = Math.min(2.4, Math.max(0.5, dist / 8));
+      this.label.sprite.scale.set(1.6 * k, 1.6 * k * 40 / 256, 1);
+    }
+    dispose() {
+      this.label.dispose();
+      this.root.removeFromParent();
+    }
+  };
+
   // src/render3d/chars/seacreature.js
-  var SPH5 = new SphereGeometry(1, 16, 10);
+  var SPH6 = new SphereGeometry(1, 16, 10);
   var CONE3 = new ConeGeometry(1, 1, 8);
   CONE3.translate(0, 0.5, 0);
   function finGeo(b0, b1, t, th = 0.03) {
@@ -97756,7 +98050,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     g.computeVertexNormals();
     return g;
   }
-  function part7(geo2, mat, s, p, parent, outline = 0.03) {
+  function part8(geo2, mat, s, p, parent, outline = 0.03) {
     const m = new Mesh(geo2, mat);
     m.scale.set(...s);
     m.position.set(...p);
@@ -97832,21 +98126,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const B5 = this.body;
       this.tailAxis = "z";
       this.labelY = 2;
-      part7(SPH5, hide2, [1.35, 0.62, 0.66], [0, 0, 0], B5, 0.05);
-      part7(SPH5, belly, [1.2, 0.36, 0.52], [0.05, -0.3, 0], B5, 0);
-      for (const [x, z, r4] of [[0.3, 0.5, 0.2], [-0.4, -0.52, 0.24], [-0.1, 0.55, 0.14], [0.55, -0.45, 0.16]]) part7(SPH5, dark, [r4, r4 * 0.7, 0.05], [x, 0.22, z], B5, 0);
+      part8(SPH6, hide2, [1.35, 0.62, 0.66], [0, 0, 0], B5, 0.05);
+      part8(SPH6, belly, [1.2, 0.36, 0.52], [0.05, -0.3, 0], B5, 0);
+      for (const [x, z, r4] of [[0.3, 0.5, 0.2], [-0.4, -0.52, 0.24], [-0.1, 0.55, 0.14], [0.55, -0.45, 0.16]]) part8(SPH6, dark, [r4, r4 * 0.7, 0.05], [x, 0.22, z], B5, 0);
       const H5 = new Group();
       H5.position.set(1.25, 0.15, 0);
       B5.add(H5);
-      part7(SPH5, hide2, [0.62, 0.55, 0.58], [0, 0, 0], H5, 0.045);
-      part7(SPH5, muzzle3, [0.36, 0.3, 0.44], [0.48, -0.16, 0], H5, 0.035);
+      part8(SPH6, hide2, [0.62, 0.55, 0.58], [0, 0, 0], H5, 0.045);
+      part8(SPH6, muzzle3, [0.36, 0.3, 0.44], [0.48, -0.16, 0], H5, 0.035);
       for (const s of [-1, 1]) {
-        part7(SPH5, nostril, [0.06, 0.08, 0.05], [0.82, -0.09, s * 0.14], H5, 0);
-        part7(SPH5, white, [0.14, 0.16, 0.08], [0.3, 0.22, s * 0.46], H5, 0.025);
-        part7(SPH5, black, [0.06, 0.08, 0.04], [0.36, 0.2, s * 0.52], H5, 0);
-        const ear = part7(SPH5, hide2, [0.24, 0.07, 0.13], [-0.08, 0.3, s * 0.62], H5, 0.03);
+        part8(SPH6, nostril, [0.06, 0.08, 0.05], [0.82, -0.09, s * 0.14], H5, 0);
+        part8(SPH6, white, [0.14, 0.16, 0.08], [0.3, 0.22, s * 0.46], H5, 0.025);
+        part8(SPH6, black, [0.06, 0.08, 0.04], [0.36, 0.2, s * 0.52], H5, 0);
+        const ear = part8(SPH6, hide2, [0.24, 0.07, 0.13], [-0.08, 0.3, s * 0.62], H5, 0.03);
         ear.rotation.set(s * 0.6, 0, -0.4);
-        const h1 = part7(CONE3, horn, [0.09, 0.42, 0.09], [-0.12, 0.45, s * 0.35], H5, 0.025);
+        const h1 = part8(CONE3, horn, [0.09, 0.42, 0.09], [-0.12, 0.45, s * 0.35], H5, 0.025);
         h1.rotation.set(s * 0.7, 0, -0.2);
       }
       const ring4 = new Mesh(new TorusGeometry(0.1, 0.022, 6, 14), gold);
@@ -97856,12 +98150,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.jaw = new Group();
       this.jaw.position.set(0.3, -0.34, 0);
       H5.add(this.jaw);
-      part7(SPH5, muzzle3, [0.3, 0.09, 0.34], [0.2, -0.02, 0], this.jaw, 0.02);
-      part7(SPH5, nostril, [0.24, 0.05, 0.26], [0.2, 0.04, 0], this.jaw, 0);
+      part8(SPH6, muzzle3, [0.3, 0.09, 0.34], [0.2, -0.02, 0], this.jaw, 0.02);
+      part8(SPH6, nostril, [0.24, 0.05, 0.26], [0.2, 0.04, 0], this.jaw, 0);
       for (const s of [-1, 1]) {
         const hinge = new Group();
         hinge.position.set(0.55, -0.32, s * 0.55);
-        const f = part7(SPH5, dark, [0.42, 0.06, 0.2], [-0.18, -0.05, s * 0.2], hinge, 0.025);
+        const f = part8(SPH6, dark, [0.42, 0.06, 0.2], [-0.18, -0.05, s * 0.2], hinge, 0.025);
         f.rotation.y = s * 0.5;
         B5.add(hinge);
         this.pecs.push(hinge);
@@ -97869,9 +98163,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.tail = new Group();
       this.tail.position.set(-1.2, 0.05, 0);
       B5.add(this.tail);
-      part7(SPH5, hide2, [0.7, 0.3, 0.3], [-0.45, 0, 0], this.tail, 0.04);
+      part8(SPH6, hide2, [0.7, 0.3, 0.3], [-0.45, 0, 0], this.tail, 0.04);
       for (const s of [-1, 1]) {
-        const fl2 = part7(SPH5, dark, [0.36, 0.06, 0.34], [-1.05, 0, s * 0.3], this.tail, 0.03);
+        const fl2 = part8(SPH6, dark, [0.36, 0.06, 0.34], [-1.05, 0, s * 0.3], this.tail, 0.03);
         fl2.rotation.y = s * 0.55;
       }
       this.head = H5;
@@ -97891,33 +98185,33 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const B5 = this.body;
       this.labelY = 1.7;
       const L3 = 1.45;
-      part7(SPH5, back, [L3, 0.46, 0.4], [0, 0, 0], B5, 0.045);
-      part7(SPH5, belly, [L3 * 0.9, 0.3, 0.33], [0.05, -0.17, 0], B5, 0);
-      for (let i = 0; i < 4; i++) part7(SPH5, stripe, [0.05, 0.36, 0.41], [0.55 - i * 0.38, 0.05, 0], B5, 0);
-      const horn = part7(CONE3, ivory, [0.09, 1.35, 0.09], [L3 * 0.72, 0.3, 0], B5, 0.025);
+      part8(SPH6, back, [L3, 0.46, 0.4], [0, 0, 0], B5, 0.045);
+      part8(SPH6, belly, [L3 * 0.9, 0.3, 0.33], [0.05, -0.17, 0], B5, 0);
+      for (let i = 0; i < 4; i++) part8(SPH6, stripe, [0.05, 0.36, 0.41], [0.55 - i * 0.38, 0.05, 0], B5, 0);
+      const horn = part8(CONE3, ivory, [0.09, 1.35, 0.09], [L3 * 0.72, 0.3, 0], B5, 0.025);
       horn.rotation.z = -Math.PI / 2 + 0.12;
-      part7(new TorusGeometry(1, 0.35, 5, 10), ivory, [0.1, 0.1, 0.1], [L3 * 0.72, 0.3, 0], B5, 0).rotation.y = Math.PI / 2;
+      part8(new TorusGeometry(1, 0.35, 5, 10), ivory, [0.1, 0.1, 0.1], [L3 * 0.72, 0.3, 0], B5, 0).rotation.y = Math.PI / 2;
       for (const s of [-1, 1]) {
-        part7(SPH5, white, [0.1, 0.1, 0.06], [L3 * 0.7, 0.12, s * 0.3], B5, 0.02);
-        part7(SPH5, black, [0.045, 0.06, 0.04], [L3 * 0.74, 0.11, s * 0.34], B5, 0);
-        const brow = part7(SPH5, stripe, [0.16, 0.04, 0.05], [L3 * 0.7, 0.24, s * 0.3], B5, 0);
+        part8(SPH6, white, [0.1, 0.1, 0.06], [L3 * 0.7, 0.12, s * 0.3], B5, 0.02);
+        part8(SPH6, black, [0.045, 0.06, 0.04], [L3 * 0.74, 0.11, s * 0.34], B5, 0);
+        const brow = part8(SPH6, stripe, [0.16, 0.04, 0.05], [L3 * 0.7, 0.24, s * 0.3], B5, 0);
         brow.rotation.x = s * 0.2;
         brow.rotation.z = -0.35;
       }
       this.jaw = new Group();
       this.jaw.position.set(L3 * 0.6, -0.18, 0);
       B5.add(this.jaw);
-      part7(SPH5, belly, [0.5, 0.1, 0.24], [0.32, -0.02, 0], this.jaw, 0.02);
-      part7(SPH5, mouth, [0.42, 0.06, 0.2], [0.3, 0.03, 0], this.jaw, 0);
+      part8(SPH6, belly, [0.5, 0.1, 0.24], [0.32, -0.02, 0], this.jaw, 0.02);
+      part8(SPH6, mouth, [0.42, 0.06, 0.2], [0.3, 0.03, 0], this.jaw, 0);
       for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
-        part7(CONE3, white, [0.022, 0.08, 0.022], [0.62 - i * 0.09, 0.04, s * (0.15 - i * 0.012)], this.jaw, 0);
-        const up = part7(CONE3, white, [0.022, 0.08, 0.022], [L3 * 0.6 + 0.6 - i * 0.09, -0.12, s * (0.16 - i * 0.012)], B5, 0);
+        part8(CONE3, white, [0.022, 0.08, 0.022], [0.62 - i * 0.09, 0.04, s * (0.15 - i * 0.012)], this.jaw, 0);
+        const up = part8(CONE3, white, [0.022, 0.08, 0.022], [L3 * 0.6 + 0.6 - i * 0.09, -0.12, s * (0.16 - i * 0.012)], B5, 0);
         up.rotation.x = Math.PI;
       }
       const sail2 = new Mesh(finGeo([0.75, 0.38], [-0.9, 0.34], [-0.1, 1.05], 0.03), fin3);
       addOutline(sail2, 0.025);
       B5.add(sail2);
-      for (let i = 0; i < 6; i++) part7(CONE3, finD, [0.018, 0.55, 0.018], [0.6 - i * 0.28, 0.4, 0], B5, 0).rotation.z = 0.25;
+      for (let i = 0; i < 6; i++) part8(CONE3, finD, [0.018, 0.55, 0.018], [0.6 - i * 0.28, 0.4, 0], B5, 0).rotation.z = 0.25;
       for (const s of [-1, 1]) {
         const hinge = new Group();
         hinge.position.set(0.35, -0.22, s * 0.3);
@@ -97931,7 +98225,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.tail = new Group();
       this.tail.position.set(-L3 * 0.85, 0.02, 0);
       B5.add(this.tail);
-      part7(SPH5, back, [0.5, 0.17, 0.15], [-0.35, 0, 0], this.tail, 0.03);
+      part8(SPH6, back, [0.5, 0.17, 0.15], [-0.35, 0, 0], this.tail, 0.03);
       for (const [b0, b1, tip] of [[[-0.7, 0.05], [-0.95, -0.02], [-1.3, 0.75]], [[-0.72, 0], [-0.9, 0], [-1.25, -0.65]]]) {
         const f = new Mesh(finGeo(b0, b1, tip, 0.025), fin3);
         addOutline(f, 0.025);
@@ -100013,6 +100307,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (a.look && a.look.race === "seaking") return new SeaKingView(a);
       if (a.look && a.look.race === "kraken") return new KrakenView(a);
       if (a.look && a.look.race === "seamonkey") return new SeaMonkeyView(a);
+      if (a.look && a.look.race === "dugong") return new DugongView(a);
       if (a.look && a.look.race === "beast_seacow") return new SeaCowView(a);
       if (a.look && a.look.race === "beast_fightfish") return new FightingFishView(a);
       if (a.draw !== baseDraw) return null;
@@ -101694,7 +101989,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 
   // src/render3d/groundcover.js
   var CELL5 = 16;
-  var NEAR3 = 22;
+  var NEAR4 = 22;
   var KINDS3 = ["grass", "flower", "fern", "pebble", "shell", "rock", "crop"];
   var REACH = { crop: 1, grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
   var MAXN = { crop: 4200, grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
@@ -102078,7 +102373,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           mat: coverMaterial(k),
           capNear: MAXN[k],
           capFar: MAXF[k],
-          near: NEAR3,
+          near: NEAR4,
           wedges: WEDGES[k],
           pad: PAD2[k],
           setup: (m) => {
@@ -102138,7 +102433,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL5)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR4 / CELL5)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -102359,7 +102654,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
   var GLOW3 = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
   var STRIDE = 9;
-  var NEAR4 = 16;
+  var NEAR5 = 16;
   var PAD3 = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
   var WEDGES2 = { branch: 4, brain: 4, table: 1, fan: 4, tube: 1, anemone: 1, kelp: 4, seagrass: 8, boulder: 4, star: 1, clam: 1 };
   var CELL_BUDGET_MS = 2.5;
@@ -102728,7 +103023,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           mat: seabedMaterial(k),
           capNear: Math.ceil(MAX6[k] * 0.3),
           capFar: MAX6[k],
-          near: NEAR4,
+          near: NEAR5,
           wedges: WEDGES2[k],
           pad: PAD3[k],
           setup: (m) => {
@@ -102780,7 +103075,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR4 / CELL6) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR5 / CELL6) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -103204,7 +103499,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     m.customProgramCacheKey = () => "fish2";
     return m;
   }
-  var SPH6 = new SphereGeometry(1, 14, 10);
+  var SPH7 = new SphereGeometry(1, 14, 10);
   var CON = new ConeGeometry(1, 1, 7);
   CON.translate(0, 0.5, 0);
   function piece2(root4, geo2, mat, s, p, o = 0.03, r4 = null) {
@@ -103219,15 +103514,15 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   function cartoonEyes(root4, x, y, z, r4, iris = "#141018") {
     const white = toon("#ffffff"), dark = toon(iris);
     for (const s of [-1, 1]) {
-      piece2(root4, SPH6, white, [r4 * 0.8, r4, r4 * 0.55], [x, y, s * z], 0.015);
-      piece2(root4, SPH6, dark, [r4 * 0.42, r4 * 0.55, r4 * 0.3], [x + r4 * 0.25, y, s * (z + r4 * 0.35)], 0);
+      piece2(root4, SPH7, white, [r4 * 0.8, r4, r4 * 0.55], [x, y, s * z], 0.015);
+      piece2(root4, SPH7, dark, [r4 * 0.42, r4 * 0.55, r4 * 0.3], [x + r4 * 0.25, y, s * (z + r4 * 0.35)], 0);
     }
   }
   function elephantView(col6) {
     const root4 = new Group();
     const back = toon(col6), belly = toon("#dfe7ee"), grey = toon("#8c8f98"), greyD = toon("#6c6f78"), yellow = toon("#f2c230"), ivory = toon("#f3ead2");
-    piece2(root4, SPH6, back, [0.55, 0.2, 0.17], [0, 0.02, 0], 0.025);
-    piece2(root4, SPH6, belly, [0.5, 0.13, 0.14], [0.02, -0.07, 0], 0);
+    piece2(root4, SPH7, back, [0.55, 0.2, 0.17], [0, 0.02, 0], 0.025);
+    piece2(root4, SPH7, belly, [0.5, 0.13, 0.14], [0.02, -0.07, 0], 0);
     for (let i = 0; i < 5; i++) {
       piece2(root4, CON, yellow, [0.018, 0.06, 0.012], [-0.22 - i * 0.055, 0.16 - i * 0.01, 0], 0);
       piece2(root4, CON, yellow, [0.018, 0.06, 0.012], [-0.22 - i * 0.055, -0.13 + i * 0.01, 0], 0, [Math.PI, 0, 0]);
@@ -103237,17 +103532,17 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     for (const s of [-1, 1]) {
       const hinge = new Group();
       hinge.position.set(0.3, 0.05, s * 0.14);
-      piece2(hinge, SPH6, grey, [0.11, 0.13, 0.02], [-0.06, 0, s * 0.06], 0.015, [0, s * 0.5, 0]);
+      piece2(hinge, SPH7, grey, [0.11, 0.13, 0.02], [-0.06, 0, s * 0.06], 0.015, [0, s * 0.5, 0]);
       root4.add(hinge);
       ears.push({ hinge, s });
       piece2(root4, CON, ivory, [0.014, 0.08, 0.014], [0.5, -0.05, s * 0.045], 0, [0, 0, -2.2]);
     }
     const trunk2 = [];
-    for (let i = 0; i < 5; i++) trunk2.push(piece2(root4, SPH6, i % 2 ? greyD : grey, [0.045 - i * 5e-3, 0.045 - i * 5e-3, 0.045 - i * 5e-3], [0.55, 0, 0], 0.01));
+    for (let i = 0; i < 5; i++) trunk2.push(piece2(root4, SPH7, i % 2 ? greyD : grey, [0.045 - i * 5e-3, 0.045 - i * 5e-3, 0.045 - i * 5e-3], [0.55, 0, 0], 0.01));
     const tail2 = new Group();
     tail2.position.set(-0.5, 0.02, 0);
     root4.add(tail2);
-    piece2(tail2, SPH6, back, [0.12, 0.05, 0.04], [-0.06, 0, 0], 0.015);
+    piece2(tail2, SPH7, back, [0.12, 0.05, 0.04], [-0.06, 0, 0], 0.015);
     piece2(tail2, CON, back, [0.03, 0.26, 0.02], [-0.12, 0, 0], 0.015, [0, 0, 0.6]);
     piece2(tail2, CON, back, [0.03, 0.26, 0.02], [-0.12, 0, 0], 0.015, [0, 0, Math.PI - 0.6]);
     return {
@@ -103268,19 +103563,19 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const body = toon(col6), belly = toon("#f3e7c9"), horn = toon("#f3ead2"), red = toon("#d32f2f");
     const head = new Group();
     root4.add(head);
-    piece2(head, SPH6, body, [0.2, 0.12, 0.13], [0, 0, 0], 0.02);
-    piece2(head, SPH6, belly, [0.16, 0.06, 0.1], [0.04, -0.06, 0], 0);
+    piece2(head, SPH7, body, [0.2, 0.12, 0.13], [0, 0, 0], 0.02);
+    piece2(head, SPH7, belly, [0.16, 0.06, 0.1], [0.04, -0.06, 0], 0);
     for (const s of [-1, 1]) {
       piece2(head, CON, horn, [0.025, 0.16, 0.025], [-0.08, 0.08, s * 0.07], 0.01, [s * 0.5, 0, 0.9]);
-      piece2(head, SPH6, toon("#ffffff"), [0.035, 0.035, 0.025], [0.1, 0.05, s * 0.09], 0.01);
-      piece2(head, SPH6, red, [0.016, 0.028, 0.012], [0.115, 0.05, s * 0.105], 0);
+      piece2(head, SPH7, toon("#ffffff"), [0.035, 0.035, 0.025], [0.1, 0.05, s * 0.09], 0.01);
+      piece2(head, SPH7, red, [0.016, 0.028, 0.012], [0.115, 0.05, s * 0.105], 0);
     }
     const segs = [];
     for (let i = 0; i < 8; i++) {
       const r4 = 0.1 * (1 - i * 0.085);
       const g = new Group();
       root4.add(g);
-      piece2(g, SPH6, body, [r4 * 1.25, r4, r4], [0, 0, 0], 0.015);
+      piece2(g, SPH7, body, [r4 * 1.25, r4, r4], [0, 0, 0], 0.015);
       if (i % 2 === 0 && i < 7) piece2(g, CON, i % 4 ? body : red, [r4 * 0.3, r4 * 1.1, r4 * 0.12], [0, r4 * 0.7, 0], 0);
       segs.push(g);
     }
@@ -103295,36 +103590,36 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   function seaCatView(col6) {
     const root4 = new Group();
     const fur = toon(col6), stripe = toon("#a8602a"), cream = toon("#f6e3c4"), pink = toon("#f29aa9"), dark = toon("#2a1d14");
-    piece2(root4, SPH6, fur, [0.55, 0.26, 0.28], [0, 0, 0], 0.025);
-    piece2(root4, SPH6, cream, [0.45, 0.14, 0.22], [0.05, -0.13, 0], 0);
-    for (let i = 0; i < 4; i++) piece2(root4, SPH6, stripe, [0.035, 0.2, 0.29], [0.25 - i * 0.16, 0.06, 0], 0);
+    piece2(root4, SPH7, fur, [0.55, 0.26, 0.28], [0, 0, 0], 0.025);
+    piece2(root4, SPH7, cream, [0.45, 0.14, 0.22], [0.05, -0.13, 0], 0);
+    for (let i = 0; i < 4; i++) piece2(root4, SPH7, stripe, [0.035, 0.2, 0.29], [0.25 - i * 0.16, 0.06, 0], 0);
     const head = new Group();
     head.position.set(0.6, 0.12, 0);
     root4.add(head);
-    piece2(head, SPH6, fur, [0.25, 0.23, 0.26], [0, 0, 0], 0.025);
-    piece2(head, SPH6, cream, [0.13, 0.1, 0.16], [0.17, -0.07, 0], 0.015);
-    piece2(head, SPH6, pink, [0.035, 0.028, 0.04], [0.29, -0.02, 0], 0);
+    piece2(head, SPH7, fur, [0.25, 0.23, 0.26], [0, 0, 0], 0.025);
+    piece2(head, SPH7, cream, [0.13, 0.1, 0.16], [0.17, -0.07, 0], 0.015);
+    piece2(head, SPH7, pink, [0.035, 0.028, 0.04], [0.29, -0.02, 0], 0);
     for (const s of [-1, 1]) {
       piece2(head, CON, fur, [0.09, 0.16, 0.05], [-0.02, 0.17, s * 0.13], 0.015, [s * -0.25, 0, 0]);
       piece2(head, CON, pink, [0.05, 0.1, 0.02], [0, 0.18, s * 0.13], 0, [s * -0.25, 0, 0]);
-      piece2(head, SPH6, toon("#d9f06a"), [0.05, 0.06, 0.03], [0.17, 0.07, s * 0.12], 0.012);
-      piece2(head, SPH6, dark, [0.014, 0.05, 0.02], [0.195, 0.07, s * 0.135], 0);
-      for (const k of [-1, 0, 1]) piece2(head, SPH6, toon("#ffffff"), [0.12, 4e-3, 4e-3], [0.22, -0.05 + k * 0.02, s * 0.14], 0, [0, s * 0.35, k * 0.12]);
+      piece2(head, SPH7, toon("#d9f06a"), [0.05, 0.06, 0.03], [0.17, 0.07, s * 0.12], 0.012);
+      piece2(head, SPH7, dark, [0.014, 0.05, 0.02], [0.195, 0.07, s * 0.135], 0);
+      for (const k of [-1, 0, 1]) piece2(head, SPH7, toon("#ffffff"), [0.12, 4e-3, 4e-3], [0.22, -0.05 + k * 0.02, s * 0.14], 0, [0, s * 0.35, k * 0.12]);
     }
     const paws = [];
     for (const s of [-1, 1]) {
       const h2 = new Group();
       h2.position.set(0.35, -0.12, s * 0.2);
-      piece2(h2, SPH6, fur, [0.07, 0.16, 0.07], [0.04, -0.1, 0], 0.015);
-      piece2(h2, SPH6, cream, [0.075, 0.05, 0.075], [0.06, -0.24, 0], 0);
+      piece2(h2, SPH7, fur, [0.07, 0.16, 0.07], [0.04, -0.1, 0], 0.015);
+      piece2(h2, SPH7, cream, [0.075, 0.05, 0.075], [0.06, -0.24, 0], 0);
       root4.add(h2);
       paws.push({ h: h2, s });
     }
     const tail2 = new Group();
     tail2.position.set(-0.52, 0.02, 0);
     root4.add(tail2);
-    piece2(tail2, SPH6, fur, [0.22, 0.12, 0.12], [-0.12, 0, 0], 0.02);
-    piece2(tail2, SPH6, stripe, [0.1, 0.03, 0.26], [-0.34, 0, 0], 0.02);
+    piece2(tail2, SPH7, fur, [0.22, 0.12, 0.12], [-0.12, 0, 0], 0.02);
+    piece2(tail2, SPH7, stripe, [0.1, 0.03, 0.26], [-0.34, 0, 0], 0.02);
     return {
       root: root4,
       update(t) {
@@ -103338,22 +103633,22 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const root4 = new Group();
     const skin = toon(col6), belly = toon("#fbe3d6"), horn = toon("#f3ead2"), fin3 = toon("#e0795f"), dark = toon("#3a1f1a");
     const saddle = toon("#6d4c33"), cloth = toon("#c0392b");
-    piece2(root4, SPH6, skin, [0.3, 0.3, 0.26], [0, 0, 0], 0.025);
-    piece2(root4, SPH6, belly, [0.22, 0.24, 0.2], [0.06, -0.06, 0], 0);
+    piece2(root4, SPH7, skin, [0.3, 0.3, 0.26], [0, 0, 0], 0.025);
+    piece2(root4, SPH7, belly, [0.22, 0.24, 0.2], [0.06, -0.06, 0], 0);
     const head = new Group();
     head.position.set(0.3, 0.26, 0);
     root4.add(head);
-    piece2(head, SPH6, skin, [0.27, 0.24, 0.25], [0, 0, 0], 0.025);
-    piece2(head, SPH6, belly, [0.16, 0.12, 0.18], [0.16, -0.09, 0], 0.015);
-    piece2(head, SPH6, dark, [0.1, 0.02, 0.13], [0.24, -0.1, 0], 0);
+    piece2(head, SPH7, skin, [0.27, 0.24, 0.25], [0, 0, 0], 0.025);
+    piece2(head, SPH7, belly, [0.16, 0.12, 0.18], [0.16, -0.09, 0], 0.015);
+    piece2(head, SPH7, dark, [0.1, 0.02, 0.13], [0.24, -0.1, 0], 0);
     cartoonEyes(head, 0.14, 0.07, 0.15, 0.08, "#2a1d14");
     for (const s of [-1, 1]) piece2(head, CON, horn, [0.035, 0.14, 0.035], [-0.05, 0.18, s * 0.14], 0.012, [s * 0.5, 0, -0.3]);
-    piece2(root4, SPH6, cloth, [0.2, 0.03, 0.27], [-0.02, 0.26, 0], 0.012);
-    piece2(root4, SPH6, saddle, [0.14, 0.06, 0.18], [-0.02, 0.3, 0], 0.012);
+    piece2(root4, SPH7, cloth, [0.2, 0.03, 0.27], [-0.02, 0.26, 0], 0.012);
+    piece2(root4, SPH7, saddle, [0.14, 0.06, 0.18], [-0.02, 0.3, 0], 0.012);
     const tail2 = [];
-    for (let i = 0; i < 6; i++) tail2.push(piece2(root4, SPH6, i % 2 ? skin : fin3, [0.09 - i * 0.012, 0.09 - i * 0.012, 0.09 - i * 0.012], [0, 0, 0], 0.012));
+    for (let i = 0; i < 6; i++) tail2.push(piece2(root4, SPH7, i % 2 ? skin : fin3, [0.09 - i * 0.012, 0.09 - i * 0.012, 0.09 - i * 0.012], [0, 0, 0], 0.012));
     const fins = [];
-    for (const s of [-1, 1]) fins.push(piece2(root4, SPH6, fin3, [0.1, 0.03, 0.07], [0.05, 0.02, s * 0.27], 0.012));
+    for (const s of [-1, 1]) fins.push(piece2(root4, SPH7, fin3, [0.1, 0.03, 0.07], [0.05, 0.02, s * 0.27], 0.012));
     piece2(root4, CON, fin3, [0.1, 0.18, 0.02], [-0.12, 0.26, 0], 0.012, [0, 0, 0.5]);
     return {
       root: root4,
@@ -108686,7 +108981,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   var MARY_GEOISE = {
     x: 0,
     y: EQ,
-    portParadise: { x: W2 - RL_HALF + 4, y: EQ },
+    portParadise: { x: W - RL_HALF + 4, y: EQ },
     portNewWorld: { x: RL_HALF - 4, y: EQ }
   };
   function yieldFrame() {
@@ -108694,7 +108989,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   async function generateWorld({ seed = "blue-planet", islands = [], onProgress = () => {
   } } = {}) {
-    const world = new World(W2, H, { wrap: true, zone: 0, id: "surface", fogCell: 16 });
+    const world = new World(W, H, { wrap: true, zone: 0, id: "surface", fogCell: 16 });
     world.seed = seed;
     world.objects = new ObjectIndex(world);
     const noise = new Noise(seed);
@@ -108842,8 +109137,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   var EDGE_PAD = 34;
   function setupBase(world, noise) {
     const M3 = REVERSE_MOUNTAIN;
-    const ptop = new Float32Array(W2), pbot = new Float32Array(W2);
-    for (let x = 0; x < W2; x++) {
+    const ptop = new Float32Array(W), pbot = new Float32Array(W);
+    for (let x = 0; x < W; x++) {
       ptop[x] = POLAR + noise.fbm(x * 0.02, 3.3, 3) * 10 + 4;
       pbot[x] = H - POLAR - (noise.fbm(x * 0.02, 91.7, 3) * 10 + 4);
     }
@@ -108978,7 +109273,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   function buildFloes(world, noise) {
     world.floes = [];
     for (let k = 0; k < 180; k++) {
-      const x = Math.floor(hash2(k, 1, 77) * W2);
+      const x = Math.floor(hash2(k, 1, 77) * W);
       const north = k % 2 === 0;
       const y = north ? POLAR + 20 + Math.floor(hash2(k, 2, 77) * chart(12)) : H - POLAR - 20 - Math.floor(hash2(k, 2, 77) * chart(12));
       const r4 = 2 + hash2(k, 3, 77) * 6;
@@ -109042,7 +109337,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     world.reverseMountain = M3;
     const MG = MARY_GEOISE;
     for (const port of [MG.portParadise, MG.portNewWorld]) {
-      const dir = port.x > W2 / 2 ? 1 : -1;
+      const dir = port.x > W / 2 ? 1 : -1;
       port.dir = dir;
       for (let j = -18; j <= 18; j++) {
         for (let i = -26; i <= 14; i++) {
@@ -109150,7 +109445,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const tries = 6e3;
     let placed = 0;
     for (let k = 0; k < tries && placed < 640; k++) {
-      const x = rng4.range(chart(60), W2 - chart(60));
+      const x = rng4.range(chart(60), W - chart(60));
       const y = rng4.range(POLAR + chart(40), H - POLAR - chart(40));
       const reg11 = regionAt(x, y);
       if (reg11 === REGION.RED_LINE || reg11 === REGION.POLAR) continue;
@@ -116593,9 +116888,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const m = sel.match(/^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i);
     const el = document.createElement(m && m[1] ? m[1] : "div");
     if (m && m[2]) {
-      for (const part8 of m[2].match(/[.#][\w-]+/g) || []) {
-        if (part8[0] === ".") el.classList.add(part8.slice(1));
-        else el.id = part8.slice(1);
+      for (const part9 of m[2].match(/[.#][\w-]+/g) || []) {
+        if (part9[0] === ".") el.classList.add(part9.slice(1));
+        else el.id = part9.slice(1);
       }
     }
     if (props !== null && props !== void 0 && (typeof props !== "object" || props instanceof Node || Array.isArray(props))) {
@@ -119672,10 +119967,10 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     draw(g, r4) {
       if (r4.is3d) {
         drawShapes3d(this, g, r4);
-        const part8 = (gg, p, vx, vy) => this.drawPart(gg, p, vx, vy);
-        drawParticles3d(this, g, r4, false, part8);
+        const part9 = (gg, p, vx, vy) => this.drawPart(gg, p, vx, vy);
+        drawParticles3d(this, g, r4, false, part9);
         g.globalCompositeOperation = "lighter";
-        drawParticles3d(this, g, r4, true, part8);
+        drawParticles3d(this, g, r4, true, part9);
         g.globalCompositeOperation = "source-over";
         g.globalAlpha = 1;
         this.drawTexts(g, r4, (t) => textPlace3d(r4, t));
@@ -120222,7 +120517,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   var DAY_SECONDS = 960;
   var ZONE_X = 3840;
   function zoneOffset(x) {
-    let d = (x - ZONE_X) / W2;
+    let d = (x - ZONE_X) / W;
     d -= Math.round(d);
     return d * 24;
   }
@@ -124169,7 +124464,7 @@ button:disabled { cursor: not-allowed; }
   var RING_X = 0.3;
   var RING_Y = 0.36;
   var RING_SIDE = 300;
-  var NEAR5 = 160;
+  var NEAR6 = 160;
   var HEAD3 = 3.8;
   var ROAD_ICON = { pirate: "jolly_roger", marine: "marine", hunter: "bounty" };
   var ROAD_NAME = { pirate: "Pirate", marine: "Marine", hunter: "Bounty Hunter" };
@@ -124237,7 +124532,7 @@ button:disabled { cursor: not-allowed; }
         const d = w.distance(p.x, p.y, m.x, m.y);
         const mk3 = this.mark(id, kind, icon);
         const fade2 = Math.max(0, Math.min(1, (d - 10) / 12));
-        const gy = d < NEAR5 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
+        const gy = d < NEAR6 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
         V4.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
         let sx, sy, edge;
         if (V4.z < -0.1) {
@@ -124824,7 +125119,7 @@ button:disabled { cursor: not-allowed; }
   // src/ui/globe.js
   var TEX_W = 4096;
   var TEX_H = 2048;
-  var R_M = W2 / (2 * Math.PI);
+  var R_M = W / (2 * Math.PI);
   var FOV = 30;
   var TANH = Math.tan(FOV / 2 * Math.PI / 180);
   var NEAR_D = 1.035;
@@ -124834,7 +125129,7 @@ button:disabled { cursor: not-allowed; }
   var shrink = (y) => Math.max(0.06, Math.cos(latOf(y)));
   var wrapDx = (a, b) => {
     let d = b - a;
-    d -= W2 * Math.round(d / W2);
+    d -= W * Math.round(d / W);
     return d;
   };
   var ROWS = TEX_H;
@@ -124850,12 +125145,12 @@ button:disabled { cursor: not-allowed; }
   }
   function rowMap(feats, y) {
     const s = shrink(y), K = 1 / s;
-    const HALF = W2 / 2;
+    const HALF = W / 2;
     const rl = [{ c: MG_X, h: RL_HALF + RL_MARGIN }, { c: RM_X, h: RL_HALF + RL_MARGIN }];
     const isl = [];
     for (const f of feats) {
       if (f.rl || y < f.y0 || y > f.y1) continue;
-      const c = (f.c % W2 + W2) % W2;
+      const c = (f.c % W + W) % W;
       let onRL = false;
       for (const R5 of rl) {
         const d = Math.abs(wrapDx(R5.c, c));
@@ -124866,11 +125161,11 @@ button:disabled { cursor: not-allowed; }
       }
       if (!onRL) isl.push({ c, h: f.h });
     }
-    for (const R5 of rl) R5.k = y < POLAR || y > H - POLAR ? 0.25 * W2 / R5.h : Math.max(1, Math.min(K, 0.2 * W2 / R5.h));
+    for (const R5 of rl) R5.k = y < POLAR || y > H - POLAR ? 0.25 * W / R5.h : Math.max(1, Math.min(K, 0.2 * W / R5.h));
     const xs = [], Xs = [];
     const stretches = [
       { a: rl[0].h, b: HALF - rl[1].h, A: rl[0].h * rl[0].k, B: HALF - rl[1].h * rl[1].k },
-      { a: HALF + rl[1].h, b: W2 - rl[0].h, A: HALF + rl[1].h * rl[1].k, B: W2 - rl[0].h * rl[0].k }
+      { a: HALF + rl[1].h, b: W - rl[0].h, A: HALF + rl[1].h * rl[1].k, B: W - rl[0].h * rl[0].k }
     ];
     xs.push(-rl[0].h);
     Xs.push(-rl[0].h * rl[0].k);
@@ -124916,13 +125211,13 @@ button:disabled { cursor: not-allowed; }
       xs.push(S6.b);
       Xs.push(S6.B);
     }
-    xs.push(W2 + rl[0].h);
-    Xs.push(W2 + rl[0].h * rl[0].k);
+    xs.push(W + rl[0].h);
+    Xs.push(W + rl[0].h * rl[0].k);
     return { xs: Float64Array.from(xs), Xs: Float64Array.from(Xs) };
   }
   function along(a, b, v) {
     const n = a.length;
-    v = a[0] + ((v - a[0]) % W2 + W2) % W2;
+    v = a[0] + ((v - a[0]) % W + W) % W;
     let lo = 0, hi = n - 1;
     while (hi - lo > 1) {
       const m = lo + hi >> 1;
@@ -124931,7 +125226,7 @@ button:disabled { cursor: not-allowed; }
     }
     const t = a[hi] > a[lo] ? (v - a[lo]) / (a[hi] - a[lo]) : 0;
     const r4 = b[lo] + (b[hi] - b[lo]) * t;
-    return (r4 % W2 + W2) % W2;
+    return (r4 % W + W) % W;
   }
   function anchorsOf(world) {
     const feats = featuresOf(world), rows = new Array(ROWS);
@@ -124944,17 +125239,17 @@ button:disabled { cursor: not-allowed; }
       /** chart x → x round the ball, on row y */
       fwd(x, y) {
         const r4 = this.row(y);
-        return r4 ? along(r4.xs, r4.Xs, x) : (x % W2 + W2) % W2;
+        return r4 ? along(r4.xs, r4.Xs, x) : (x % W + W) % W;
       },
       /** and back */
       inv(X2, y) {
         const r4 = this.row(y);
-        return r4 ? along(r4.Xs, r4.xs, X2) : (X2 % W2 + W2) % W2;
+        return r4 ? along(r4.Xs, r4.xs, X2) : (X2 % W + W) % W;
       }
     };
   }
   function globeU(x, y, maps) {
-    return (maps ? maps.fwd(x, y) : (x % W2 + W2) % W2) / W2;
+    return (maps ? maps.fwd(x, y) : (x % W + W) % W) / W;
   }
   function uvToSphere(u, v, r4 = 1, out = new Vector3()) {
     const phi = u * Math.PI * 2, theta = Math.max(0, Math.min(1, v)) * Math.PI;
@@ -125043,8 +125338,8 @@ button:disabled { cursor: not-allowed; }
     centre() {
       const u = ((Math.PI / 2 - this.yaw) / (Math.PI * 2) % 1 + 1) % 1, v = 0.5 - this.tilt / Math.PI;
       const y = Math.max(0, Math.min(1, v)) * H;
-      const x = this.anchors ? this.anchors.inv(u * W2, y) : u * W2;
-      return { x: (x % W2 + W2) % W2, y };
+      const x = this.anchors ? this.anchors.inv(u * W, y) : u * W;
+      return { x: (x % W + W) % W, y };
     }
     /**
      * The chart, captured from its own renderer, tinted by region and re-laid
@@ -125064,10 +125359,10 @@ button:disabled { cursor: not-allowed; }
       const env2 = game.env, saved = { ...r4.cam }, prevMode = env2.mapMode;
       env2.mapMode = true;
       env2.globeTint = true;
-      const scale = r4.dpr * (r4.terrainScale || 1), zEff = TEX_W / W2;
+      const scale = r4.dpr * (r4.terrainScale || 1), zEff = TEX_W / W;
       const tw = r4.glCanvas.width / zEff, th = r4.glCanvas.height / zEff;
       for (let Y0 = 0; Y0 < H; Y0 += th) {
-        for (let X0 = 0; X0 < W2; X0 += tw) {
+        for (let X0 = 0; X0 < W; X0 += tw) {
           Object.assign(r4.cam, { x: X0 + tw / 2, y: Y0 + th / 2, zoom: zEff / scale, shakeX: 0, shakeY: 0 });
           r4.renderTerrain(w, env2);
           ga.drawImage(r4.glCanvas, Math.round(X0 * zEff), Math.round(Y0 * zEff));
@@ -125082,7 +125377,7 @@ button:disabled { cursor: not-allowed; }
       F4.height = TEX_H;
       const gf = F4.getContext("2d");
       gf.drawImage(A2, 0, 0);
-      const pxW = W2 / TEX_W, pxH = H / TEX_H;
+      const pxW = W / TEX_W, pxH = H / TEX_H;
       const seg2 = (j, sx0, sx1, dx0, dx1) => {
         if (sx1 - sx0 < 1e-6) return;
         const sw2 = sx1 - sx0, dw = dx1 - dx0;
@@ -125199,7 +125494,7 @@ button:disabled { cursor: not-allowed; }
       const p = hit.applyMatrix4(new Matrix4().copy(this.spin.matrixWorld).invert());
       const theta = Math.acos(Math.max(-1, Math.min(1, p.y))), phi = Math.atan2(p.z, -p.x);
       const u = (phi / (Math.PI * 2) % 1 + 1) % 1, y = theta / Math.PI * H;
-      const x = this.anchors ? this.anchors.inv(u * W2, y) : u * W2;
+      const x = this.anchors ? this.anchors.inv(u * W, y) : u * W;
       return { x, y };
     }
     /** Chart point → css pixels as the globe stands just now; null round the far side of it. */
@@ -125337,7 +125632,7 @@ button:disabled { cursor: not-allowed; }
     wrap2.classList.add("hidden");
     ui.root.appendChild(wrap2);
     const cam = { x: 0, y: 0, zoom: 0.3 };
-    const MIN_ZOOM = () => Math.min(0.18, (game.renderer.cw || 1280) / W2 * 0.9);
+    const MIN_ZOOM = () => Math.min(0.18, (game.renderer.cw || 1280) / W * 0.9);
     const MAX_ZOOM = 3.2;
     let drag = null, pinch = null;
     const ptrs = /* @__PURE__ */ new Map();
@@ -125407,7 +125702,7 @@ button:disabled { cursor: not-allowed; }
         drag = null;
         pinch = null;
         game.closeMap();
-        game.creative.teleport((wx % W2 + W2) % W2, Math.max(2, Math.min(H - 2, wy)));
+        game.creative.teleport((wx % W + W) % W, Math.max(2, Math.min(H - 2, wy)));
         return;
       }
       if (press && e.type === "pointerup" && globeHere() && game.creative?.on && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && game.world === game.surface) {
@@ -125420,7 +125715,7 @@ button:disabled { cursor: not-allowed; }
           pinch = null;
           globe2.dragging = false;
           game.closeMap();
-          game.creative.teleport((at4.x % W2 + W2) % W2, Math.max(2, Math.min(H - 2, at4.y)));
+          game.creative.teleport((at4.x % W + W) % W, Math.max(2, Math.min(H - 2, at4.y)));
           return;
         }
       }
@@ -125466,7 +125761,7 @@ button:disabled { cursor: not-allowed; }
         cam.x = p.x;
         cam.y = p.y;
       } else if (game.world === game.surface) {
-        cam.zoom = Math.max(MIN_ZOOM(), Math.min(r4.cw / (W2 * 0.28), 0.5));
+        cam.zoom = Math.max(MIN_ZOOM(), Math.min(r4.cw / (W * 0.28), 0.5));
         cam.x = p.x;
         cam.y = Math.max(H * 0.3, Math.min(H * 0.7, p.y));
       } else {
@@ -125530,7 +125825,7 @@ button:disabled { cursor: not-allowed; }
       const p = game.player;
       const toS = (x, y) => {
         let dx = x - cam.x;
-        if (!zone) dx -= W2 * Math.round(dx / W2);
+        if (!zone) dx -= W * Math.round(dx / W);
         return [dx * cam.zoom + r4.cw / 2, (y - cam.y) * cam.zoom + r4.ch / 2];
       };
       detail.draw(g, {
@@ -125560,7 +125855,7 @@ button:disabled { cursor: not-allowed; }
     clear(layer);
     const toS = proj ? proj.toS : (x, y) => {
       let dx = x - cam.x;
-      if (!zone) dx -= W2 * Math.round(dx / W2);
+      if (!zone) dx -= W * Math.round(dx / W);
       return [dx * z + r4.cw / 2, (y - cam.y) * z + r4.ch / 2];
     };
     const placed = [];
@@ -134028,7 +134323,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         say2(seal.to(id), { f: selfId2, hi: 1 });
       }
     };
-    const part8 = (id) => {
+    const part9 = (id) => {
       if (peers.delete(id)) {
         seen.delete(id);
         h2.onPeerLeave?.(id);
@@ -134051,7 +134346,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const got = (d) => {
       if (left || !d || typeof d.f !== "string" || !/^[a-z0-9]{4,16}$/.test(d.f) || d.f === selfId2) return;
       if (d.bye) {
-        part8(d.f);
+        part9(d.f);
         return;
       }
       meet(d.f);
@@ -134087,7 +134382,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const timer = setInterval(() => {
       say2(seal.all, { f: selfId2, hi: 1 });
       const now3 = Date.now();
-      for (const [id, t] of peers) if (now3 - t > QUIET_MS) part8(id);
+      for (const [id, t] of peers) if (now3 - t > QUIET_MS) part9(id);
     }, BEAT_MS);
     return {
       kind: "relay",
@@ -134365,7 +134660,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (fresh) h2.onPeerJoin?.(id);
       return fresh;
     };
-    const part8 = (id) => {
+    const part9 = (id) => {
       if (peers.delete(id)) h2.onPeerLeave?.(id);
     };
     bc.onmessage = (ev) => {
@@ -134373,7 +134668,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (left || !m || typeof m !== "object" || typeof m.from !== "string" || m.from === selfId2) return;
       if (m.to && m.to !== selfId2) return;
       if (m.type === "leave") {
-        part8(m.from);
+        part9(m.from);
         return;
       }
       const fresh = meet(m.from);
@@ -134383,7 +134678,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const timer = setInterval(() => {
       post({ type: "beat", from: selfId2 });
       const now3 = Date.now();
-      for (const [id, t] of peers) if (now3 - t > timeout) part8(id);
+      for (const [id, t] of peers) if (now3 - t > timeout) part9(id);
     }, beat4);
     timer.unref?.();
     post({ type: "join", from: selfId2 });
@@ -135122,7 +135417,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/net/coop.js
   var SEND_GAP = 0.2;
-  var NEAR6 = 150;
+  var NEAR7 = 150;
   var sharedFoe = (a) => !!(a?.npcId && (a.boss || a.named || a.bountyValue || a.def?.story));
   var sharedKO = (a) => sharedFoe(a) || !!(a?.npcId && (a.hostile || a.def?.hostile));
   var down = (a) => a.state === "knocked" || a.state === "dead" || !a.alive;
@@ -135152,7 +135447,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const find = (id) => {
       const p = game.player;
       if (!p || typeof id !== "string" || id.length > 80) return null;
-      return game.actorsNear(p.x, p.y, NEAR6).find((a) => a.npcId === id && !down(a)) || null;
+      return game.actorsNear(p.x, p.y, NEAR7).find((a) => a.npcId === id && !down(a)) || null;
     };
     game.coop = {
       /** A message about a shared fight from a friend's game (session.js receive). */
@@ -168662,14 +168957,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     return ct;
   };
   var shortName = (n) => String(n || "").replace(/^"[^"]*"\s*/, "");
-  function chapterReward(part8, k, path2) {
-    const b = part8 === 1 ? 3e3 + 1800 * k : part8 === 2 ? 4e4 + 14e3 * k : 4e5 + 9e4 * k;
-    const r4 = { berries: Math.round(b * (path2 === "hunter" ? 1.4 : path2 === "marine" ? 0.8 : 1) / 100) * 100, points: part8 };
+  function chapterReward(part9, k, path2) {
+    const b = part9 === 1 ? 3e3 + 1800 * k : part9 === 2 ? 4e4 + 14e3 * k : 4e5 + 9e4 * k;
+    const r4 = { berries: Math.round(b * (path2 === "hunter" ? 1.4 : path2 === "marine" ? 0.8 : 1) / 100) * 100, points: part9 };
     if (path2 === "marine") {
-      r4.merit = part8 === 1 ? 60 + 45 * k : part8 === 2 ? 260 + 110 * k : 900 + 220 * k;
-      r4.reputation = part8 * 2 + 1;
+      r4.merit = part9 === 1 ? 60 + 45 * k : part9 === 2 ? 260 + 110 * k : 900 + 220 * k;
+      r4.reputation = part9 * 2 + 1;
     }
-    if (path2 === "hunter") r4.reputation = part8 * 2 + 2;
+    if (path2 === "hunter") r4.reputation = part9 * 2 + 2;
     if (path2 === "pirate") r4.reputation = 1;
     return r4;
   }
@@ -168855,13 +169150,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const c = C3();
       const ch = CHAPTERS.get(chId);
       if (!c || !ch || c.main || c.mainShelf) return false;
-      const part8 = ch.part;
-      c.main = { path: path2, part: part8, chain: PLANS[part8](c, path2, ch, game), at: 0, done: [], skipped: [], route: null, sworn: false, began: game.env.day, home: ch.kind === "start" ? ch.island : null };
+      const part9 = ch.part;
+      c.main = { path: path2, part: part9, chain: PLANS[part9](c, path2, ch, game), at: 0, done: [], skipped: [], route: null, sworn: false, began: game.env.day, home: ch.kind === "start" ? ch.island : null };
       if (ch.kind !== "start" && c.main.chain[0] !== ch.id) c.main.chain.unshift(ch.id);
       c.main.route = c.main.route || c.mainRoute || null;
       c.mainIntro = null;
       c.freeSail = null;
-      game.ui.banner(PATHS[path2].name.toUpperCase(), `Part ${part8} \xB7 ${PART_NAMES[part8]}`, PATHS[path2].tagline, 5);
+      game.ui.banner(PATHS[path2].name.toUpperCase(), `Part ${part9} \xB7 ${PART_NAMES[part9]}`, PATHS[path2].tagline, 5);
       game.log(`You take up the road of the ${PATHS[path2].name}.`, PATHS[path2].color);
       setTimeout(() => {
         if (game.state?.char === c) game.hint?.("fightstyle", "Fight however suits you: fists, legs, a blade or a gun all win fights. Weapon shops sell blades and pistols, and trainers and dojos teach styles \u2014 your Skills (Tab) show what you know.");
@@ -169015,14 +169310,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         game.log(`${questDef(cur.qid)?.name || "A chapter"} is left behind: ${why}`, "#b0bec5");
       }
     }
-    S6.jumpTo = (part8, why) => {
+    S6.jumpTo = (part9, why) => {
       const c = C3(), m = c?.main;
-      if (!m || m.finished || m.part >= part8 || !PLANS[part8]) return;
+      if (!m || m.finished || m.part >= part9 || !PLANS[part9]) return;
       leaveBehind(why);
-      m.part = part8;
-      m.chain = PLANS[part8](c, m.path, null, game);
+      m.part = part9;
+      m.chain = PLANS[part9](c, m.path, null, game);
       m.at = 0;
-      game.ui.banner(`PART ${part8}`, PART_NAMES[part8], why, 6);
+      game.ui.banner(`PART ${part9}`, PART_NAMES[part9], why, 6);
       S6.pending = 3;
       persist(game);
     };
@@ -174275,8 +174570,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const reg11 = regionAt(p.x, p.y);
         out.seaId = reg11 === REGION.CALM_NORTH || reg11 === REGION.CALM_SOUTH ? "calm_belt" : REGION_INFO[reg11]?.id || "east_blue";
         if (reg11 === REGION.RED_LINE) {
-          const x = (p.x % W2 + W2) % W2;
-          out.holyLand = Math.abs(x - RM_X) > W2 / 4;
+          const x = (p.x % W + W) % W;
+          out.holyLand = Math.abs(x - RM_X) > W / 4;
           if (!out.holyLand) out.seaId = "red_line";
         }
       }
@@ -175582,7 +175877,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     };
   }
   function lootable(a) {
-    if (!a || a.isPlayer || a.faction === "player" || a.seaCreature || a.look?.race === "seaking" || a.look?.race === "kraken") return false;
+    if (!a || a.isPlayer || a.faction === "player" || a.seaCreature || a.look?.race === "seaking" || a.look?.race === "kraken" || a.dugong) return false;
     if (a.controller?.kind === "follower" || a.crewId || a.summonedBy || a.spar) return false;
     if (a.talk || a.recoverAfter || a.canCarry || a.def?.duel) return false;
     return true;
@@ -176669,7 +176964,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const here = o.port === "paradise" ? MG.portParadise : MG.portNewWorld;
         const other = o.port === "paradise" ? MG.portNewWorld : MG.portParadise;
         game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Bondola Operator", text: '"Destination?"', choices: [
-          { text: "Up to Mary Geoise, the Holy Land.", do: () => go(o.port === "paradise" ? W2 - csize(16) : csize(16), EQ + 3, ["MARY GEOISE", "The Holy Land", "Keep your eyes down. The Celestial Dragons do not like to be looked at."]), end: true },
+          { text: "Up to Mary Geoise, the Holy Land.", do: () => go(o.port === "paradise" ? W - csize(16) : csize(16), EQ + 3, ["MARY GEOISE", "The Holy Land", "Keep your eyes down. The Celestial Dragons do not like to be looked at."]), end: true },
           { text: "Carry my ship over the Red Line.", do: () => {
             if (!moveShipTo(other)) {
               game.log("You have no ship in this harbour.", "#ff8a80");
@@ -177263,6 +177558,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     installBuildings(game);
     installTownLife(game);
     installSeaLife(game);
+    installDugongs(game);
     installForaging(game);
     installSurvival(game);
     installContent(game);
