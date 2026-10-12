@@ -72,6 +72,8 @@ function panelNeed(u, h, r, len, psi, a, reach = SKIRT_REACH) {
 // out it may swing (radians) — the feel of the cloth
 // a skirt (skirtSwing): the same, a lighter cloth hung all round
 export const SKIRT_FEEL = { g: 9.8, wind: 0.8, damp: 4.2, damp2: 3.4, link: 9, max: 1.2, max2: 1.2, smooth: 0.09 };
+// (a long skirt: more cloth, heavier — the stride swings its hem, the air barely lifts it)
+export const SKIRT_FEEL_LONG = { g: 9.8, wind: 0.45, damp: 5.2, damp2: 4.8, link: 9, max: 0.9, max2: 0.75, smooth: 0.12, spread: 0.32 };
 export const COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
 const _cv = new THREE.Vector3(), _cv2 = new THREE.Vector3(), _cv3 = new THREE.Vector3(), _cq = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _cm = new THREE.Matrix4(), _cax = new THREE.Vector3();
 const _cpts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
@@ -666,8 +668,9 @@ export class CharacterModel {
     }
     // (a panel can't be pulled in past its neighbours' swing by much: a leg
     // between two panels holds them both out, and the cloth between doesn't sag in)
+    const spread = two ? SKIRT_FEEL_LONG.spread : 0.22;
     for (let r = 0; r < 2; r++) for (let i = 0; i < N; i++) {
-      const m = Math.max(K.need[(i + N - 1) % N], K.need[(i + 1) % N]) - 0.22;
+      const m = Math.max(K.need[(i + N - 1) % N], K.need[(i + 1) % N]) - spread;
       if (m > K.need[i]) K.need[i] = m;
     }
     // (nothing swinging it: it falls back to hanging, as gently as cloth falls, held out by the legs)
@@ -713,7 +716,7 @@ export class CharacterModel {
    * pendulum, neighbours tug each other along, and the legs keep it out.
    */
   skirtSwing(dt) {
-    const K = this.skirtS, S = this.body.skirt, N = SKIRT_N, F = SKIRT_FEEL;
+    const K = this.skirtS, S = this.body.skirt, N = SKIRT_N, F = S.hK > 0 ? SKIRT_FEEL_LONG : SKIRT_FEEL;
     if (!K) return;
     const hips = this.bones[B.hips];
     const p = _cv.setFromMatrixPosition(hips.matrixWorld);
@@ -753,7 +756,7 @@ export class CharacterModel {
         th[i] += om[i] * h;
         // (never inside the legs; never flung up past what cloth does)
         if (th[i] < K.need[i]) { th[i] = K.need[i]; if (om[i] < 0) om[i] = 0; }
-        if (th[i] > F.max) { th[i] = F.max; if (om[i] > 0) om[i] = 0; }
+        if (th[i] > Math.max(F.max, K.need[i])) { th[i] = Math.max(F.max, K.need[i]); if (om[i] > 0) om[i] = 0; }
         if (!two) continue;
         const j = N + i, t1 = th[j];
         const linkL = F.link * (th[N + ip] + th[N + inx] - 2 * t1);
@@ -762,7 +765,7 @@ export class CharacterModel {
         th[j] += om[j] * h;
         const lo = this.skirtLowNeed(i, th[i]);
         if (th[j] < lo) { th[j] = lo; if (om[j] < 0) om[j] = 0; }
-        if (th[j] > F.max2) { th[j] = F.max2; if (om[j] > 0) om[j] = 0; }
+        if (th[j] > Math.max(F.max2, lo)) { th[j] = Math.max(F.max2, lo); if (om[j] > 0) om[j] = 0; }
       }
     }
     this.skirtApply();
