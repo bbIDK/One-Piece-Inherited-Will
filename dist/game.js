@@ -96563,6 +96563,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return phi * fade2;
   }
   var SKIRT_FEEL = { g: 9.8, wind: 0.8, damp: 4.2, damp2: 3.4, link: 9, max: 1.2, max2: 1.2, smooth: 0.09 };
+  var SKIRT_FEEL_LONG = { g: 9.8, wind: 0.45, damp: 5.2, damp2: 4.8, link: 9, max: 0.9, max2: 0.75, smooth: 0.12, spread: 0.32 };
   var COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
   var _cv = new Vector3();
   var _cv2 = new Vector3();
@@ -97145,8 +97146,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
         K.need[i] = Math.min(1.75, need) - phi0;
       }
+      const spread2 = two ? SKIRT_FEEL_LONG.spread : 0.22;
       for (let r4 = 0; r4 < 2; r4++) for (let i = 0; i < N8; i++) {
-        const m = Math.max(K.need[(i + N8 - 1) % N8], K.need[(i + 1) % N8]) - 0.22;
+        const m = Math.max(K.need[(i + N8 - 1) % N8], K.need[(i + 1) % N8]) - spread2;
         if (m > K.need[i]) K.need[i] = m;
       }
       K.live -= dt || 0.016;
@@ -97190,7 +97192,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
      * pendulum, neighbours tug each other along, and the legs keep it out.
      */
     skirtSwing(dt) {
-      const K = this.skirtS, S6 = this.body.skirt, N8 = SKIRT_N, F4 = SKIRT_FEEL;
+      const K = this.skirtS, S6 = this.body.skirt, N8 = SKIRT_N, F4 = S6.hK > 0 ? SKIRT_FEEL_LONG : SKIRT_FEEL;
       if (!K) return;
       const hips = this.bones[B.hips];
       const p = _cv.setFromMatrixPosition(hips.matrixWorld);
@@ -97240,8 +97242,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
             th[i] = K.need[i];
             if (om[i] < 0) om[i] = 0;
           }
-          if (th[i] > F4.max) {
-            th[i] = F4.max;
+          if (th[i] > Math.max(F4.max, K.need[i])) {
+            th[i] = Math.max(F4.max, K.need[i]);
             if (om[i] > 0) om[i] = 0;
           }
           if (!two) continue;
@@ -97255,8 +97257,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
             th[j] = lo;
             if (om[j] < 0) om[j] = 0;
           }
-          if (th[j] > F4.max2) {
-            th[j] = F4.max2;
+          if (th[j] > Math.max(F4.max2, lo)) {
+            th[j] = Math.max(F4.max2, lo);
             if (om[j] > 0) om[j] = 0;
           }
         }
