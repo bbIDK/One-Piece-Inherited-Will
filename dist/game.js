@@ -120921,8 +120921,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         const far = coming > 0.25 && this.storm < 0.55;
         this.bolt(game, far ? { angle: this.frontAngle + (Math.random() - 0.5) * 0.6, dist: 1500 + Math.random() * 1100, ground: Math.random() < 0.3 } : { ground: Math.random() < 0.25 + th * 0.2 });
       }
-      if (this.lightning > this.lightOut + 1e-6) this.flashExt = this.lightning;
-      this.flashExt = Math.max(0, this.flashExt - dt * 4);
+      if (this.lightning > this.lightOut + 1e-6) this.flashExt = Math.min(1, this.lightning);
+      this.flashExt = clamp(this.flashExt - Math.max(0, dt) * 4, 0, 1);
       let f = 0;
       for (let i = this.pulses.length - 2; i >= 0; i -= 2) {
         const age = this.time - this.pulses[i];
@@ -123528,7 +123528,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.fillRect(0, 0, W4, H5);
       }
       if (env2.lightning > 0.5) {
-        g.fillStyle = `rgba(255,255,255,${(env2.lightning - 0.5) * (flat3 ? 0.5 : 0.22)})`;
+        g.fillStyle = `rgba(255,255,255,${(Math.min(1, env2.lightning) - 0.5) * (flat3 ? 0.5 : 0.22)})`;
         g.fillRect(0, 0, W4, H5);
       }
       const p = this.player;

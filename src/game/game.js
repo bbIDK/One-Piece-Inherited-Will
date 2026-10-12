@@ -402,7 +402,7 @@ export class Game {
       grd.addColorStop(1, `rgba(200,205,215,${env.fog * 0.85})`);
       g.fillStyle = grd; g.fillRect(0, 0, W, H);
     }
-    if (env.lightning > 0.5) { g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * (flat ? 0.5 : 0.22)})`; g.fillRect(0, 0, W, H); }
+    if (env.lightning > 0.5) { g.fillStyle = `rgba(255,255,255,${(Math.min(1, env.lightning) - 0.5) * (flat ? 0.5 : 0.22)})`; g.fillRect(0, 0, W, H); }
     // low-health vignette
     const p = this.player;
     if (p && p.d && p.hp / p.d.maxHp < 0.3 && p.state === 'idle') {

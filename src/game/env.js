@@ -223,8 +223,10 @@ export class Env {
       this.bolt(game, far ? { angle: this.frontAngle + (Math.random() - 0.5) * 0.6, dist: 1500 + Math.random() * 1100, ground: Math.random() < 0.3 } : { ground: Math.random() < 0.25 + th * 0.2 });
     }
     // (other code raises env.lightning for a flash of its own: that fades as it always has)
-    if (this.lightning > this.lightOut + 1e-6) this.flashExt = this.lightning;
-    this.flashExt = Math.max(0, this.flashExt - dt * 4);
+    // (a flash raised by other code is at most a full flash, and only ever fades: never brighter
+    // than white, and a clock wound back — dt below zero — mustn't make it grow)
+    if (this.lightning > this.lightOut + 1e-6) this.flashExt = Math.min(1, this.lightning);
+    this.flashExt = clamp(this.flashExt - Math.max(0, dt) * 4, 0, 1);
     let f = 0;
     for (let i = this.pulses.length - 2; i >= 0; i -= 2) {
       const age = this.time - this.pulses[i];
