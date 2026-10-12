@@ -1340,7 +1340,7 @@ SHAPES.zone = {
       for (let i = 0; i < 8; i++) {
         const ph = (v.time * 0.5 + hash(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.5 + hash(s.seed + i * 5));
         const th = hash(s.seed + i * 13 + cyc) * TAU, rr = R * (0.3 + 0.7 * ph);
-        v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.08, Z + Math.sin(th) * rr, 0.35 + 0.4 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.45, c, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
+        v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.05, Z + Math.sin(th) * rr, 0.22 + 0.22 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.3, GRAV_DEEP, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
       }
       for (let i = 0; i < 3; i++) {
         const ph = (v.time * 0.8 + i / 3) % 1, rr = R * (1 - ph);

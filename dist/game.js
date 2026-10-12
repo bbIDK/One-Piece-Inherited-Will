@@ -90957,7 +90957,7 @@ vec3 paneView(vec3 dir, float night) {
         for (let i = 0; i < 8; i++) {
           const ph = (v.time * 0.5 + hash8(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.5 + hash8(s.seed + i * 5));
           const th = hash8(s.seed + i * 13 + cyc) * TAU15, rr = R5 * (0.3 + 0.7 * ph);
-          v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.08, Z2 + Math.sin(th) * rr, 0.35 + 0.4 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.45, c, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
+          v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.05, Z2 + Math.sin(th) * rr, 0.22 + 0.22 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.3, GRAV_DEEP, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
         }
         for (let i = 0; i < 3; i++) {
           const ph = (v.time * 0.8 + i / 3) % 1, rr = R5 * (1 - ph);
