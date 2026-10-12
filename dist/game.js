@@ -108408,14 +108408,15 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       for (const f of tr.falls) if (f.k === 0) carveRunoff(world, tr.x + f.x + f.sx * Math.SQRT1_2 * 3.2, tr.y + f.y + f.sy * Math.SQRT1_2 * 3.2, f.sx * Math.SQRT1_2, f.sy * Math.SQRT1_2, (i, j) => terraceTile(tr, i, j));
     }
     for (const f of def.shipyards || []) placeShipyard(world, rec, f);
+    const tk = 1 / Math.sqrt(def._grow || 1);
     for (const town of def.towns || []) {
       const c = P6(town);
       const t = generateTown(world, {
         ...town,
         x: c.x,
         y: c.y,
-        w: rel2(town.w ?? 0.4, hw) * (Math.abs(town.w ?? 0.4) <= 1.5 ? 2 : 1),
-        h: rel2(town.h ?? 0.3, hh) * (Math.abs(town.h ?? 0.3) <= 1.5 ? 2 : 1),
+        w: rel2(town.w ?? 0.4, hw) * (Math.abs(town.w ?? 0.4) <= 1.5 ? 2 : 1) * tk,
+        h: rel2(town.h ?? 0.3, hh) * (Math.abs(town.h ?? 0.3) <= 1.5 ? 2 : 1) * tk,
         islandId: def.id,
         climate: clim
       }, rng4.fork(town.id || town.name), noise);
