@@ -80192,13 +80192,26 @@ vec3 paneView(vec3 dir, float night) {
     const wood = P6.wood, woodL = P6.woodL, woodD = P6.woodD;
     switch (it.k) {
       case "bed": {
-        B2(k, -w / 2, 0.12, -d / 2, w / 2, 0.38, d / 2, wood, { outline: 0.015 });
-        legs2(k, w, d, 0.14, woodD, 0.08, 0.05);
-        B2(k, -w / 2 + 0.04, 0.38, -d / 2 + 0.05, w / 2 - 0.04, 0.52, d / 2 - 0.04, P6.sheet);
-        B2(k, -w / 2 + 0.02, 0.4, -d / 2 + 0.62, w / 2 - 0.02, 0.58, d / 2 - 0.02, cloth, { outline: 0.01 });
-        B2(k, -w / 2 + 0.03, 0.52, -d / 2 + 0.08, w / 2 - 0.03, 0.6, -d / 2 + 0.4, "#ffffff");
-        B2(k, -w / 2 - 0.02, 0.12, -d / 2 - 0.02, w / 2 + 0.02, 0.98, -d / 2 + 0.05, woodD, { outline: 0.015 });
-        B2(k, -w / 2 - 0.02, 0.12, d / 2 - 0.05, w / 2 + 0.02, 0.62, d / 2 + 0.02, woodD);
+        B2(k, -w / 2, 0.16, -d / 2, w / 2, 0.32, d / 2, wood, { outline: 0.015 });
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+          const top = sz < 0 ? 1.08 : 0.72;
+          k.add(cyl(0.045, 0.05, top, 8), { at: [sx * (w / 2 - 0.02), 0, sz * (d / 2 - 0.02)], color: woodD, outline: 0.01 });
+          k.add(new SphereGeometry(0.06, 8, 6), { at: [sx * (w / 2 - 0.02), top + 0.03, sz * (d / 2 - 0.02)], color: woodL });
+        }
+        B2(k, -w / 2 + 0.03, 0.34, -d / 2 - 0.01, w / 2 - 0.03, 0.42, -d / 2 + 0.035, woodD);
+        B2(k, -w / 2 + 0.03, 0.86, -d / 2 - 0.01, w / 2 - 0.03, 0.94, -d / 2 + 0.035, woodD);
+        B2(k, -w / 2 + 0.12, 0.94, -d / 2 - 5e-3, w / 2 - 0.12, 1, -d / 2 + 0.03, woodD, { outline: 0.01 });
+        B2(k, -w / 4, 1, -d / 2, w / 4, 1.04, -d / 2 + 0.025, woodD);
+        for (let i = 1; i < 5; i++) {
+          const x = -w / 2 + i * w / 5;
+          B2(k, x - 0.025, 0.42, -d / 2, x + 0.025, 0.86, -d / 2 + 0.025, wood);
+        }
+        B2(k, -w / 2 + 0.03, 0.34, d / 2 - 0.035, w / 2 - 0.03, 0.62, d / 2 + 0.01, woodD, { outline: 0.01 });
+        B2(k, -w / 2 + 0.03, 0.32, -d / 2 + 0.04, w / 2 - 0.03, 0.5, d / 2 - 0.04, P6.sheet, { outline: 0.01 });
+        const quilt = (p) => (Math.floor((p.x + 5) / 0.26) + Math.floor((p.z + 5) / 0.26)) % 2 ? cloth : shade2(cloth, 0.18);
+        k.add(new BoxGeometry(w - 0.02, 0.19, d - 0.68, 4, 1, 5).translate(0, 0.095, 0), { at: [0, 0.36, (-d / 2 + 0.66 + d / 2 - 0.02) / 2], split: true, color: quilt, outline: 0.01 });
+        B2(k, -w / 2 + 0.01, 0.42, -d / 2 + 0.58, w / 2 - 0.01, 0.56, -d / 2 + 0.7, "#f7f2e6");
+        k.add(new SphereGeometry(0.2, 10, 6), { at: [0, 0.57, -d / 2 + 0.26], scale: [(w / 2 - 0.1) / 0.2, 0.42, 0.75], color: "#ffffff", outline: 8e-3 });
         break;
       }
       case "futon": {
@@ -80208,10 +80221,15 @@ vec3 paneView(vec3 dir, float night) {
         break;
       }
       case "table": {
-        B2(k, -w / 2, h2 - 0.06, -d / 2, w / 2, h2, d / 2, woodL, { outline: 0.012 });
-        legs2(k, w, d, h2 - 0.06, wood, 0.07);
-        k.add(cyl(0.045, 0.04, 0.1, 7), { at: [w * 0.18, h2, d * 0.1], color: "#d7ccc8" });
-        k.add(cyl(0.11, 0.1, 0.02, 10), { at: [-w * 0.15, h2, -d * 0.08], color: "#fafafa" });
+        for (let i = 0; i < 3; i++) B2(k, -w / 2, h2 - 0.055, -d / 2 + i * d / 3 + 4e-3, w / 2, h2, -d / 2 + (i + 1) * d / 3 - 4e-3, i % 2 ? shade2(woodL, -0.06) : woodL, { outline: 0.01 });
+        B2(k, -w / 2 + 0.06, h2 - 0.15, -d / 2 + 0.06, w / 2 - 0.06, h2 - 0.055, d / 2 - 0.06, wood);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.add(lathe([[0.03, 0], [0.04, 0.05], [0.028, 0.2], [0.045, 0.34], [0.03, 0.46], [0.035, h2 - 0.1], [0.04, h2 - 0.055]], 8), { at: [sx * (w / 2 - 0.09), 0, sz * (d / 2 - 0.09)], color: wood, outline: 8e-3 });
+        k.add(cyl(0.045, 0.04, 0.1, 8), { at: [w * 0.18, h2, d * 0.1], color: "#d7ccc8" });
+        k.add(new TorusGeometry(0.03, 8e-3, 4, 8, Math.PI), { at: [w * 0.18 + 0.05, h2 + 0.05, d * 0.1], rot: [0, 0, -Math.PI / 2], color: "#d7ccc8" });
+        k.add(cyl(0.11, 0.1, 0.02, 12), { at: [-w * 0.15, h2, -d * 0.08], color: "#fafafa" });
+        k.add(cyl(0.05, 0.06, 0.015, 8), { at: [0.05, h2, -d * 0.25], color: "#b08d57" });
+        k.add(cyl(0.018, 0.018, 0.08, 6), { at: [0.05, h2 + 0.015, -d * 0.25], color: "#f5f0e1" });
+        k.add(new ConeGeometry(0.012, 0.03, 5), { at: [0.05, h2 + 0.11, -d * 0.25], color: "#ffd54f", glow: "#ffcc66", flicker: 0.5 });
         break;
       }
       case "lowtable": {
@@ -80232,9 +80250,15 @@ vec3 paneView(vec3 dir, float night) {
         break;
       }
       case "chair": {
-        B2(k, -0.21, 0.42, -0.21, 0.21, 0.47, 0.21, woodL);
-        legs2(k, 0.42, 0.42, 0.42, wood, 0.045, 0.03);
-        B2(k, -0.21, 0.47, -0.21, 0.21, 0.92, -0.17, wood);
+        B2(k, -0.21, 0.42, -0.21, 0.21, 0.47, 0.21, woodL, { outline: 0.01 });
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.add(cyl(0.022, 0.026, 0.42, 6), { at: [sx * 0.17, 0, sz * 0.17], color: wood });
+        for (const sz of [-1, 1]) B2(k, -0.17, 0.14, sz * 0.17 - 0.012, 0.17, 0.165, sz * 0.17 + 0.012, wood);
+        for (const sx of [-1, 1]) {
+          k.add(cyl(0.022, 0.024, 0.5, 6), { at: [sx * 0.17, 0.47, -0.19], color: wood });
+          k.add(new SphereGeometry(0.028, 6, 4), { at: [sx * 0.17, 0.97, -0.19], color: woodD });
+        }
+        for (let i = -1; i <= 1; i++) k.add(cyl(0.012, 0.014, 0.36, 5), { at: [i * 0.07, 0.47, -0.19], color: woodL });
+        B2(k, -0.2, 0.84, -0.215, 0.2, 0.93, -0.165, woodD, { outline: 8e-3 });
         break;
       }
       case "stool": {
@@ -80359,26 +80383,63 @@ vec3 paneView(vec3 dir, float night) {
         break;
       }
       case "chest": {
-        B2(k, -w / 2, 0, -d / 2, w / 2, h2 * 0.7, d / 2, woodL, { outline: 0.015 });
-        B2(k, -w / 2 - 0.01, h2 * 0.7, -d / 2 - 0.01, w / 2 + 0.01, h2, d / 2 + 0.01, wood);
-        for (const s of [-1, 1]) B2(k, s * w * 0.3 - 0.03, 0, -d / 2 - 0.012, s * w * 0.3 + 0.03, h2 + 0.01, d / 2 + 0.012, "#4a4a4a");
-        B2(k, -0.05, h2 * 0.55, d / 2, 0.05, h2 * 0.8, d / 2 + 0.03, "#d4ac0d");
+        const lh = h2 * 0.3, bh = h2 - lh;
+        for (let i = 0; i < 2; i++) B2(k, -w / 2, i * bh / 2, -d / 2, w / 2, (i + 1) * bh / 2 - 8e-3, d / 2, i ? woodL : shade2(woodL, -0.06), { outline: 0.012 });
+        k.add(new CylinderGeometry(d / 2, d / 2, w, 12, 1, false, 0, Math.PI), { at: [0, bh, 0], rot: [0, 0, Math.PI / 2], scale: [1, lh / (d / 2), 1], color: wood, outline: 0.012 });
+        for (const s of [-1, 1]) {
+          B2(k, s * w * 0.3 - 0.03, 0, -d / 2 - 0.012, s * w * 0.3 + 0.03, bh, d / 2 + 0.012, "#4a4a4a");
+          k.add(new CylinderGeometry(d / 2 + 0.012, d / 2 + 0.012, 0.06, 12, 1, false, 0, Math.PI), { at: [s * w * 0.3, bh, 0], rot: [0, 0, Math.PI / 2], scale: [1, lh / (d / 2), 1], color: "#4a4a4a" });
+          for (const z of [-1, 1]) B2(k, s * w / 2 - (s > 0 ? 0.06 : -0), 0, z * d / 2 - (z > 0 ? 0.06 : 0), s * w / 2 + (s < 0 ? 0.06 : 0), bh, z * d / 2 + (z < 0 ? 0.06 : 0), "#d4ac0d");
+        }
+        B2(k, -0.06, bh - 0.16, d / 2, 0.06, bh + 0.02, d / 2 + 0.02, "#d4ac0d");
+        B2(k, -0.01, bh - 0.11, d / 2 + 0.02, 0.01, bh - 0.06, d / 2 + 0.025, "#1d1a20");
         break;
       }
       case "barrel": {
-        k.add(cyl(w * 0.44, w * 0.4, h2, 10), { color: wood, outline: 0.012 });
-        k.add(cyl(w * 0.46, w * 0.46, 0.05, 10), { at: [0, h2 * 0.2, 0], color: "#4a4a4a" });
-        k.add(cyl(w * 0.46, w * 0.46, 0.05, 10), { at: [0, h2 * 0.78, 0], color: "#4a4a4a" });
-        k.add(cyl(w * 0.4, w * 0.4, 0.02, 10), { at: [0, h2, 0], color: woodL });
+        const r0 = w * 0.38, rm = w * 0.46;
+        const Pf = [[r0, 0], [r0 + (rm - r0) * 0.55, h2 * 0.12], [rm * 0.98, h2 * 0.3], [rm, h2 * 0.5], [rm * 0.98, h2 * 0.7], [r0 + (rm - r0) * 0.55, h2 * 0.88], [r0, h2]];
+        k.add(lathe(Pf, 14), { split: true, color: (pp3, n, i) => Math.floor(i / 12) % 2 ? wood : woodL, outline: 0.012 });
+        for (const t of [0.1, 0.22, 0.78, 0.9]) {
+          const rr = t < 0.5 ? r0 + (rm - r0) * Math.min(1, t * 3.4) : r0 + (rm - r0) * Math.min(1, (1 - t) * 3.4);
+          k.add(cyl(rr + 8e-3, rr + 8e-3, 0.035, 14, true), { at: [0, h2 * t - 0.017, 0], color: "#3d3d42", double: true });
+        }
+        k.add(cyl(r0, r0, 0.02, 14), { at: [0, h2 - 0.02, 0], color: woodL });
         break;
       }
       case "crate": {
-        B2(k, -w / 2, 0, -d / 2, w / 2, h2, d / 2, "#b08850", { outline: 0.012 });
-        for (const y of [0.05, h2 - 0.1]) B2(k, -w / 2 - 0.01, y, -d / 2 - 0.01, w / 2 + 0.01, y + 0.06, d / 2 + 0.01, "#8d6e4a");
+        const e = 0.05, dk3 = "#6e4f2a", pl = ["#b8894f", "#a97c46", "#c2945a"];
+        B2(k, -w / 2 + 0.02, 0, -d / 2 + 0.02, w / 2 - 0.02, h2, d / 2 - 0.02, "#5a3f22");
+        for (let i = 0; i < 3; i++) {
+          const y0 = e + i * (h2 - 2 * e) / 3, y1 = y0 + (h2 - 2 * e) / 3 - 0.01;
+          B2(k, -w / 2 + e, y0, d / 2 - 0.03, w / 2 - e, y1, d / 2, pl[i]);
+          B2(k, -w / 2 + e, y0, -d / 2, w / 2 - e, y1, -d / 2 + 0.03, pl[(i + 1) % 3]);
+          B2(k, w / 2 - 0.03, y0, -d / 2 + e, w / 2, y1, d / 2 - e, pl[(i + 2) % 3]);
+          B2(k, -w / 2, y0, -d / 2 + e, -w / 2 + 0.03, y1, d / 2 - e, pl[i]);
+        }
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) B2(k, sx * w / 2 - (sx > 0 ? e : 0), 0, sz * d / 2 - (sz > 0 ? e : 0), sx * w / 2 + (sx < 0 ? e : 0), h2, sz * d / 2 + (sz < 0 ? e : 0), dk3, { outline: 0.01 });
+        for (const y of [0, h2 - e]) {
+          B2(k, -w / 2, y, d / 2 - e, w / 2, y + e, d / 2, dk3);
+          B2(k, -w / 2, y, -d / 2, w / 2, y + e, -d / 2 + e, dk3);
+        }
+        k.save();
+        k.translate(0, h2 / 2, d / 2 + 5e-3);
+        k.rotateZ(Math.atan2(w - 2 * e, h2 - 2 * e));
+        k.add(box(0.05, Math.hypot(w - 2 * e, h2 - 2 * e), 0.02), { at: [0, -Math.hypot(w - 2 * e, h2 - 2 * e) / 2, 0], color: dk3 });
+        k.restore();
         break;
       }
       case "sacks": {
-        for (let i = 0; i < 3; i++) k.add(blob(0.24, 1), { at: [-0.22 + i * 0.22, 0.2 + (i === 1 ? 0.18 : 0), i % 2 * 0.05], scale: [1, 0.85, 0.8], color: "#c8a97e", flat: true });
+        for (let i = 0; i < 3; i++) {
+          k.save();
+          k.translate(-0.22 + i * 0.22, i === 1 ? 0.3 : 0, i % 2 * 0.05);
+          k.rotateY(i * 1.3);
+          if (i === 1) k.rotateZ(Math.PI / 2 - 0.1);
+          const c = ["#c8a97e", "#bba67b", "#d2c096"][i];
+          k.add(lathe([[1e-3, 0], [0.17, 0.01], [0.21, 0.06], [0.22, 0.16], [0.2, 0.25], [0.14, 0.32], [0.06, 0.37], [0.05, 0.4]], 10), { scale: [1, 1, 0.8], color: c, outline: 0.012 });
+          k.add(lathe([[0.045, 0.4], [0.07, 0.44], [0.08, 0.47], [1e-3, 0.48]], 7), { color: shade2(c, -0.1) });
+          k.add(new TorusGeometry(0.05, 0.014, 4, 8), { at: [0, 0.395, 0], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
+          k.restore();
+        }
         break;
       }
       case "plant": {
@@ -80633,6 +80694,12 @@ vec3 paneView(vec3 dir, float night) {
       }
     } while (performance.now() - t0 < ROOM_BUDGET_MS);
   }, "interiors");
+  var SIZES = { bed: [1.1, 2, 0.6], table: [1.3, 0.8, 0.78], chair: [0.42, 0.42, 0.92], stool: [0.4, 0.4, 0.7], barrel: [0.6, 0.6, 0.9], crate: [0.6, 0.6, 0.6], sacks: [0.8, 0.5, 0.5], chest: [0.8, 0.5, 0.55], cupboard: [1, 0.5, 1.9], books: [1.2, 0.35, 1.9], counter: [2, 0.6, 1], stove: [0.8, 0.6, 0.9], fireplace: [1.6, 0.6, 1.3], desk: [1.3, 0.7, 0.78], roundtable: [1, 1, 0.78], plant: [0.4, 0.4, 1] };
+  var INTERIOR_MODELS = Object.fromEntries(Object.entries(SIZES).map(([name, [w, d, h2]]) => [name, () => {
+    const k = new Mesher(), R5 = (n) => rng2(n + 1)();
+    piece(k, { k: name, w, d, h: h2, x: 0, z: 0 }, { ...BASE }, BASE.cloth[0], R5, 2.6);
+    return k.build();
+  }]));
 
   // src/render3d/buildings3d.js
   var ROLE_ICON = {

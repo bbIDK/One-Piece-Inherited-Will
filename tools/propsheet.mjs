@@ -20,6 +20,7 @@ if (!out) { console.error('usage: node tools/propsheet.mjs <out.png> [--only=a,b
 const SETS = {
   street: [['STREET_MODELS', 'src/render3d/props/street.js']],
   landmarks: [['LANDMARK_MODELS', 'src/render3d/props/landmarks.js']],
+  interiors: [['INTERIOR_MODELS', 'src/render3d/interiors3d.js']],
   weapons: [['WEAPON_MODELS', 'src/render3d/chars/weapons.js'], ['SWORD_MODELS', 'src/render3d/chars/swords.js']],
 };
 const SOURCES = SETS[opt.set || 'street'];
