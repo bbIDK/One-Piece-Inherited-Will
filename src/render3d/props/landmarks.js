@@ -536,26 +536,54 @@ reg('lighthouse', (o) => {
 });
 
 // ------------------------------------------------------------ treasure chest
+const CHEST = (tier) => (tier >= 3 ? { wood: '#8e2b22', band: '#f1c40f', dark: '#5e1a14' } : tier === 2 ? { wood: '#5d4037', band: '#cfd8dc', dark: '#3b2a22' } : { wood: '#8d5b33', band: '#e2b23a', dark: '#5b3a1f' });
 const chestBody = (tier) => model('chest-body:' + tier, (k) => {
-  const [wood, band] = tier >= 3 ? ['#8e2b22', '#f1c40f'] : tier === 2 ? ['#5d4037', '#cfd8dc'] : ['#8d5b33', '#f1c40f'];
-  k.add(box(0.92, 0.5, 0.6), { color: wood, outline: 0.02 });
-  for (const x of [-0.34, 0.34]) k.add(box(0.08, 0.52, 0.62), { at: [x, -0.005, 0], color: band });
-  k.add(box(0.94, 0.06, 0.62), { at: [0, 0.44, 0], color: band });
-  k.add(box(0.16, 0.2, 0.04), { at: [0, 0.25, 0.31], color: band });
-  k.add(box(0.05, 0.08, 0.02), { at: [0, 0.3, 0.335], color: '#2d3436' });
-  for (const x of [-0.4, 0.4]) for (const z of [-0.24, 0.24]) k.add(box(0.1, 0.06, 0.1), { at: [x, -0.04, z], color: band });
-  k.add(new THREE.CircleGeometry(0.3, 10), { at: [0, 0.47, 0], rot: [-Math.PI / 2, 0, 0], scale: [1.4, 0.9, 1], color: '#3b2a1a' });
+  // planked sides, metal corner brackets and bands with rivets, a lock plate
+  // with its keyhole, iron ring handles at the ends; dark inside
+  const { wood, band, dark } = CHEST(tier), W = 0.92, H = 0.5, D = 0.6;
+  k.add(box(W - 0.04, H - 0.02, D - 0.04), { at: [0, 0.01, 0], color: dark });
+  for (let i = 0; i < 3; i++) {
+    const y = 0.02 + i * (H - 0.04) / 3, h = (H - 0.04) / 3 - 0.012, c = i % 2 ? shade(wood, -0.08) : wood;
+    k.add(box(W, h, 0.03), { at: [0, y, D / 2 - 0.015], color: c, outline: 0.012 });
+    k.add(box(W, h, 0.03), { at: [0, y, -D / 2 + 0.015], color: c, outline: 0.012 });
+    k.add(box(0.03, h, D - 0.06), { at: [W / 2 - 0.015, y, 0], color: c, outline: 0.012 });
+    k.add(box(0.03, h, D - 0.06), { at: [-W / 2 + 0.015, y, 0], color: c, outline: 0.012 });
+  }
+  k.add(box(W - 0.06, 0.03, D - 0.06), { at: [0, 0, 0], color: dark });
+  // bands round the body, corner brackets, rivets
+  for (const x of [-0.3, 0.3]) k.add(box(0.07, H + 0.01, D + 0.014), { at: [x, -0.005, 0], color: band, outline: 0.01 });
+  k.add(box(W + 0.014, 0.05, D + 0.014), { at: [0, H - 0.05, 0], color: band, outline: 0.01 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    k.add(box(0.1, H + 0.012, 0.1), { at: [sx * (W / 2 - 0.045), -0.006, sz * (D / 2 - 0.045)], color: shade(band, -0.15), outline: 0.01 });
+    for (const y of [0.08, 0.36]) k.add(new THREE.SphereGeometry(0.014, 5, 4), { at: [sx * (W / 2 - 0.02), y, sz * (D / 2 + 0.006)], color: shade(band, 0.2) });
+  }
+  for (const x of [-0.3, 0.3]) for (const y of [0.1, 0.24, 0.38]) k.add(new THREE.SphereGeometry(0.013, 5, 4), { at: [x, y, D / 2 + 0.01], color: shade(band, 0.25) });
+  // the lock: a shaped plate, the keyhole, the hasp up to the lid
+  k.add(slab([[-0.09, 0], [0.09, 0], [0.09, 0.14], [0.05, 0.2], [-0.05, 0.2], [-0.09, 0.14]], 0.02), { at: [0, 0.27, D / 2 + 0.012], color: band, outline: 0.01 });
+  k.add(new THREE.CircleGeometry(0.018, 8), { at: [0, 0.36, D / 2 + 0.024], color: '#1d1a20' });
+  k.add(box(0.012, 0.04, 0.01), { at: [0, 0.31, D / 2 + 0.024], color: '#1d1a20' });
+  for (const sx of [-1, 1]) k.add(torus(0.06, 0.012, 4, 10), { at: [sx * (W / 2 + 0.02), 0.3, 0], rot: [0, Math.PI / 2, 0], color: '#3a3a3e' });
+  k.add(new THREE.CircleGeometry(0.3, 10), { at: [0, H - 0.02, 0], rot: [-Math.PI / 2, 0, 0], scale: [1.4, 0.9, 1], color: '#3b2a1a' });
 });
 const chestLid = (tier) => model('chest-lid:' + tier, (k) => {
-  const [wood, band] = tier >= 3 ? ['#a63a2e', '#f1c40f'] : tier === 2 ? ['#6d4c33', '#cfd8dc'] : ['#a86f3f', '#f1c40f'];
+  // the barrel-vaulted lid: planks along it, bands over it, the hasp hanging at the front
+  const { wood, band } = CHEST(tier), W = 0.92;
   // hinge at the origin (back top edge); the lid extends towards +z
-  k.add(new THREE.CylinderGeometry(0.3, 0.3, 0.92, 12, 1, false, 0, Math.PI), { at: [0, 0, 0.3], rot: [0, 0, Math.PI / 2], color: wood, outline: 0.02 });
-  for (const x of [-0.34, 0, 0.34]) k.add(new THREE.CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band });
+  k.add(new THREE.CylinderGeometry(0.3, 0.3, W, 12, 1, false, 0, Math.PI), { at: [0, 0, 0.3], rot: [0, 0, Math.PI / 2], split: true, color: (p, n, i) => (Math.floor(i / 6) % 2 ? wood : shade(wood, -0.08)), outline: 0.02 });
+  for (const x of [-0.3, 0.3]) k.add(new THREE.CylinderGeometry(0.312, 0.312, 0.07, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band });
+  for (const x of [-W / 2 + 0.03, W / 2 - 0.03]) k.add(new THREE.CylinderGeometry(0.31, 0.31, 0.05, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: shade(band, -0.15) });
+  k.add(box(0.06, 0.12, 0.02), { at: [0, -0.09, 0.605], color: band, outline: 0.008 });
 });
 const coinsGeo = () => model('coins', (k) => {
+  // a heap of gold: a mound of coins, loose coins tumbling over it, a few gems and a goblet
   const R = rng(5);
-  for (let i = 0; i < 14; i++) k.add(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 8), { at: [(R() - 0.5) * 0.7, 0.42 + R() * 0.12, (R() - 0.5) * 0.4], rot: [R(), 0, R()], color: '#ffd54f', glow: '#ffb300' });
-  k.add(new THREE.SphereGeometry(0.3, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), { at: [0, 0.4, 0], scale: [1.3, 0.35, 0.8], color: '#f1c40f' });
+  k.add(lathe([[0.42, 0.44], [0.36, 0.49], [0.26, 0.55], [0.12, 0.6], [0.001, 0.62]], 12), { at: [0, -0.02, 0], scale: [1.05, 1, 0.68], split: true, color: (p, n, i) => (i % 3 ? '#f1c40f' : '#e0a812'), glow: '#ffb300' });
+  for (let i = 0; i < 26; i++) {
+    const a = R() * Math.PI * 2, r = Math.sqrt(R()) * 0.38, y = 0.6 - (r / 0.42) ** 2 * 0.15 + 0.01;
+    k.add(new THREE.CylinderGeometry(0.045, 0.045, 0.012, 8), { at: [Math.cos(a) * r * 1.05, y, Math.sin(a) * r * 0.68], rot: [(R() - 0.5) * 0.9, 0, (R() - 0.5) * 0.9], color: R() < 0.5 ? '#ffd54f' : '#f6c341', glow: '#ffb300' });
+  }
+  for (const [x, z, c] of [[-0.18, 0.05, '#e53935'], [0.2, -0.06, '#43a047'], [0.05, 0.12, '#1e88e5'], [-0.05, -0.12, '#8e24aa']]) k.add(new THREE.OctahedronGeometry(0.045, 0), { at: [x, 0.62, z], rot: [0.4, x, 0], color: c, glow: c, flat: true });
+  k.add(lathe([[0.04, 0], [0.012, 0.02], [0.012, 0.09], [0.06, 0.12], [0.075, 0.2]], 8), { at: [0.27, 0.5, 0.02], rot: [0, 0, -0.25], color: '#e2b23a', glow: '#ffb300' });
 });
 
 reg('chest', (o) => {
@@ -870,22 +898,38 @@ reg('bell', (o, ctx) => {
 
 // ------------------------------------------------------------ poneglyph
 const poneglyphGeo = (red) => model('poneglyph:' + red, (k) => {
-  const stone = red ? '#8e2b22' : '#37474f', light = red ? '#ffcdb4' : '#c8e6f0';
-  k.add(box(2.6, 0.35, 2.4), { at: [0, -0.2, 0], color: red ? '#6e5a50' : '#5d6468', outline: 0.025 });
-  k.add(box(2.05, 2.05, 2.05), { at: [0, 0.15, 0], color: stone, outline: 0.04, flat: true });
+  // a great block of indestructible stone, its edges worn round and chipped,
+  // the ancient script cut into its faces in neat rows: rings, bars, hooks
+  // and dots, a little lighter than the stone; sunk in a low plinth, moss at its foot
+  const stone = red ? '#8e2b22' : '#2f3a40', cut = red ? '#c9705e' : '#6f8792';
+  k.add(box(2.7, 0.3, 2.5), { at: [0, -0.16, 0], color: red ? '#6e5a50' : '#5d6468', outline: 0.025 });
+  const S = 2.05;
+  k.add(box(S, S, S), { at: [0, 0.14, 0], color: stone, outline: 0.04, flat: true });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) k.add(cyl(0.09, 0.09, S, 6), { at: [sx * S / 2, 0.14, sz * S / 2], color: shade(stone, 0.06), flat: true });
+  for (const [x, z, rx, rz] of [[0, 1, Math.PI / 2, 0], [0, -1, Math.PI / 2, 0], [1, 0, 0, Math.PI / 2], [-1, 0, 0, Math.PI / 2]]) k.add(cbox(z ? S : 0.16, 0.16, z ? 0.16 : S), { at: [x * S / 2, S + 0.14, z * S / 2], rot: [Math.PI / 4 * (z ? 1 : 0), 0, Math.PI / 4 * (x ? 1 : 0)], color: shade(stone, 0.06), flat: true });
   const R = rng(red ? 5 : 3);
-  for (const face of [0, 1, 2, 3]) {
-    k.save(); k.rotateY(face * Math.PI / 2);
-    for (let r = 0; r < 7; r++) {
-      let x = -0.85;
-      while (x < 0.8) {
-        const w = 0.08 + R() * 0.16;
-        k.add(box(w, 0.11, 0.02), { at: [x + w / 2, 0.42 + r * 0.25, 1.03], color: light, glow: red ? '#ff8a65' : '#4fc3f7' });
-        x += w + 0.06 + R() * 0.06;
-      }
-    }
+  // (chips knocked out of the edges)
+  for (let i = 0; i < 7; i++) {
+    const f = Math.floor(R() * 4), t = (R() - 0.5) * 1.6;
+    k.save(); k.rotateY(f * Math.PI / 2);
+    k.add(new THREE.IcosahedronGeometry(0.07 + R() * 0.06, 0), { at: [S / 2, 0.3 + R() * 1.7, t], color: shade(stone, -0.25), flat: true });
     k.restore();
   }
+  const glyph = (x, y, z) => {
+    const g = Math.floor(R() * 6), c = { color: cut };
+    if (g === 0) k.add(torus(0.045, 0.014, 3, 7), { ...c, at: [x, y, z] });
+    else if (g === 1) k.add(cbox(0.03, 0.13, 0.02), { ...c, at: [x, y, z] });
+    else if (g === 2) { k.add(cbox(0.1, 0.028, 0.02), { ...c, at: [x, y + 0.04, z] }); k.add(cbox(0.028, 0.1, 0.02), { ...c, at: [x - 0.035, y, z] }); }
+    else if (g === 3) { k.add(cbox(0.028, 0.12, 0.02), { ...c, at: [x, y, z] }); k.add(cbox(0.034, 0.034, 0.02), { ...c, at: [x + 0.05, y + 0.04, z] }); k.add(cbox(0.034, 0.034, 0.02), { ...c, at: [x + 0.05, y - 0.04, z] }); }
+    else if (g === 4) { k.add(torus(0.05, 0.013, 3, 5, Math.PI), { ...c, at: [x, y - 0.02, z] }); k.add(cbox(0.1, 0.026, 0.02), { ...c, at: [x, y + 0.045, z] }); }
+    else k.add(cbox(0.08, 0.08, 0.02), { ...c, at: [x, y, z], rot: [0, 0, Math.PI / 4] });
+  };
+  for (const face of [0, 1, 2, 3]) {
+    k.save(); k.rotateY(face * Math.PI / 2);
+    for (let r = 0; r < 9; r++) for (let cI = 0; cI < 9; cI++) if (R() > 0.12) glyph(-0.78 + cI * 0.195, 1.92 - r * 0.2, S / 2 + 0.005);
+    k.restore();
+  }
+  for (let i = 0; i < 9; i++) { const a = R() * Math.PI * 2; k.add(new THREE.IcosahedronGeometry(0.16 + R() * 0.1, 0), { at: [Math.cos(a) * 1.15, 0.02, Math.sin(a) * 1.15], scale: [1.4, 0.4, 1.4], color: R() < 0.5 ? '#4f7a3a' : '#3e6b2f', flat: true }); }
 });
 reg('poneglyph', (o, ctx) => simple(o, ctx, 'poneglyph:' + (o.road ? 1 : 0), poneglyphGeo(o.road ? 1 : 0), { yaw: 0, scale: 1 }));
 
@@ -1416,3 +1460,11 @@ reg('bigtop', (o, ctx) => {
   });
   return root;
 });
+
+/** The smaller models above by name, for tools/propsheet.mjs. */
+export const LANDMARK_MODELS = {
+  flagpole: poleGeo, windmill: windmillBody, fountain: fountainGeo, campfire: fireBase, millwheel: millWheel, lighthouse: lighthouseGeo,
+  chest0: () => chestBody(0), chestLid0: () => chestLid(0), chest2: () => chestBody(2), coins: coinsGeo, poneglyphRed: () => poneglyphGeo(1), gate: () => gateGeo(0), arch: stoneArch,
+  torii: toriiGeo, scaffold: scaffoldGeo, ring: ringGeo, stage: stageGeo, bell: () => bellGeo(0), poneglyph: () => poneglyphGeo(0),
+  statue: statueGeo, wreck: wreckGeo, boat: () => boatGeo(0), tower: () => towerGeo(0), portal: () => portalGeo(0),
+};

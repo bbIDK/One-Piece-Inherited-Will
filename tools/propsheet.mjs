@@ -19,6 +19,7 @@ const opt = Object.fromEntries(args.filter((a) => a.startsWith('--')).map((a) =>
 if (!out) { console.error('usage: node tools/propsheet.mjs <out.png> [--only=a,b] [--cell=256] [--yaw=0.8]'); process.exit(2); }
 const SETS = {
   street: [['STREET_MODELS', 'src/render3d/props/street.js']],
+  landmarks: [['LANDMARK_MODELS', 'src/render3d/props/landmarks.js']],
   weapons: [['WEAPON_MODELS', 'src/render3d/chars/weapons.js'], ['SWORD_MODELS', 'src/render3d/chars/swords.js']],
 };
 const SOURCES = SETS[opt.set || 'street'];
