@@ -18,7 +18,7 @@ import { MARINE_POSTS } from './marinePosts.js';
  * much. Their centres stay where they are, so the voyages don't change.
  * (Saves made before an island grew are moved with it: lineage.js migrateWorld.)
  */
-export const GROW = { east_blue: 1.75 };
+export const GROW = { east_blue: 1.75, north_blue: 1.75, west_blue: 1.75, south_blue: 1.75 };
 
 /**
  * Island data is written in chart units (the original 4096 × 2048 grid). Move

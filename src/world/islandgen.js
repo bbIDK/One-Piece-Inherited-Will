@@ -1285,6 +1285,7 @@ export function placeObject(world, o) {
 
 function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, def) {
   const forestTypes = new Set([T.FOREST, T.JUNGLE]);
+  const thin = 1 / (def._grow || 1);
   for (let j = 0; j < LH; j++) {
     for (let i = 0; i < LW; i++) {
       if (!L[li(i, j)]) continue;
@@ -1311,8 +1312,10 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       } else if (t === T.MOUNTAIN || t === T.ROCK) {
         p = 0.02; kindList = ['rock'];
       }
-      // (the dice first: the checks below are the dear part)
-      if (rng.next() > p) continue;
+      // (the dice first: the checks below are the dear part; a grown island's
+      // woods are no thicker than they were, just spread over more ground —
+      // as many trees as it grew across, not as it grew in area: meadow between)
+      if (rng.next() > p * thin) continue;
       if (world.elev(x, y) > 200) continue;
       if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
       // (no tree or bush in a road or a path, nor crowding its edge: a way stays clear to walk)
