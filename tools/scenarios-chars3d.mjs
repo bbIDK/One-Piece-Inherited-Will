@@ -740,6 +740,8 @@ export const scenarios = {
         skirt: { fem: true, frame: 'slim', hair: 'twintails', hairColor: '#e84393', skin: '#fbe3cf', topStyle: 'tank', top: '#fdcb6e', bottomStyle: 'skirt', bottom: '#6c5ce7', shoeStyle: 'shoes' },
         longskirt: { fem: true, frame: 'slim', idle: 'cross', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' },
         // a cloak over the shoulders (the body slot's red_cloak), and a traveller in hood and cloak
+        // (a loose shirt and a sash under a long open coat: the coat over all of it, front and back)
+        layers: { fem: false, frame: 'athletic', hair: 'short', hairColor: '#3b2a1a', skin: '#e8b98f', topStyle: 'shirt', top: '#e8a33a', waist: 'sash', waistCol: '#e8c33a', coat: '#1f2a44', bottomStyle: 'trousers', bottom: '#5a2e1e', shoeStyle: 'boots' },
         cloak: { fem: false, frame: 'athletic', hair: 'short', hairColor: '#3b2a1a', skin: '#e8b98f', topStyle: 'shirt', top: '#f5f5f5', coat: '#b71c1c', bottomStyle: 'trousers', bottom: '#2d3436', shoeStyle: 'boots' },
         hood: { fem: false, frame: 'lean', hair: 'short', hairColor: '#1b1b1b', skin: '#d9a77c', topStyle: 'tee', top: '#5d6d7e', hat: 'hood', hatColor: '#6a5643', coat: '#6a5643', bottomStyle: 'trousers', bottom: '#3e2f25', shoeStyle: 'boots' },
         cowl: { fem: true, frame: 'slim', hair: 'long', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'tank', top: '#26262b', hat: 'hood', hatColor: '#26262b', bottomStyle: 'trousers', bottom: '#26262b', shoeStyle: 'boots' },

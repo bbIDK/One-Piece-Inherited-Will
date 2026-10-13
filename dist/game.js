@@ -96570,6 +96570,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var SKIRT_FADE = 0.35;
   var _sq2 = new Quaternion();
   var _sax = new Vector3();
+  var _sv4 = new Vector3();
   var _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
   var _srad = new Float32Array(SKIRT_T.length * 2);
   var _sleg = new Uint8Array(SKIRT_T.length * 2);
@@ -97153,6 +97154,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
       }
       K.n = n;
+      let seat = 0;
+      for (const [hi, ki] of LEG3) {
+        _sv4.subVectors(rig.pos[ki], rig.pos[hi]).applyQuaternion(_sq2);
+        const L3 = _sv4.length() || 1;
+        seat += Math.min(1, Math.max(0, (0.75 - Math.abs(_sv4.y) / L3) / 0.45)) * 0.5;
+      }
       for (let i = 0; i < N8; i++) {
         const a = i / N8 * TAU20, ca = Math.cos(a), sa = Math.sin(a);
         const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S6.Dh, sa * S6.Wh);
@@ -97166,8 +97173,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
         K.need[i] = Math.min(1.75, need) - phi0;
       }
-      const spread2 = two ? SKIRT_FEEL_LONG.spread : 0.22;
-      for (let r4 = 0; r4 < 2; r4++) for (let i = 0; i < N8; i++) {
+      const spread2 = (two ? SKIRT_FEEL_LONG.spread : 0.22) + seat * 0.7;
+      for (let r4 = 0; r4 < (seat > 0.5 ? 1 : 2); r4++) for (let i = 0; i < N8; i++) {
         const m = Math.max(K.need[(i + N8 - 1) % N8], K.need[(i + 1) % N8]) - spread2;
         if (m > K.need[i]) K.need[i] = m;
       }
@@ -103415,6 +103422,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   attribute float aSlope;
   attribute float aSpeed;
   attribute float aFade;
+  attribute float aHide;
+  varying float vHide;
   varying vec2 vUv;
   varying float vSlope;
   varying float vSpeed;
@@ -103423,7 +103432,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   varying vec3 vView;
   #include <fog_pars_vertex>
   void main() {
-    vUv = uv; vSlope = aSlope; vSpeed = aSpeed; vFade = aFade;
+    vUv = uv; vSlope = aSlope; vSpeed = aSpeed; vFade = aFade; vHide = aHide;
     vec4 wp = modelMatrix * vec4(position, 1.0);
     vWorld = wp.xyz;
     vView = cameraPosition - wp.xyz;
@@ -103445,10 +103454,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   uniform vec3 uSky;
   uniform vec3 uSkyTop;
   uniform float uPool;
+  uniform vec3 uSeaA, uSeaB, uSeaC, uSeaD, uSeaTint; // the open sea's own blues and the cast of the sea you're in (water3d.js)
+  uniform float uOvercast, uStorm;
+  uniform float uFar;     // past this far off (m), water up in its groove is hidden by the walls (see main)
   varying vec2 vUv;
   varying float vSlope;
   varying float vSpeed;
   varying float vFade;
+  varying float vHide;
   varying vec3 vWorld;
   varying vec3 vView;
   #include <fog_pars_fragment>
@@ -103461,6 +103474,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
   }
   ${SWELL_GLSL}
+  // the open sea's colour, as water3d.js has it (the same stretches of blue, the same cast)
+  vec3 seaHue(vec2 p) {
+    float a = sFbm(p * 0.0011 + 13.0), b = sFbm(p * 0.0004 - 7.0), c = sFbm(p * 0.0031 + 29.0);
+    vec3 col = mix(uSeaA, uSeaB, smoothstep(0.42, 0.72, a));
+    col = mix(col, uSeaC, smoothstep(0.48, 0.78, b) * 0.85);
+    col = mix(col, uSeaD, smoothstep(0.55, 0.8, 1.0 - a) * smoothstep(0.4, 0.66, b) * 0.6);
+    return col * (0.92 + 0.16 * c) * uSeaTint;
+  }
   // the sea's chop, cell for cell as water3d.js has it (so where this water
   // fades in over the sea, the two are the same planes)
   vec2 facets(vec2 p, float t) {
@@ -103517,11 +103538,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     vec3 n = normalize(vec3(-sx * 3.0 * mix(0.4, 1.0, fade) - fc.x, 1.0, -(s2 - 0.5) * 0.4 - fc.y));
     vec3 v = normalize(vView);
     float light = mix(0.3, 1.0, uDay);
-    vec3 deep = mix(vec3(0.006, 0.05, 0.27), vec3(0.02, 0.26, 0.44), up), bright = mix(vec3(0.01, 0.13, 0.46), vec3(0.12, 0.62, 0.72), up);
-    vec3 col = mix(deep, bright, streak * mix(0.45, 0.7, up) * mix(0.5, 1.0, fade) + 0.15);
-    // (and the sea's wide drifting patches, where it runs level)
-    float big = sFbm(pw * 0.0045 + vec2(uTime * 0.004, -uTime * 0.003)) * 0.65 + sFbm(pw * 0.017 + 41.0 - uTime * 0.006) * 0.35;
-    col *= mix(1.0, mix(0.62, 1.18, smoothstep(0.3, 0.72, big)), 1.0 - up);
+    // (where it runs level it's the open sea's own colour \u2014 whichever sea
+    // this is, its own blue, grey under cloud \u2014 so it runs into it unseen)
+    vec3 open = seaHue(pw);
+    vec3 og = mix(vec3(0.028, 0.085, 0.1), vec3(0.012, 0.033, 0.045), uStorm);
+    vec3 seaDeep = mix(open, og * 0.75, uOvercast * (0.7 + 0.2 * uStorm));
+    vec3 seaMid = mix(mix(open, vec3(0.08, 0.34, 0.52), 0.3), og * 1.25, uOvercast * (0.65 + 0.25 * uStorm));
+    vec3 deep = mix(seaDeep, vec3(0.02, 0.26, 0.44), up), bright = mix(seaMid, vec3(0.12, 0.62, 0.72), up);
+    vec3 col = mix(deep, bright, streak * mix(0.45, 0.7, up) * mix(0.25, 1.0, fade) * mix(0.5, 1.0, up) + 0.08 * fade);
     // foam: against the walls, in the steep runs, and in the churning pool
     float wall = 1.0 - smoothstep(0.0, 0.16, min(across, 1.0 - across));
     float steep = smoothstep(0.08, 0.3, abs(vSlope));
@@ -103542,7 +103566,13 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     col += uSunCol * smoothstep(0.988, 0.996, nh) * step(0.62, hash(floor(pw * 4.0))) * 1.6 * sunUp;
     // (at sea its edges melt into the water either side, as the middle does ahead)
     float edge = mix(smoothstep(0.0, 0.32, min(across, 1.0 - across)), 1.0, fade * fade);
-    gl_FragColor = vec4(col, smoothstep(0.1, 1.0, fade) * edge);
+    // (seen from far off and from below it \u2014 out at sea, a few hundred
+    // metres away \u2014 water up in its groove is behind the groove's walls; the
+    // far terrain's coarser grid can lose those walls, and the ribbon would
+    // hang in the air over the sea: there it isn't drawn)
+    float dist = length(vView.xz);
+    float hidden = vHide * smoothstep(uFar * 0.8, uFar, dist) * smoothstep(1.5, 5.0, vWorld.y - cameraPosition.y);
+    gl_FragColor = vec4(col, smoothstep(0.1, 1.0, fade) * edge * (1.0 - hidden));
     #include <fog_fragment>
   }
 `
@@ -103565,7 +103595,15 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           uSunDir: { value: new Vector3(0.3, 0.8, 0.2) },
           uSunCol: { value: new Color(1, 0.95, 0.85) },
           uSky: { value: new Color(0.6, 0.8, 1) },
-          uSkyTop: { value: new Color(0.2, 0.45, 0.85) }
+          uSkyTop: { value: new Color(0.2, 0.45, 0.85) },
+          uSeaA: { value: new Color() },
+          uSeaB: { value: new Color() },
+          uSeaC: { value: new Color() },
+          uSeaD: { value: new Color() },
+          uSeaTint: { value: new Vector3(1, 1, 1) },
+          uOvercast: { value: 0 },
+          uStorm: { value: 0 },
+          uFar: { value: 260 }
         }
       ]);
       const mat = (pool2) => {
@@ -103618,6 +103656,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.setAttribute("aSlope", new BufferAttribute(slope, 1));
         g.setAttribute("aSpeed", new BufferAttribute(speed2, 1));
         g.setAttribute("aFade", new BufferAttribute(fade2, 1));
+        g.setAttribute("aHide", new BufferAttribute(new Float32Array(n2 * 2).fill(c.exit ? 0 : 1), 1));
         g.setIndex(idx);
         g.computeBoundingSphere();
         const m = new Mesh(g, this.mat);
@@ -103631,6 +103670,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       pg.setAttribute("aSlope", new BufferAttribute(new Float32Array(n), 1));
       pg.setAttribute("aSpeed", new BufferAttribute(new Float32Array(n).fill(9), 1));
       pg.setAttribute("aFade", new BufferAttribute(new Float32Array(n).fill(1), 1));
+      pg.setAttribute("aHide", new BufferAttribute(new Float32Array(n).fill(1), 1));
       const pool2 = new Mesh(pg, this.poolMat);
       pool2.renderOrder = 2;
       this.group.add(pool2);
@@ -103667,8 +103707,12 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         u.uSky.value.copy(wu.uSky.value);
         u.uSkyTop.value.copy(wu.uSkyTop.value);
         u.uRipT.value = wu.uRipT.value;
+        for (const k of ["uSeaA", "uSeaB", "uSeaC", "uSeaD", "uSeaTint"]) if (wu[k]) u[k].value.copy(wu[k].value);
+        if (wu.uOvercast) u.uOvercast.value = wu.uOvercast.value;
+        if (wu.uStorm) u.uStorm.value = wu.uStorm.value;
       }
       u.uOrigin.value.set(ox, oy);
+      u.uFar.value = Math.max(100, (v.terrain?.nearR ?? 6) * 32 - 8);
     }
   };
   var water2 = null;
@@ -125966,6 +126010,22 @@ button:disabled { cursor: not-allowed; }
       this.spin = new Group();
       this.scene.add(this.spin);
       this.base = new Mesh(new SphereGeometry(1, 192, 128), new MeshBasicMaterial({ color: 16777215 }));
+      this.base.material.onBeforeCompile = (sh) => {
+        sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vBall;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvBall = normalize(position);");
+        sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+varying vec3 vBall;
+float gHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float gNoise(vec3 x) {
+  vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(gHash(i), gHash(i + vec3(1, 0, 0)), f.x), mix(gHash(i + vec3(0, 1, 0)), gHash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(gHash(i + vec3(0, 0, 1)), gHash(i + vec3(1, 0, 1)), f.x), mix(gHash(i + vec3(0, 1, 1)), gHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}`).replace("#include <map_fragment>", `
+  float pole = smoothstep(0.6, 0.86, abs(vBall.y));
+  vec4 sampledDiffuseColor = texture2D(map, vMapUv, pole * 4.5);
+  float grain = gNoise(vBall * 160.0) * 0.55 + gNoise(vBall * 430.0 + 7.0) * 0.45;
+  sampledDiffuseColor.rgb *= mix(1.0, 0.93 + 0.14 * grain, pole);
+  diffuseColor *= sampledDiffuseColor;`);
+      };
       this.spin.add(this.base);
       this.scene.add(new Mesh(new SphereGeometry(1.03, 64, 48), new MeshBasicMaterial({ color: 9423103, transparent: true, opacity: 0.1, side: BackSide, depthWrite: false })));
       this.spin.add(Object.assign(new Mesh(new SphereGeometry(1.0004, 96, 64), new ShaderMaterial({

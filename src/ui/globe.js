@@ -221,6 +221,27 @@ export class GlobeView {
     this.spin = new THREE.Group();
     this.scene.add(this.spin);
     this.base = new THREE.Mesh(new THREE.SphereGeometry(1, 192, 128), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    // (toward the poles every row of the picture is drawn out round a smaller
+    // and smaller circle, and its paper grain fans out into streaks: there it's
+    // read blurred — the sea's colour and the Red Line kept, the stretched
+    // grain gone — and the grain laid on afresh by where it is on the ball)
+    this.base.material.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBall;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBall = normalize(position);');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vBall;
+float gHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float gNoise(vec3 x) {
+  vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(gHash(i), gHash(i + vec3(1, 0, 0)), f.x), mix(gHash(i + vec3(0, 1, 0)), gHash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(gHash(i + vec3(0, 0, 1)), gHash(i + vec3(1, 0, 1)), f.x), mix(gHash(i + vec3(0, 1, 1)), gHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}`).replace('#include <map_fragment>', `
+  float pole = smoothstep(0.6, 0.86, abs(vBall.y));
+  vec4 sampledDiffuseColor = texture2D(map, vMapUv, pole * 4.5);
+  float grain = gNoise(vBall * 160.0) * 0.55 + gNoise(vBall * 430.0 + 7.0) * 0.45;
+  sampledDiffuseColor.rgb *= mix(1.0, 0.93 + 0.14 * grain, pole);
+  diffuseColor *= sampledDiffuseColor;`);
+    };
     this.spin.add(this.base);
     this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.03, 64, 48), new THREE.MeshBasicMaterial({ color: 0x8fc8ff, transparent: true, opacity: 0.1, side: THREE.BackSide, depthWrite: false })));
     // (the ball's rim shaded a little, so it reads round without lighting the chart's colours away)

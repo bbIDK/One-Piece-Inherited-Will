@@ -46,6 +46,7 @@ const LEG3 = [[B.thighR, B.shinR, B.footR], [B.thighL, B.shinL, B.footL]];
 const SKIRT_T = [0.25, 0.45, 0.65, 0.85, 1.0, 0.2, 0.4, 0.6, 0.8, 1.0], SKIRT_TH = 5;
 const SKIRT_REACH = Math.PI / SKIRT_N * 2, SKIRT_FADE = 0.35;
 const _sq = new THREE.Quaternion(), _sax = new THREE.Vector3();
+const _sv = new THREE.Vector3();
 const _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
 const _srad = new Float32Array(SKIRT_T.length * 2), _sleg = new Uint8Array(SKIRT_T.length * 2);
 /**
@@ -654,6 +655,13 @@ export class CharacterModel {
       }
     }
     K.n = n;
+    // (how far she's sitting: the thighs run out level instead of hanging)
+    let seat = 0;
+    for (const [hi, ki] of LEG3) {
+      _sv.subVectors(rig.pos[ki], rig.pos[hi]).applyQuaternion(_sq);
+      const L = _sv.length() || 1;
+      seat += Math.min(1, Math.max(0, (0.75 - Math.abs(_sv.y) / L) / 0.45)) * 0.5;
+    }
     for (let i = 0; i < N; i++) {
       const a = (i / N) * TAU, ca = Math.cos(a), sa = Math.sin(a);
       const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S.Dh, sa * S.Wh);
@@ -670,8 +678,12 @@ export class CharacterModel {
     }
     // (a panel can't be pulled in past its neighbours' swing by much: a leg
     // between two panels holds them both out, and the cloth between doesn't sag in)
-    const spread = two ? SKIRT_FEEL_LONG.spread : 0.22;
-    for (let r = 0; r < 2; r++) for (let i = 0; i < N; i++) {
+    // (sitting, the cloth lies over the thighs and the rest of it hangs down
+    // round the seat: the lift over the knees carries only to the panels
+    // either side of them, not on round the waist — or the whole skirt
+    // stands out flat round her like a disc)
+    const spread = (two ? SKIRT_FEEL_LONG.spread : 0.22) + seat * 0.7;
+    for (let r = 0; r < (seat > 0.5 ? 1 : 2); r++) for (let i = 0; i < N; i++) {
       const m = Math.max(K.need[(i + N - 1) % N], K.need[(i + 1) % N]) - spread;
       if (m > K.need[i]) K.need[i] = m;
     }
