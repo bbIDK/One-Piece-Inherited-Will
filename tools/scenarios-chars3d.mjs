@@ -527,7 +527,7 @@ export const scenarios = {
   // weapons worn on the body, drawn from the hotbar and put away again: the real
   // hotbar keys, snapped part way through the draw
   //   --wpns=fine_katana,flintlock,bo_staff,wado_ichimonji+shusui+sandai_kitetsu  --modes=third,first
-  //   --at=0.15,0.3,0.45,0.6  (seconds into the draw)
+  //   --at=0.15,0.3,0.45,0.6  (seconds into the draw)  --camyaw=0.72 (camera round from the facing, in half-turns)
   c3draw: {
     async run(page, snap, args) {
       await boot(page);
@@ -552,16 +552,16 @@ export const scenarios = {
           await settle(page, 2);
           await press('1');
           await settle(page, 3);
-          const place = () => page.evaluate((mode) => {
+          const place = () => page.evaluate(([mode, cy]) => {
             const g = window.OP.game, p = g.player, r = g.view3d.rig;
             window.OP.hold = true;
             if (r.mode === 'third') {
               const v = g.view3d.actorViews.get(p);
-              r.yaw = (v && v.visF !== undefined ? v.visF : p.facing) + Math.PI * 0.72;
+              r.yaw = (v && v.visF !== undefined ? v.visF : p.facing) + Math.PI * cy;
               r.pitch = 0.05;
               for (let i = 0; i < 3; i++) window.OP.step(0.05);
             } else { r.pitch = -0.2; window.OP.step(0.05); }
-          }, mode);
+          }, [mode, Number(args.camyaw ?? 0.72)]);
           await place();
           await snap(`${set}-${mode}-worn`);
           // draw: snapped along the way, then held ready

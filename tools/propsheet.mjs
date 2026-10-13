@@ -1,7 +1,7 @@
 // A contact sheet of the kit-built prop models, each from three-quarters
 // above, with the game's own cel material and outlines:
 //
-//   node tools/propsheet.mjs <out.png> [--only=barrel,crate] [--cell=256]
+//   node tools/propsheet.mjs <out.png> [--set=street|weapons] [--only=barrel,crate] [--cell=256]
 //
 // Models come from the named exports (STREET_MODELS and the like) of the
 // prop modules; add a module's map to SOURCES to include it.
@@ -17,7 +17,11 @@ const args = process.argv.slice(2);
 const out = args.find((a) => !a.startsWith('--'));
 const opt = Object.fromEntries(args.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 if (!out) { console.error('usage: node tools/propsheet.mjs <out.png> [--only=a,b] [--cell=256] [--yaw=0.8]'); process.exit(2); }
-const SOURCES = [['STREET_MODELS', 'src/render3d/props/street.js']];
+const SETS = {
+  street: [['STREET_MODELS', 'src/render3d/props/street.js']],
+  weapons: [['WEAPON_MODELS', 'src/render3d/chars/weapons.js'], ['SWORD_MODELS', 'src/render3d/chars/swords.js']],
+};
+const SOURCES = SETS[opt.set || 'street'];
 const dir = mkdtempSync(join(tmpdir(), 'propsheet-'));
 const entry = join(dir, 'entry.js');
 writeFileSync(entry, `

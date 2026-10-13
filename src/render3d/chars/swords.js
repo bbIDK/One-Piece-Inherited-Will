@@ -274,3 +274,6 @@ export function addBuilt(add, g, m, bone) {
   let n = 0;
   add(g, m, () => _c.fromArray(col.array, (n++) * 3), bone);
 }
+
+/** Every sword by id, for tools/propsheet.mjs. */
+export const SWORD_MODELS = Object.fromEntries(Object.keys(SWORD_LOOKS).map((k) => [k, () => swordGeo(k)]));
