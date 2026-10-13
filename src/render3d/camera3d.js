@@ -493,6 +493,10 @@ export class CameraRig {
             if ((w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.8)) || (ships && !own && game.shipSolidAt(bx, bz, by, true))) return t;
             // (flying: the eaves overhanging the walls are in the way too, through their thickness)
             if (p.flying && roofs) { const r = roofs.roofAt(bx, bz); if (r && by < r.h + 0.4 && by > r.h - 1.2) return t; }
+            // (on foot too: an eave the arm passes through — a temple's deep,
+            // swept eaves reach far out over the street — brings the camera in
+            // under it, rather than leaving the lens in among the tiles)
+            else if (roofs && t > 0.15) { const r = roofs.roofAt(bx, bz, by + 0.3); if (r && by < r.h + 0.35 && !w.isBlocked(bx, bz)) return t; }
           }
           return 0;
         };
@@ -545,12 +549,18 @@ export class CameraRig {
         if (roofs3 && !p.belowDeck && !room) {
           for (const [qx, qz] of ROOF_PROBE) {
             const rx = p.x + cx + qx, rz = p.y + cz + qz;
-            const r3 = roofs3.roofAt(rx, rz);
+            // (the roof surface the lens is over — or just in — not a higher
+            // tier above it: a pagoda's tiers and a temple's deep, swept eaves
+            // stack one over another, and over the lower one the camera must
+            // ride that, not leap up onto the tier above; inside the walls of
+            // an upper storey, though, it's the top that counts)
+            const blocked = w.isBlocked(rx, rz);
+            const r3 = roofs3.roofAt(rx, rz, cy + 0.6) || (blocked ? roofs3.roofAt(rx, rz) : null);
             // (over the walls, or in among the eaves that overhang them — a lens in the thickness of a roof sees inside the house)
             // (the eaves count only when you're up there with them — flying, or on the roofs: walking
             // under an awning or an overhang, the camera stays down with you rather than leaping over it)
             const high = p.flying || p.roofed || (r3 && oy > r3.h - 1);
-            if (r3 && (w.isBlocked(rx, rz) || (high && cy > r3.h - 1.5)) && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
+            if (r3 && (blocked || (high && cy > r3.h - 1.5)) && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
           }
         }
         if (cy < under) cy = under;

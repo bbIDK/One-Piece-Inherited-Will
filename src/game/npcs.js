@@ -599,11 +599,16 @@ export class Interactions {
       return;
     }
     if (a.talk?.kind === 'keeper') { this.building(a.talk.building); return; }
-    if (a.talk?.kind === 'townsfolk') {
+    if (a.talk?.kind === 'country' && g.countryTalk) { g.countryTalk(a); return; }
+    if (a.talk?.kind === 'townsfolk' || a.talk?.kind === 'country') {
       const rng = new RNG(a.talk.seed + g.env.day);
       const isl = this.islandOf(a.x, a.y);
+      // (someone with a letter for the farm out in the country: content/countryQuests.js)
+      const letter = g.countryLetter?.(a, isl);
       g.dialogue.open(a, { start: 'a', nodes: {
+        ...(letter ? { cq_letter: g.countryLetterNode(isl) } : {}),
         a: { text: rumorFor(g, isl, rng, a), choices: [
+          ...(letter ? [letter] : []),
           { text: 'Thanks. Take care.', end: true },
           { text: 'Pick their pocket while they talk. (a crime)', do: () => { g.dialogue.close(); const r = pickpocket(g, a); if (r === 'caught') g.fx.text(a.x, a.y - 2, 'HEY! THIEF!', '#ff5252', 0.45); }, end: true },
         ] },

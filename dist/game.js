@@ -10136,8 +10136,8 @@
     const p = ownEyes(fx);
     const d = p ? fromPlayer(fx, p, a) : Infinity;
     if (d < 3) {
-      const at4 = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
-      return fx.sfx?.(at4[0], at4[1], str2, col6, size2, { ...o, z: at4[2] });
+      const at5 = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
+      return fx.sfx?.(at5[0], at5[1], str2, col6, size2, { ...o, z: at5[2] });
     }
     return fx.sfx?.(x, y, str2, col6, size2, o);
   }
@@ -10250,14 +10250,14 @@
     calloutOver(fx, a, 1.5 * s, "BREAK FREE!", "#b3e5fc", 0.46);
     if (a.isPlayer) fx.kick(-Math.PI / 2, 3);
   }
-  function parryCueFx(fx, at4, breaks, k = 1) {
-    const s = at4.look && at4.look.scale || 1;
-    const z = at4.z !== void 0 && !at4.look ? at4.z : 1.3 * s;
-    const follow2 = at4.follow || at4;
+  function parryCueFx(fx, at5, breaks, k = 1) {
+    const s = at5.look && at5.look.scale || 1;
+    const z = at5.z !== void 0 && !at5.look ? at5.z : 1.3 * s;
+    const follow2 = at5.follow || at5;
     const col6 = breaks ? "#ff1744" : "#ffee58";
-    fx.add("flare", { x: at4.x, y: at4.y, z, size: (0.45 + 0.6 * k) * (breaks ? 1.15 : 1), color: col6, life: 0.14 + 0.14 * k, follow: follow2, rot: 0 });
-    if (k >= 0.55) fx.ring(at4.x, at4.y, 0.15, (0.6 + 0.5 * k) * s, col6, 0.2, 0.05, { z: z - 0.2, flat: 1, noCore: true, add: true, follow: follow2 });
-    if (breaks && k >= 0.9 && at4.look) fx.sfx?.(at4.x, at4.y, "!!", "#ff1744", 0.8, { z: 2.15 * s, gap: 0, life: 0.55 });
+    fx.add("flare", { x: at5.x, y: at5.y, z, size: (0.45 + 0.6 * k) * (breaks ? 1.15 : 1), color: col6, life: 0.14 + 0.14 * k, follow: follow2, rot: 0 });
+    if (k >= 0.55) fx.ring(at5.x, at5.y, 0.15, (0.6 + 0.5 * k) * s, col6, 0.2, 0.05, { z: z - 0.2, flat: 1, noCore: true, add: true, follow: follow2 });
+    if (breaks && k >= 0.9 && at5.look) fx.sfx?.(at5.x, at5.y, "!!", "#ff1744", 0.8, { z: 2.15 * s, gap: 0, life: 0.55 });
   }
   function techFx(fx, actor, s, a, kind, extra = {}) {
     const def = a && a.def || {};
@@ -12075,8 +12075,8 @@
     if (a.hidden || a.alive === false || p && a !== p && w && w.distance(a.x, a.y, p.x, p.y) > 40) return;
     const own = a === p && g.settings?.view === "first";
     const s = a.look && a.look.scale || 1, f = a.facing || 0, cf = Math.cos(f), sf = Math.sin(f);
-    const puff = (at4, o) => {
-      const [fw, sd, z] = at4;
+    const puff = (at5, o) => {
+      const [fw, sd, z] = at5;
       fx.particle({ x: a.x + (cf * fw - sf * sd) * s, y: a.y + (sf * fw + cf * sd) * s, z: (a.z || 0) + z * s, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, drag: 1.2, kind: "smoke", ...o });
     };
     const rate = (n) => Math.random() < dt * n;
@@ -13354,12 +13354,12 @@
   var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
   function liningAt(d, r4, t, y) {
     const ys = liningYs(r4);
-    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
+    const at5 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
     const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
     for (let i = 0; i < ys.length - 1; i++) {
-      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
+      if (yc <= ys[i + 1]) return at5(ys[i]) + (at5(ys[i + 1]) - at5(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
     }
-    return at4(ys[ys.length - 1]);
+    return at5(ys[ys.length - 1]);
   }
   function roomEnds(d, r4) {
     const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
@@ -13962,8 +13962,8 @@
       const cp = d.comp;
       if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
     }
-    const rail = d.big ? 0.75 : 0.6, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
-    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
+    const rail = d.big ? 0.75 : 0.6, at5 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    if (d.castle && at5(d.tq) && h2 < d.yq + rail || d.poop && at5(d.tp) && h2 < d.yp + rail || d.fore && at5(d.tf) && h2 < d.yf + rail) return true;
     if (h2 > topAt(d, t)) return false;
     if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
     if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
@@ -16890,8 +16890,8 @@
     let front = spread2(fw);
     if (floor2 === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach3);
     const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
-    const at4 = b.attach || {};
-    return { front, left: at4.left ? [] : zs, right: at4.right ? [] : zs, w: winW, reach: reach3 };
+    const at5 = b.attach || {};
+    return { front, left: at5.left ? [] : zs, right: at5.right ? [] : zs, w: winW, reach: reach3 };
   }
   function groundWindows(b) {
     const kind = winKind(b);
@@ -18621,10 +18621,10 @@
     const s = def.steps[i];
     const T5 = tierOf(game, actor);
     const speed2 = def.noSpeedup ? 1 : actor.atkSpeed();
-    const at4 = s.at ?? def.windup ?? 0;
-    const w = at4 / speed2;
+    const at5 = s.at ?? def.windup ?? 0;
+    const w = at5 / speed2;
     const want = stretchWindup(T5, w, !!def.chained);
-    a.hitAt = at4;
+    a.hitAt = at5;
     a.slow = w > 1e-3 && want > w ? want / w : 1;
     a.breaks = breaksGuard(s) || !!s.zone;
     a.shot = !!s.proj;
@@ -18632,7 +18632,7 @@
     let travel2 = 0;
     if (s.dash && who) travel2 = Math.max(0, game.world.distance(actor.x, actor.y, who.x, who.y) - 1) / Math.max(1, s.dash.dist / s.dash.time);
     const real = Math.max(0, want + travel2 - T5.cueLead);
-    a.cueT = want > 0 && real <= want ? real / want * at4 : at4 + Math.max(0, real - want) * speed2;
+    a.cueT = want > 0 && real <= want ? real / want * at5 : at5 + Math.max(0, real - want) * speed2;
   }
   function glint(actor, a, game) {
     const p = game.player;
@@ -24996,8 +24996,8 @@
       const g = this.game, time = g.env?.time || 0;
       if (this.cache && this.cache.time === time && this.cache.ax === this.a.x && this.cache.bx === this.b.x) return this.cache;
       const w = g.world, A2 = this.a, B5 = this.b, dA = shipDims(A2.def), dB = shipDims(B5.def);
-      const at4 = (s, f) => deckToWorld(s, (f.u + shipDims(s.def).L / 2) / shipDims(s.def).L, f.v);
-      const EA = at4(A2, this.aE), RA = at4(A2, this.aR), RB = at4(B5, this.bR), EB = at4(B5, this.bE);
+      const at5 = (s, f) => deckToWorld(s, (f.u + shipDims(s.def).L / 2) / shipDims(s.def).L, f.v);
+      const EA = at5(A2, this.aE), RA = at5(A2, this.aR), RB = at5(B5, this.bR), EB = at5(B5, this.bE);
       const dx = w.dx(EA.x, EB.x), dy = EB.y - EA.y, len = Math.hypot(dx, dy) || 1, dir = { x: dx / len, y: dy / len };
       const along2 = (p) => w.dx(EA.x, p.x) * dir.x + (p.y - EA.y) * dir.y;
       const tt = (d, f) => (f.u + d.L / 2) / d.L;
@@ -25054,10 +25054,10 @@
     const fb = frame(w, a, b.x, b.y), side = fb.v >= 0 ? 1 : -1;
     const n = { x: -Math.sin(a.heading) * side, y: Math.cos(a.heading) * side };
     const [t0, t1] = mainSpan(dA), mid = Math.max(xAt(dA, t0) + 1.2, Math.min(xAt(dA, t1) - 1.2, fb.u));
-    const at4 = (p, d, l) => ({ x: w.wx(p.x + d.x * l), y: p.y + d.y * l });
+    const at5 = (p, d, l) => ({ x: w.wx(p.x + d.x * l), y: p.y + d.y * l });
     const across = (RA, d) => {
       for (let l = 0.2; l < 7.5; l += 0.1) {
-        const q2 = at4(RA, d, l);
+        const q2 = at5(RA, d, l);
         if (deckPoint(b, w.dx(b.x, q2.x), q2.y - b.y, 0)) return { l, ...q2 };
       }
       return null;
@@ -25068,7 +25068,7 @@
       const RA = deckToWorld(a, t, vR);
       if (clearRun(w, a, deckToWorld(a, t, vR - side * PLANK_RAMP), n, PLANK_RAMP - 0.25)) okA.push({ u, RA });
       const hit = across(RA, n);
-      if (hit && hit.l >= 0.8 && clearRun(w, b, at4(hit, n, 0.25), n, PLANK_RAMP - 0.25)) okB.push({ u, hit });
+      if (hit && hit.l >= 0.8 && clearRun(w, b, at5(hit, n, 0.25), n, PLANK_RAMP - 0.25)) okB.push({ u, hit });
     }
     okA.sort((p, q2) => Math.abs(p.u - mid) - Math.abs(q2.u - mid));
     for (const A2 of okA) {
@@ -25076,9 +25076,9 @@
         const dx = w.dx(A2.RA.x, B5.hit.x), dy = B5.hit.y - A2.RA.y, dl = Math.hypot(dx, dy), d = { x: dx / dl, y: dy / dl };
         const RB = across(A2.RA, d);
         if (!RB || RB.l < 0.8) continue;
-        const EA = at4(A2.RA, d, -PLANK_RAMP), EB = at4(RB, d, PLANK_RAMP);
-        if (!clearRun(w, a, EA, d, PLANK_RAMP - 0.25) || !clearRun(w, b, at4(RB, d, 0.25), d, PLANK_RAMP - 0.25)) continue;
-        const m = at4(A2.RA, d, RB.l / 2);
+        const EA = at5(A2.RA, d, -PLANK_RAMP), EB = at5(RB, d, PLANK_RAMP);
+        if (!clearRun(w, a, EA, d, PLANK_RAMP - 0.25) || !clearRun(w, b, at5(RB, d, 0.25), d, PLANK_RAMP - 0.25)) continue;
+        const m = at5(A2.RA, d, RB.l / 2);
         if (!w.isLiquid(m.x, m.y) || w.isDock?.(m.x, m.y)) continue;
         return new Plank(game, a, b, { side, aE: frame(w, a, EA.x, EA.y), aR: frame(w, a, A2.RA.x, A2.RA.y), bR: frame(w, b, RB.x, RB.y), bE: frame(w, b, EB.x, EB.y) });
       }
@@ -25302,10 +25302,10 @@
     (ship.aboard || (ship.aboard = /* @__PURE__ */ new Set())).add(a);
     a.facing = ship.heading;
   }
-  function standAboard(game, a, ship, at4) {
-    if (!ship || !at4) return false;
-    placeOnDeck(game, a, ship, at4.t, at4.v);
-    const dk3 = game.deckAt(a.x, a.y, 0, at4.h ?? null, ship);
+  function standAboard(game, a, ship, at5) {
+    if (!ship || !at5) return false;
+    placeOnDeck(game, a, ship, at5.t, at5.v);
+    const dk3 = game.deckAt(a.x, a.y, 0, at5.h ?? null, ship);
     if (dk3) {
       a.deck = dk3;
       dk3.ship = ship;
@@ -26178,8 +26178,8 @@
   function addToHotbar(c, id) {
     c.hotbar = c.hotbar || [];
     if (isFormEntry(id)) return -1;
-    const at4 = c.hotbar.indexOf(id);
-    if (at4 >= 0) return at4;
+    const at5 = c.hotbar.indexOf(id);
+    if (at5 >= 0) return at5;
     const i = freeSlot(c.hotbar);
     if (i >= 0) c.hotbar[i] = id;
     return i;
@@ -26256,8 +26256,8 @@
       let why = "";
       if (!have) {
         const L3 = t.learn || {};
-        const at4 = `mastery ${L3.mastery || 0}`;
-        why = L3.innate ? "born to it" : L3.special === "full_moon" ? `${at4} \xB7 under a full moon` : `${at4} \xB7 fight with ${st.name}`;
+        const at5 = `mastery ${L3.mastery || 0}`;
+        why = L3.innate ? "born to it" : L3.special === "full_moon" ? `${at5} \xB7 under a full moon` : `${at5} \xB7 fight with ${st.name}`;
         if (!learnedStyle) why = st.swords ? `carry ${st.swords} sword${st.swords > 1 ? "s" : ""}` : `learn ${st.name} from a teacher`;
       } else why = needs(p, d);
       out.skills.push({ id: t.id, def: d, locked: !have, why });
@@ -28753,20 +28753,20 @@
     }
     return best;
   }
-  function climbLadder(game, a, at4) {
-    a.startClimb(game, { ship: at4.ship, t: at4.foot.deck.t, v: at4.foot.deck.v, ladder: at4.l });
+  function climbLadder(game, a, at5) {
+    a.startClimb(game, { ship: at5.ship, t: at5.foot.deck.t, v: at5.foot.deck.v, ladder: at5.l });
     game.audio?.sfx("step", a);
     if (a.isPlayer) game.hint?.("ladder", "On the ladder: hold W to climb, S to climb down, Space to let go.");
   }
   function installLadders(game) {
     game.ladderAt = (a, reach3, only) => ladderAt(game, a, reach3, only);
-    game.climbLadder = (a, at4) => climbLadder(game, a, at4);
+    game.climbLadder = (a, at5) => climbLadder(game, a, at5);
     const prevFoot = game.footInteraction;
     game.footInteraction = (p) => {
       const other = prevFoot ? prevFoot(p) : null;
-      const at4 = p.mode === "foot" && canClimb(p) ? ladderAt(game, p) : null;
-      if (!at4) return other;
-      const mine = { d: at4.d, x: at4.foot.x, y: at4.foot.y, label: `Climb the ladder (the ${at4.ship.name})`, run: () => climbLadder(game, p, at4) };
+      const at5 = p.mode === "foot" && canClimb(p) ? ladderAt(game, p) : null;
+      if (!at5) return other;
+      const mine = { d: at5.d, x: at5.foot.x, y: at5.foot.y, label: `Climb the ladder (the ${at5.ship.name})`, run: () => climbLadder(game, p, at5) };
       return !other || mine.d <= other.d ? mine : other;
     };
   }
@@ -28814,11 +28814,11 @@
         ok = !!dp && !dp.solid && dp.lvl === lvl;
       }
       if (!ok) continue;
-      const at4 = (v) => {
+      const at5 = (v) => {
         const q2 = deckToWorld(T5, t, sg * v);
         return { x: w.wx(q2.x), y: q2.y };
       };
-      return { u: xAt(d, t), edge, inb: at4(Math.max(0, edge - 2.2)), out: at4(edge - 0.3), beyond: at4(edge + 4) };
+      return { u: xAt(d, t), edge, inb: at5(Math.max(0, edge - 2.2)), out: at5(edge - 0.3), beyond: at5(edge + 4) };
     }
     return null;
   }
@@ -28869,10 +28869,10 @@
       if (!crosses) continue;
       const ex = w.dx(s.x, a.x), ey = a.y - s.y, ua = ex * c + ey * sn, side = -ex * sn + ey * c >= 0 ? 1 : -1;
       const gex = w.dx(s.x, gx), gey = gy - s.y, sideG = -gex * sn + gey * c >= 0 ? 1 : -1;
-      const at4 = (u, v) => ({ x: w.wx(s.x + u * c - v * sn), y: s.y + u * sn + v * c });
+      const at5 = (u, v) => ({ x: w.wx(s.x + u * c - v * sn), y: s.y + u * sn + v * c });
       let best = null, bd = Infinity;
       for (const e of [1, -1]) {
-        const near = at4(e * (d.L / 2 + 3), side * (d.B / 2 + 1.5)), far = at4(e * (d.L / 2 + 3), sideG * (d.B / 2 + 1.5));
+        const near = at5(e * (d.L / 2 + 3), side * (d.B / 2 + 1.5)), far = at5(e * (d.L / 2 + 3), sideG * (d.B / 2 + 1.5));
         const past = e * ua > d.L / 2 + 2, via = past ? far : near;
         const dd = w.distance(a.x, a.y, via.x, via.y) + w.distance(via.x, via.y, far.x, far.y) + w.distance(far.x, far.y, gx, gy);
         if (dd < bd) {
@@ -28917,14 +28917,14 @@
         const rg2 = railGap(game, a, T5, S6, goal.x, goal.y);
         const jump = !!rg2 && leapable(a, rg2);
         if (!jump && a.fruit && !a.gills) return null;
-        const at4 = atRail(game, a, to.x, to.y);
-        if (at4) a.navJump = { ship: S6, leap: jump };
-        return { x: to.x, y: to.y, run: true, jump: at4 ? jump ? 1 : 0.55 : void 0 };
+        const at5 = atRail(game, a, to.x, to.y);
+        if (at5) a.navJump = { ship: S6, leap: jump };
+        return { x: to.x, y: to.y, run: true, jump: at5 ? jump ? 1 : 0.55 : void 0 };
       }
       const d = shipDims(S6.def);
       if (d.ladders?.length) {
-        const at4 = ladderAt(game, a, 1.3, S6);
-        if (at4 && canClimb(a)) return { climb: at4 };
+        const at5 = ladderAt(game, a, 1.3, S6);
+        if (at5 && canClimb(a)) return { climb: at5 };
         let best = null, bd = Infinity;
         for (const l of d.ladders) {
           const f = ladderFoot(S6, l), dd = w.distance(a.x, a.y, f.x, f.y);
@@ -28942,9 +28942,9 @@
       return null;
     }
     if (who.inWater && T5 && !(a.fruit && !a.gills)) {
-      const at4 = atRail(game, a, who.x, who.y);
-      if (at4) a.navJump = { ship: null, leap: false };
-      return { x: who.x, y: who.y, run: true, jump: at4 ? 0.55 : void 0 };
+      const at5 = atRail(game, a, who.x, who.y);
+      if (at5) a.navJump = { ship: null, leap: false };
+      return { x: who.x, y: who.y, run: true, jump: at5 ? 0.55 : void 0 };
     }
     return null;
   }
@@ -30063,7 +30063,7 @@
     town._life = S6;
     return S6;
   }
-  function spawnFolk(game, town, isl, rng4, list, at4, kid = false) {
+  function spawnFolk(game, town, isl, rng4, list, at5, kid = false) {
     const race = kid ? "human" : rng4.weighted(isl.def.population || townRaces(isl));
     const look = makeLook(race, rng4.int(1, 1e9), civilianOutfit(town.style, rng4));
     if (kid) {
@@ -30071,8 +30071,8 @@
       look.bulk = 0.9;
     }
     const a = game.spawner.spawn({
-      x: at4.x,
-      y: at4.y,
+      x: at5.x,
+      y: at5.y,
       name: kid ? "Kid" : randomName(rng4, race),
       look,
       race,
@@ -30115,9 +30115,9 @@
     }
     const n = Math.round(crowdOf(town) * outShare(clock));
     for (let i = 0; i < n; i++) {
-      const at4 = S6.street.length ? acrossOf(game.world, rng4.pick(S6.street), rng4) : town.plaza;
-      if (!at4) break;
-      const a = spawnFolk(game, town, isl, rng4, list, { x: at4.x, y: at4.y });
+      const at5 = S6.street.length ? acrossOf(game.world, rng4.pick(S6.street), rng4) : town.plaza;
+      if (!at5) break;
+      const a = spawnFolk(game, town, isl, rng4, list, { x: at5.x, y: at5.y });
       const act2 = pick(game, a);
       if (act2) start(game, a, act2, true);
       if (ctx?.onTownsfolk) ctx.onTownsfolk(a, town);
@@ -65396,8 +65396,8 @@ void main() {
       const w = this.world;
       if (!w) return;
       const ccx = Math.floor(w.wx(ox) / CHUNK2), ccy = Math.floor(oy / CHUNK2);
-      const at4 = this.wantAt;
-      if (!at4 || at4[0] !== ccx || at4[1] !== ccy || at4[2] !== this.nearR || at4[3] !== this.farR || at4[4] !== this.floorR) {
+      const at5 = this.wantAt;
+      if (!at5 || at5[0] !== ccx || at5[1] !== ccy || at5[2] !== this.nearR || at5[3] !== this.farR || at5[4] !== this.floorR) {
         this.wantAt = [ccx, ccy, this.nearR, this.farR, this.floorR];
         this.want = this.wanted(ccx, ccy);
         this.dropUnwanted();
@@ -65677,10 +65677,10 @@ void main() {
       }
       return (x, y) => {
         const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
-        const at4 = (i, j) => g[(j % n + n) % n * n + (i % n + n) % n];
+        const at5 = (i, j) => g[(j % n + n) % n * n + (i % n + n) % n];
         const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-        const a = at4(xi, yi) + (at4(xi + 1, yi) - at4(xi, yi)) * sx;
-        const b = at4(xi, yi + 1) + (at4(xi + 1, yi + 1) - at4(xi, yi + 1)) * sx;
+        const a = at5(xi, yi) + (at5(xi + 1, yi) - at5(xi, yi)) * sx;
+        const b = at5(xi, yi + 1) + (at5(xi + 1, yi + 1) - at5(xi, yi + 1)) * sx;
         return a + (b - a) * sy;
       };
     };
@@ -66834,13 +66834,13 @@ void main() {
 `
   );
   patch3("shadowmap_pars_fragment", "the directional shadow lookup", (chunk) => {
-    const at4 = chunk.indexOf("	float getShadow(");
-    if (at4 < 0) return chunk;
-    return chunk.slice(0, at4) + `#if NUM_DIR_LIGHT_SHADOWS > 0
+    const at5 = chunk.indexOf("	float getShadow(");
+    if (at5 < 0) return chunk;
+    return chunk.slice(0, at5) + `#if NUM_DIR_LIGHT_SHADOWS > 0
 ${GLSL}
 #endif
 
-` + chunk.slice(at4);
+` + chunk.slice(at5);
   });
   patch3("lights_fragment_begin", "the directional shadow", (chunk) => chunk.replace(
     "getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )",
@@ -70128,7 +70128,7 @@ vec2 scell(vec3 p) {
       L3.unshift(new Vector3(0, h0, 0));
       const cum = [0];
       for (let i = 1; i < L3.length; i++) cum.push(cum[i - 1] + L3[i].distanceTo(L3[i - 1]));
-      const at4 = (d, out) => {
+      const at5 = (d, out) => {
         let i = 1;
         while (i < L3.length - 1 && cum[i] < d) i++;
         const A2 = L3[i - 1], Bp = L3[i], seg2 = Math.max(1e-4, cum[i] - cum[i - 1]);
@@ -70139,8 +70139,8 @@ vec2 scell(vec3 p) {
       const amp = 0.45 + 0.55 * mv, ampY = 0.55 + 0.45 * mv;
       for (let i = 0; i < DN; i++) {
         const u = i / (DN - 1), d = u * DL;
-        const P6 = at4(d, this.pts[i]);
-        at4(Math.max(0, d - 0.5), _p1);
+        const P6 = at5(d, this.pts[i]);
+        at5(Math.max(0, d - 0.5), _p1);
         _tmp.subVectors(P6, _p1);
         _tmp.y = 0;
         if (_tmp.lengthSq() < 1e-6) _tmp.set(-c, 0, -sn);
@@ -70591,7 +70591,7 @@ vec2 scell(vec3 p) {
     {
       const pr = profile(d, 0), hb0 = hbAt(0, d.B), x0 = xAt(d, 0);
       const ys = pr.map(([, y]) => y);
-      const at4 = (y) => {
+      const at5 = (y) => {
         for (let j = 0; j < pr.length - 1; j++) {
           const [w0, y0] = pr[j], [w1, y1] = pr[j + 1];
           if (y <= y0 && y >= y1 || y >= y0 && y <= y1) {
@@ -70601,8 +70601,8 @@ vec2 scell(vec3 p) {
         }
         return { w: pr[pr.length - 1][0] * hb0, j: pr.length - 2 };
       };
-      wallWithHoles(pos, idx, triCol, x0, ys, (y) => at4(y).w, sternHoles(d), (y) => {
-        const j = at4(y).j;
+      wallWithHoles(pos, idx, triCol, x0, ys, (y) => at5(y).w, sternHoles(d), (y) => {
+        const j = at5(y).j;
         return j < 1 ? P6.cap : j < 4 ? P6.upper : P6.bottom;
       });
     }
@@ -72676,8 +72676,8 @@ vec3 paneView(vec3 dir, float night) {
       figure(Math.min(0.97, (hp.x - 0.35 + d.L / 2) / d.L), 0, 0, 0);
       const hands2 = d.L > 9 ? 2 : 1;
       const B5 = d.B;
-      const at4 = [[0.4, 0.26], [0.62, -0.28]];
-      for (let i = 0; i < hands2; i++) figure(clear3(at4[i][0]), at4[i][1] * B5, (i % 2 ? -1 : 1) * 1.2, i + 1);
+      const at5 = [[0.4, 0.26], [0.62, -0.28]];
+      for (let i = 0; i < hands2; i++) figure(clear3(at5[i][0]), at5[i][1] * B5, (i % 2 ? -1 : 1) * 1.2, i + 1);
     }
     const m = new Mesh(k.build(false), SOLID());
     m.castShadow = true;
@@ -73625,6 +73625,9 @@ vec3 paneView(vec3 dir, float night) {
               if (p.flying && roofs) {
                 const r4 = roofs.roofAt(bx, bz);
                 if (r4 && by < r4.h + 0.4 && by > r4.h - 1.2) return t;
+              } else if (roofs && t > 0.15) {
+                const r4 = roofs.roofAt(bx, bz, by + 0.3);
+                if (r4 && by < r4.h + 0.35 && !w.isBlocked(bx, bz)) return t;
               }
             }
             return 0;
@@ -73682,9 +73685,10 @@ vec3 paneView(vec3 dir, float night) {
           if (roofs3 && !p.belowDeck && !room2) {
             for (const [qx, qz] of ROOF_PROBE) {
               const rx = p.x + cx + qx, rz = p.y + cz + qz;
-              const r32 = roofs3.roofAt(rx, rz);
+              const blocked = w.isBlocked(rx, rz);
+              const r32 = roofs3.roofAt(rx, rz, cy + 0.6) || (blocked ? roofs3.roofAt(rx, rz) : null);
               const high = p.flying || p.roofed || r32 && oy > r32.h - 1;
-              if (r32 && (w.isBlocked(rx, rz) || high && cy > r32.h - 1.5) && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
+              if (r32 && (blocked || high && cy > r32.h - 1.5) && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
             }
           }
           if (cy < under) cy = under;
@@ -79751,10 +79755,10 @@ vec3 paneView(vec3 dir, float night) {
       this.batches.clear();
     }
     /** items: [{ o, sprite, x, y (relative), h (ground) }] */
-    rebuild(items9) {
+    rebuild(items10) {
       this.clear();
       const byKey = /* @__PURE__ */ new Map();
-      for (const it of items9) {
+      for (const it of items10) {
         let arr = byKey.get(it.sprite.key);
         if (!arr) byKey.set(it.sprite.key, arr = []);
         arr.push(it);
@@ -82518,10 +82522,10 @@ vec3 paneView(vec3 dir, float night) {
       let lx = dx * c - dy * s, lz = dx * s + dy * c;
       lx = Math.max(-fw / 2, Math.min(fw / 2, lx));
       lz = Math.max(-fd, Math.min(0, lz));
-      const at4 = hy ?? Math.min(H5 * 0.7, k > 0.5 ? rnd2(0.9, 2.4) : rnd2(1, 1.6));
+      const at5 = hy ?? Math.min(H5 * 0.7, k > 0.5 ? rnd2(0.9, 2.4) : rnd2(1, 1.6));
       for (let i = 0; i < n; i++) {
         const sz = rnd2(0.12, 0.35);
-        const p = this.piece(b, base2, lx + rnd2(-0.4, 0.4), at4 + rnd2(-0.4, 0.4), lz + rnd2(-0.2, 0.2), sz, sz * rnd2(0.5, 1), sz, Math.random() < 0.7 ? P6.wall : P6.wood, { chip: true, life: 25 });
+        const p = this.piece(b, base2, lx + rnd2(-0.4, 0.4), at5 + rnd2(-0.4, 0.4), lz + rnd2(-0.2, 0.2), sz, sz * rnd2(0.5, 1), sz, Math.random() < 0.7 ? P6.wall : P6.wood, { chip: true, life: 25 });
         this.throwFrom(p, x, y, 5);
       }
     }
@@ -83827,9 +83831,9 @@ vec3 paneView(vec3 dir, float night) {
     mango: { col: "#ffb300", r: 0.12 },
     cherry: { col: "#c2185b", r: 0.07 }
   };
-  function addFruit(k, fruit, at4, s = 1) {
+  function addFruit(k, fruit, at5, s = 1) {
     const L3 = FRUIT_LOOK[fruit];
-    const [x, y, z] = at4;
+    const [x, y, z] = at5;
     if (fruit === "banana") {
       k.add(cyl(0.02, 0.025, 0.25, 4, true), { at: [x, y - 0.1, z], color: "#6d8b3a" });
       for (let i = 0; i < 5; i++) {
@@ -84051,11 +84055,11 @@ vec3 paneView(vec3 dir, float night) {
   }
   function treeBase(o, ctx) {
     if (!ctx?.ground) return 0;
-    const g = ctx.ground(o.x, o.y), at4 = ctx.terrain || ctx.ground, R5 = 0.45 * (o.s || 1);
+    const g = ctx.ground(o.x, o.y), at5 = ctx.terrain || ctx.ground, R5 = 0.45 * (o.s || 1);
     let lo = g;
     for (let i = 0; i < 8; i++) {
       const a = i * Math.PI / 4;
-      lo = Math.min(lo, at4(o.x + Math.cos(a) * R5, o.y + Math.sin(a) * R5));
+      lo = Math.min(lo, at5(o.x + Math.cos(a) * R5, o.y + Math.sin(a) * R5));
     }
     return Math.max(lo, g - 1.5 * (o.s || 1)) - 0.05;
   }
@@ -85754,10 +85758,10 @@ vec3 paneView(vec3 dir, float night) {
       k.add(box(1, 2.2, 0.3), { at: [Math.cos(a) * 6.45, Y2 + 2.2, Math.sin(a) * 6.45], rot: [0, -a + Math.PI / 2, 0], color: win });
       if (i % 2 === 0) k.add(box(0.8, 1.8, 0.3), { at: [Math.cos(a) * 4.85, Y2 + 10.5, Math.sin(a) * 4.85], rot: [0, -a + Math.PI / 2, 0], color: win });
     }
-    const onion = (r4, at4, color) => {
-      k.add(lathe([[r4 * 0.9, 0], [r4 * 1.15, r4 * 0.45], [r4 * 1.05, r4 * 0.95], [r4 * 0.6, r4 * 1.45], [r4 * 0.18, r4 * 1.85], [0.05, r4 * 2.15]], 18), { at: at4, color, outline: 0.05 });
-      k.add(cyl(0.06 * r4, 0.1 * r4, r4 * 0.7, 6), { at: [at4[0], at4[1] + r4 * 2.1, at4[2]], color: gold });
-      k.add(blob(0.14 * r4, 0), { at: [at4[0], at4[1] + r4 * 2.85, at4[2]], color: gold });
+    const onion = (r4, at5, color) => {
+      k.add(lathe([[r4 * 0.9, 0], [r4 * 1.15, r4 * 0.45], [r4 * 1.05, r4 * 0.95], [r4 * 0.6, r4 * 1.45], [r4 * 0.18, r4 * 1.85], [0.05, r4 * 2.15]], 18), { at: at5, color, outline: 0.05 });
+      k.add(cyl(0.06 * r4, 0.1 * r4, r4 * 0.7, 6), { at: [at5[0], at5[1] + r4 * 2.1, at5[2]], color: gold });
+      k.add(blob(0.14 * r4, 0), { at: [at5[0], at5[1] + r4 * 2.85, at5[2]], color: gold });
     };
     onion(4.8, [0, Y2 + 14.8, 0], pink);
     for (let i = 0; i < 6; i++) {
@@ -86360,12 +86364,12 @@ vec3 paneView(vec3 dir, float night) {
       for (const r4 of runs) {
         const P6 = r4.map((i) => pts[i]);
         const foot = P6.map((p) => (lev ? T5.L[lev - 1].h : ground(p.x + p.nx * (WALL_T2 + 0.6), p.y + p.ny * (WALL_T2 + 0.6))) - 0.35);
-        const at4 = (p, o, y) => [p.x + p.nx * o, y, p.y + p.ny * o];
+        const at5 = (p, o, y) => [p.x + p.nx * o, y, p.y + p.ny * o];
         const nOut = P6.map((p) => [p.nx, 0, p.ny]), nUp = P6.map(() => [0, 1, 0]);
-        band(M3, [P6.map((p) => at4(p, -0.05, top)), P6.map((p) => at4(p, WALL_T2, top))], [CORNICE, CORNICE], nUp);
+        band(M3, [P6.map((p) => at5(p, -0.05, top)), P6.map((p) => at5(p, WALL_T2, top))], [CORNICE, CORNICE], nUp);
         band(
           M3,
-          [P6.map((p) => at4(p, WALL_T2, top)), P6.map((p) => at4(p, WALL_T2 + 0.18, top - 0.12)), P6.map((p) => at4(p, WALL_T2 + 0.18, top - 0.42)), P6.map((p) => at4(p, WALL_T2, top - 0.5))],
+          [P6.map((p) => at5(p, WALL_T2, top)), P6.map((p) => at5(p, WALL_T2 + 0.18, top - 0.12)), P6.map((p) => at5(p, WALL_T2 + 0.18, top - 0.42)), P6.map((p) => at5(p, WALL_T2, top - 0.5))],
           [CORNICE, CORNICE, CORNICE, CORNICE],
           nOut
         );
@@ -86374,24 +86378,24 @@ vec3 paneView(vec3 dir, float night) {
         const nC = Math.max(1, Math.round(H5 / 1.1));
         for (let c = 0; c <= nC; c++) {
           const f = c / nC;
-          rows.push(P6.map((p, i) => at4(p, WALL_T2, top - 0.5 - (top - 0.5 - foot[i]) * f)));
+          rows.push(P6.map((p, i) => at5(p, WALL_T2, top - 0.5 - (top - 0.5 - foot[i]) * f)));
           cols.push(STONE2);
           if (c > 0 && c < nC) {
-            rows.push(P6.map((p, i) => at4(p, WALL_T2, top - 0.5 - (top - 0.5 - foot[i]) * f - 0.07)));
+            rows.push(P6.map((p, i) => at5(p, WALL_T2, top - 0.5 - (top - 0.5 - foot[i]) * f - 0.07)));
             cols.push(COURSE);
-            rows.push(P6.map((p, i) => at4(p, WALL_T2, top - 0.5 - (top - 0.5 - foot[i]) * f - 0.075)));
+            rows.push(P6.map((p, i) => at5(p, WALL_T2, top - 0.5 - (top - 0.5 - foot[i]) * f - 0.075)));
             cols.push(STONE2);
           }
         }
         band(M3, rows, cols, nOut);
-        band(M3, [P6.map((p, i) => at4(p, WALL_T2, foot[i] + 0.9)), P6.map((p, i) => at4(p, WALL_T2 + 0.45, foot[i] - 0.1))], [PLINTH2, PLINTH2], P6.map((p) => [p.nx * 0.9, 0.45, p.ny * 0.9]));
+        band(M3, [P6.map((p, i) => at5(p, WALL_T2, foot[i] + 0.9)), P6.map((p, i) => at5(p, WALL_T2 + 0.45, foot[i] - 0.1))], [PLINTH2, PLINTH2], P6.map((p) => [p.nx * 0.9, 0.45, p.ny * 0.9]));
         let seg2 = [];
         const flush = () => {
           if (seg2.length > 1) {
             const nI = seg2.map((p) => [-p.nx, 0, -p.ny]);
-            band(M3, [seg2.map((p) => at4(p, 0.72, top)), seg2.map((p) => at4(p, 0.72, top + 0.55))], [RAIL, RAIL], nI);
-            band(M3, [seg2.map((p) => at4(p, 0.62, top + 0.55)), seg2.map((p) => at4(p, 1.12, top + 0.55))], [RAIL, RAIL], seg2.map(() => [0, 1, 0]));
-            band(M3, [seg2.map((p) => at4(p, 1.02, top + 0.55)), seg2.map((p) => at4(p, 1.02, top))], [RAIL, RAIL], seg2.map((p) => [p.nx, 0, p.ny]));
+            band(M3, [seg2.map((p) => at5(p, 0.72, top)), seg2.map((p) => at5(p, 0.72, top + 0.55))], [RAIL, RAIL], nI);
+            band(M3, [seg2.map((p) => at5(p, 0.62, top + 0.55)), seg2.map((p) => at5(p, 1.12, top + 0.55))], [RAIL, RAIL], seg2.map(() => [0, 1, 0]));
+            band(M3, [seg2.map((p) => at5(p, 1.02, top + 0.55)), seg2.map((p) => at5(p, 1.02, top))], [RAIL, RAIL], seg2.map((p) => [p.nx, 0, p.ny]));
           }
           seg2 = [];
         };
@@ -87175,7 +87179,7 @@ vec3 paneView(vec3 dir, float night) {
     g.computeVertexNormals();
     return g;
   }
-  function smoke2(root4, { n = 10, y0 = 0, rise = 60, r0 = 4, r1: r12 = 16, drift = 20, speed: speed2 = 0.05, color = "#5b5654", spread: spread2 = 2 } = {}, at4 = root4) {
+  function smoke2(root4, { n = 10, y0 = 0, rise = 60, r0 = 4, r1: r12 = 16, drift = 20, speed: speed2 = 0.05, color = "#5b5654", spread: spread2 = 2 } = {}, at5 = root4) {
     const k = new Mesher();
     k.add(new IcosahedronGeometry(1, 1), { color });
     const geo2 = k.build();
@@ -87186,7 +87190,7 @@ vec3 paneView(vec3 dir, float night) {
       m.castShadow = false;
       m.receiveShadow = false;
       puffs.push(m);
-      at4.add(m);
+      at5.add(m);
     }
     animate(root4, (t) => {
       for (let i = 0; i < n; i++) {
@@ -93166,13 +93170,13 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     U4 = Math.max(1, Math.round(U4));
     const V5 = rows.length - 1;
     const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU17 - 1e-6;
-    const at4 = (i, j) => {
+    const at5 = (i, j) => {
       const h2 = rows[j];
       const A0 = typeof a0 === "function" ? a0(h2) : a0, A1 = typeof a1 === "function" ? a1(h2) : a1;
       return [h2, A0 + (A1 - A0) * (inward ? 1 - i / U4 : i / U4)];
     };
     const g = grid((u, v) => {
-      const [h2, a0v] = at4(Math.round(u * U4), Math.round(v * V5));
+      const [h2, a0v] = at5(Math.round(u * U4), Math.round(v * V5));
       const a = warp(a0v);
       const p = pt(h2, a);
       if (uv) {
@@ -93186,7 +93190,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const n = g.attributes.normal, W4 = U4 + 1;
       for (let j = 0; j <= V5; j++) {
         for (let i = 0; i <= U4; i++) {
-          const [h2, a] = at4(i, j);
+          const [h2, a] = at5(i, j);
           const p = pt(h2, warp(a)), pa = pt(h2, warp(a + 1e-3)), ph = pt(h2 + 1e-3, warp(a));
           const tx = pa[0] - p[0], ty = pa[1] - p[1], tz = pa[2] - p[2];
           const sx = ph[0] - p[0], sy = ph[1] - p[1], sz = ph[2] - p[2];
@@ -93488,9 +93492,11 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const rows = cloth ? [0.1, 0.07, 0.04, 0.01] : [0.1, 0.01];
       add7(band2((y, a) => pelvisPt(sh, y, a, 0.011 + Math.abs(y - 0.055) * 0.08), rows, -Math.PI, Math.PI, U4), M(), cc.waist, B.hips);
       const k = pelvisPt(sh, 0.05, -1.25, 0.02);
-      add7(Prim.sphere(q2.sph[0], q2.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B.hips);
-      for (const [dx, len, rot] of [[0.012, 0.2, 0.12], [-0.02, 0.16, -0.08]]) {
-        add7(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B.sash);
+      if (!(look.coat || TOP2 === "coat")) {
+        add7(Prim.sphere(q2.sph[0], q2.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B.hips);
+        for (const [dx, len, rot] of [[0.012, 0.2, 0.12], [-0.02, 0.16, -0.08]]) {
+          add7(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B.sash);
+        }
       }
     } else if (o.waist === "haramaki" || o.waist === "obi") {
       const hi = o.waist === "obi" ? 0.32 : 0.3, lo = o.waist === "obi" ? 0.08 : -0.06;
@@ -95312,8 +95318,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       h2.cap(1.09, 58, 102, 118);
       bangs(h2, 5, 100, 74, 0.25, { sweep: 12, part: -10 });
       const wave = (a, b, sd, w) => {
-        const at4 = (k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
-        const c1 = at4(0.33), c2 = at4(0.7);
+        const at5 = (k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+        const c1 = at5(0.33), c2 = at5(0.7);
         const o1 = norm([c1[0], 0, c1[2]]), o2 = norm([c2[0], 0, c2[2]]);
         lock(h2, a, b, w, { c: add3(c1, o1, 0.45), c2: add3(c2, o2, -0.2), flat: 0.5 });
       };
@@ -95837,7 +95843,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S6(0.019, 0.047, 0.043)), col6, hand, part10);
       const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
       const hb0 = b.bind && b.bind[hand];
-      const at4 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
+      const at5 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
       for (let f = 0; f < 4; f++) {
         const len = [0.93, 1, 0.95, 0.77][f];
         const kn = [0, -0.083 * k * (f === 3 ? 0.95 : 1), th * (1.5 - f) * 0.0205 * k];
@@ -95845,18 +95851,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         rest.knuckle.push(kn);
         rest.lp.push(lp);
         if (hb0) {
-          const km = at4(hb0, kn);
+          const km = at5(hb0, kn);
           b.setBind(B["k" + (f + 1) + H5], km);
-          b.setBind(B["j" + (f + 1) + H5], at4(km, [0, -lp, 0]));
+          b.setBind(B["j" + (f + 1) + H5], at5(km, [0, -lp, 0]));
         }
         const c = f % 2 ? col6 : dark;
         b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B["k" + (f + 1) + H5], part10);
         b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B["j" + (f + 1) + H5], part10);
       }
       if (hb0) {
-        const tm = at4(hb0, rest.thumb);
+        const tm = at5(hb0, rest.thumb);
         b.setBind(B["tb" + H5], tm);
-        b.setBind(B["tc" + H5], at4(tm, [0, -rest.lt, 0]));
+        b.setBind(B["tc" + H5], at5(tm, [0, -rest.lt, 0]));
       }
       b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col6, B["tb" + H5], part10);
       b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B["tc" + H5], part10);
@@ -98618,8 +98624,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     if (/apple/.test(id)) return "apple";
     return d.type === "medicine" ? "vial" : "apple";
   }
-  function leaf(k, at4, rot, col6 = "#43a047") {
-    k.add(sph(6, 4), { at: at4, rot, scale: [0.022, 4e-3, 0.011], color: col6 });
+  function leaf(k, at5, rot, col6 = "#43a047") {
+    k.add(sph(6, 4), { at: at5, rot, scale: [0.022, 4e-3, 0.011], color: col6 });
   }
   var BUILD = {
     apple(k) {
@@ -101438,7 +101444,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (full) this.scan = { x: ox, y: oy, day: env2.day, D: D4, fx: ox, fy: oy };
       else Object.assign(this.scan, { x: ox, y: oy, day: env2.day });
       const objs = w.objects.query(ox - r4, oy - r4, ox + r4, oy + r4);
-      const items9 = [];
+      const items10 = [];
       const keep = full ? /* @__PURE__ */ new Set() : null;
       const near = [], far = full ? [] : null;
       if (full) {
@@ -101486,7 +101492,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
         if (d2 > sprites * sprites && (o.kind !== "tree" || d2 > RN * RN)) continue;
         const s = propSprite(o, w.id, env2.day);
-        if (s) items9.push({ o, sprite: s, rx: w.dx(O.x, o.x), rz: o.y - O.y, h: this.terrain.terrainAt(o.x, o.y) });
+        if (s) items10.push({ o, sprite: s, rx: w.dx(O.x, o.x), rz: o.y - O.y, h: this.terrain.terrainAt(o.x, o.y) });
       }
       if (full) {
         for (const [o, v] of this.built) if (!keep.has(o) && !this.retiring.has(o)) this.dropProp(o, v);
@@ -101499,7 +101505,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.farQueue = far;
       }
       const t0 = performance.now();
-      this.forest.rebuild(items9);
+      this.forest.rebuild(items10);
       prof("b.forest", t0);
     }
     /**
@@ -102658,9 +102664,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         for (const sh of game.ships || []) {
           if (n >= MAXH) break;
           if (sh.sunk || !sh.def || w.distance(v.ox, v.oy, sh.x, sh.y) > 90) continue;
-          const sv = v.shipViews?.get(sh), at4 = sv?.root?.position;
-          if (!at4) continue;
-          uHull.value[n].set(at4.x, at4.z, Math.cos(sh.heading), Math.sin(sh.heading));
+          const sv = v.shipViews?.get(sh), at5 = sv?.root?.position;
+          if (!at5) continue;
+          uHull.value[n].set(at5.x, at5.z, Math.cos(sh.heading), Math.sin(sh.heading));
           uHullSz.value[n].set(sh.def.length * 0.5, sh.def.beam * 0.5);
           n++;
         }
@@ -105119,10 +105125,10 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     for (let ch = 0; ch < 2; ch++) {
       const d = buf.getChannelData(ch);
       for (let i = 0, cnt = Math.round(rate * secs); i < cnt; i++) {
-        const at4 = Math.floor(Math.random() * n), a = 0.12 + 0.88 * Math.pow(Math.random(), 3);
+        const at5 = Math.floor(Math.random() * n), a = 0.12 + 0.88 * Math.pow(Math.random(), 3);
         const f = 800 + Math.random() * Math.random() * 6500, tau = (4e-4 + Math.random() * 12e-4) * sr;
         const w = 2 * Math.PI * f / sr, len = Math.floor(tau * 5);
-        for (let j = 0; j < len; j++) d[(at4 + j) % n] += a * Math.exp(-j / tau) * (0.12 * Math.sin(w * j) + 0.88 * (Math.random() * 2 - 1));
+        for (let j = 0; j < len; j++) d[(at5 + j) % n] += a * Math.exp(-j / tau) * (0.12 * Math.sin(w * j) + 0.88 * (Math.random() * 2 - 1));
       }
       for (let i = 0; i < n; i++) ss += d[i] * d[i];
     }
@@ -105981,10 +105987,10 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const g = this.mesh.geometry;
       g.setDrawRange(0, this.n);
       for (const k of ["position", "aInfo", "aSide"]) {
-        const at4 = g.attributes[k];
-        at4.clearUpdateRanges();
-        at4.addUpdateRange(0, this.n * at4.itemSize);
-        at4.needsUpdate = true;
+        const at5 = g.attributes[k];
+        at5.clearUpdateRanges();
+        at5.addUpdateRange(0, this.n * at5.itemSize);
+        at5.needsUpdate = true;
       }
     }
     update(env2, ctx) {
@@ -106149,9 +106155,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         group4.add(view.root);
       }
       const L3 = P6.pts(), d = L3.dir, yaw = Math.atan2(d.y, d.x);
-      const at4 = (s) => [w.dx(v.ox, L3.x + d.x * s), L3.y + d.y * s - v.oy];
+      const at5 = (s) => [w.dx(v.ox, L3.x + d.x * s), L3.y + d.y * s - v.oy];
       for (let i = 0; i < 3; i++) {
-        const [x, z] = at4(L3.s[i]), run = L3.s[i + 1] - L3.s[i], rise = L3.h[i + 1] - L3.h[i];
+        const [x, z] = at5(L3.s[i]), run = L3.s[i + 1] - L3.s[i], rise = L3.h[i + 1] - L3.h[i];
         const m = view.runs[i];
         m.position.set(x, L3.h[i], z);
         m.rotation.set(0, -yaw, Math.atan2(rise, run));
@@ -106159,7 +106165,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       }
       for (let j = 0; j < 4; j++) {
         const i = j < 2 ? 1 : 2, side = j % 2 ? 1 : -1, off = side * (PLANK_W / 2 - 0.03);
-        const [x, z] = at4(L3.s[i]);
+        const [x, z] = at5(L3.s[i]);
         view.posts[j].position.set(x - d.y * off, L3.h[i] - 0.08, z + d.x * off);
       }
     }
@@ -108048,18 +108054,18 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       let prevGap = 0;
       while (houses < houseCount) {
         const fw = rng4.int(widths[0], widths[1]);
-        const at4 = fromStart ? s : s - fw;
-        if (fromStart ? at4 + fw > run.s1 : at4 < run.s0) break;
+        const at5 = fromStart ? s : s - fw;
+        if (fromStart ? at5 + fw > run.s1 : at5 < run.s0) break;
         const sb = setback && rng4.chance(0.3) ? setback + 1 : setback;
         const want = rng4.int(depths[0], depths[1]);
-        const fd = depthFor(run, at4, fw, sb, want, terraced ? 1 : 2);
+        const fd = depthFor(run, at5, fw, sb, want, terraced ? 1 : 2);
         let b = null;
-        if (fd >= (big2 ? 6 : 4)) b = place2(run, at4, fw, fd, sb, { role: "house" });
+        if (fd >= (big2 ? 6 : 4)) b = place2(run, at5, fw, fd, sb, { role: "house" });
         if (b) {
           houses++;
           const gap = terraced ? rng4.chance(0.12) && prevGap === 0 ? 1 : 0 : rng4.int(2, 4);
           prevGap = gap;
-          s = fromStart ? at4 + fw + gap : at4 - gap;
+          s = fromStart ? at5 + fw + gap : at5 - gap;
         } else s += fromStart ? 1 : -1;
       }
     }
@@ -108500,8 +108506,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       if (!d) continue;
       const a = P6({ dx: f.from[0], dy: f.from[1] });
       const th = Math.atan2(a.y - d.y, world.dx(d.x, a.x)), ux = Math.cos(th), uy = Math.sin(th), Rf = drumR(d, th);
-      const at4 = (x, y, k) => ({ x: world.wx(x + ux * k), y: y + uy * k });
-      const rw = { id: f.id, name: f.name, island: def.id, a: { x: a.x, y: a.y }, b: at4(d.x, d.y, Rf + 3.2), aExit: at4(a.x, a.y, 4.5), bExit: at4(d.x, d.y, Rf - 4.5) };
+      const at5 = (x, y, k) => ({ x: world.wx(x + ux * k), y: y + uy * k });
+      const rw = { id: f.id, name: f.name, island: def.id, a: { x: a.x, y: a.y }, b: at5(d.x, d.y, Rf + 3.2), aExit: at5(a.x, a.y, 4.5), bExit: at5(d.x, d.y, Rf - 4.5) };
       (world.ropeways || (world.ropeways = [])).push(rw);
       placeObject(world, { kind: "ropeway", rope: f.id, end: "a", x: rw.aExit.x, y: rw.aExit.y, face: th + Math.PI, reach: 4.5, block: false, name: f.name, interact: `Ride the ropeway up to ${f.top || "the summit"}`, use: "ropeway", interactRange: 3.4 });
       placeObject(world, { kind: "ropeway", rope: f.id, end: "b", x: rw.bExit.x, y: rw.bExit.y, face: th, reach: 7.7, edge: 4.5, block: false, name: f.name, interact: `Ride the ropeway down to ${f.foot || "the foot of the mountain"}`, use: "ropeway", interactRange: 3.4 });
@@ -108714,19 +108720,19 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     sites.forEach((c, i) => {
       const S6 = COUNTRY[(first + i) % COUNTRY.length];
       const yaw = rng4.next() * Math.PI * 2, cs = Math.cos(yaw), sn = Math.sin(yaw);
-      const at4 = (dx, dy) => ({ x: world.wx(c.x + dx * cs - dy * sn), y: c.y + dx * sn + dy * cs });
+      const at5 = (dx, dy) => ({ x: world.wx(c.x + dx * cs - dy * sn), y: c.y + dx * sn + dy * cs });
       if (S6.field) {
         const [fx, fy, fw, fh] = S6.field;
         for (let v = 0; v < fh; v++) {
           for (let u = 0; u < fw; u++) {
-            const p = at4(fx + u, fy + v - fh / 2), tx = Math.floor(p.x), ty = Math.floor(p.y);
+            const p = at5(fx + u, fy + v - fh / 2), tx = Math.floor(p.x), ty = Math.floor(p.y);
             const t = world.type(tx, ty);
             if (world.walkable(tx, ty) && !world.isBlocked(tx, ty) && !MANMADE[t] && !OVERLAY[t]) world.setType(tx, ty, T2.FARM);
           }
         }
       }
       for (const [kind, dx, dy, opt] of S6.parts) {
-        const p = at4(dx, dy);
+        const p = at5(dx, dy);
         const o = { kind, x: p.x, y: p.y, yaw: yaw + (kind === "tent" ? Math.PI : 0), block: true, country: S6.name, ...opt };
         if (kind === "chest") o.key = `country_${def.id}_${i}`;
         settleLandmark(world, rec, o, ground);
@@ -108734,7 +108740,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         rec.landmarks.push(o);
       }
       const town = rec.towns.slice().sort((u, w) => dist(c.x, c.y, u.plaza.x, u.plaza.y) - dist(c.x, c.y, w.plaza.x, w.plaza.y))[0];
-      const gate = at4(0, 9);
+      const gate = at5(0, 9);
       if (town) connectRoad(world, gate.x, gate.y, town.plaza.x, town.plaza.y, T2.DIRT);
       rec.clearings.push({ x: c.x, y: c.y, r: 14 });
       rec.country.push({ name: S6.name, folk: S6.folk || null, x: c.x, y: c.y });
@@ -108743,7 +108749,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   function coarseField(fn, x0, y0, w, h2) {
     const GW = (w >> 1) + 2, GH = (h2 >> 1) + 2;
     const g = new Float32Array(GW * GH).fill(NaN);
-    const at4 = (gi, gj) => {
+    const at5 = (gi, gj) => {
       const k = gj * GW + gi;
       let v = g[k];
       if (v !== v) v = g[k] = fn(x0 + gi * 2, y0 + gj * 2);
@@ -108753,7 +108759,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const fx = (x - x0) * 0.5, fy = (y - y0) * 0.5;
       const gi = Math.max(0, Math.min(GW - 2, Math.floor(fx))), gj = Math.max(0, Math.min(GH - 2, Math.floor(fy)));
       const tx = fx - gi, ty = fy - gj;
-      const a = at4(gi, gj), b = at4(gi + 1, gj), c = at4(gi, gj + 1), d = at4(gi + 1, gj + 1);
+      const a = at5(gi, gj), b = at5(gi + 1, gj), c = at5(gi, gj + 1), d = at5(gi + 1, gj + 1);
       return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
     };
   }
@@ -108961,13 +108967,13 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const W4 = Math.max(3, dd.width ?? 5) | 1;
     const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD4 = 3;
     const L3 = Math.max(6, Math.round(len * 1.5));
-    const at4 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
+    const at5 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
     let lastA = 0;
     for (let a = 0; a < L3; a++) {
       const head = a >= L3 - HEAD4, hb = head ? headHalf : half2;
       let placed = false;
       for (let b = -hb; b <= hb; b++) {
-        const { x, y } = at4(a, b);
+        const { x, y } = at5(a, b);
         if (world.isOverlay(x, y)) continue;
         if (!world.isLiquid(x, y)) {
           const t = world.type(x, y);
@@ -108982,7 +108988,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const Q2 = 4, qh = half2 + 1;
     for (let a = -Q2; a < 0; a++) {
       for (let b = -qh; b <= qh; b++) {
-        const { x, y } = at4(a, b);
+        const { x, y } = at5(a, b);
         if (world.isBlocked(x, y) || world.isOverlay(x, y)) continue;
         const t = world.type(x, y);
         if (t === T2.WALL || t === T2.CLIFF || t === T2.MOUNTAIN) continue;
@@ -109001,19 +109007,19 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       r: 7,
       pierLen: L3 + 1,
       pierHalf: headHalf + 0.5,
-      x0: Math.min(at4(-Q2, -qh).x, at4(-1, qh).x),
-      x1: Math.max(at4(-Q2, -qh).x, at4(-1, qh).x),
-      y0: Math.min(at4(-Q2, -qh).y, at4(-1, qh).y),
-      y1: Math.max(at4(-Q2, -qh).y, at4(-1, qh).y)
+      x0: Math.min(at5(-Q2, -qh).x, at5(-1, qh).x),
+      x1: Math.max(at5(-Q2, -qh).x, at5(-1, qh).x),
+      y0: Math.min(at5(-Q2, -qh).y, at5(-1, qh).y),
+      y1: Math.max(at5(-Q2, -qh).y, at5(-1, qh).y)
     });
     world.padIndex = null;
     for (const sg of [-1, 1]) {
-      const c = at4(-1, sg * qh);
+      const c = at5(-1, sg * qh);
       placeObject(world, { kind: "lamp", x: c.x + 0.5, y: c.y + 0.5, block: true });
-      const k = at4(-Q2 + 1, sg * qh);
+      const k = at5(-Q2 + 1, sg * qh);
       placeObject(world, { kind: sg > 0 ? "crate" : "barrel", x: k.x + 0.5, y: k.y + 0.5, block: true });
     }
-    const end = at4(lastA, 0);
+    const end = at5(lastA, 0);
     const side = headHalf + 3;
     const berth = (sg, out = 0) => ({ x: world.wx(end.x + 0.5 - vx + px2 * side * sg + vx * out), y: end.y + 0.5 - vy + py2 * side * sg + vy * out });
     const clearance = (m) => {
@@ -109038,16 +109044,16 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         moor = m;
       }
     }
-    const land2 = at4(-Q2 - 2, 0);
-    const tip = at4(lastA, headHalf);
+    const land2 = at5(-Q2 - 2, 0);
+    const tip = at5(lastA, headHalf);
     placeObject(world, { kind: "mooring", x: tip.x + 0.5, y: tip.y + 0.5, block: false });
-    const stand = shipwrightStand(world, at4, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 });
+    const stand = shipwrightStand(world, at5, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 });
     return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land2.x + 0.5, y: land2.y + 0.5 }, end: { x: end.x, y: end.y }, half: half2, headHalf, len: lastA + 1, stand };
   }
-  function shipwrightStand(world, at4, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 }) {
+  function shipwrightStand(world, at5, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 }) {
     let open = true;
     for (let a = lastA - 2; a <= lastA; a++) for (let b = headHalf + 1; b <= headHalf + 3; b++) {
-      const t = at4(a, b);
+      const t = at5(a, b);
       if (!world.sailable(t.x + 0.5, t.y + 0.5)) open = false;
     }
     const far = open ? -1 : 1;
@@ -109056,7 +109062,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     for (const sg of [far, -far]) for (const a of [lastA - 1, lastA - 2, lastA - 3]) cands.push([a, sg * half2, "pier"]);
     for (const sg of [far, -far]) cands.push([-2, sg * qh, "quay"]);
     for (const [a, b, on] of cands) {
-      const t = at4(a, b), x = t.x + 0.5, y = t.y + 0.5;
+      const t = at5(a, b), x = t.x + 0.5, y = t.y + 0.5;
       if (on === "pier" ? !world.isDock(x, y) : !world.isQuay(x, y)) continue;
       if (!world.walkable(x, y) || world.isLiquid(x, y) || world.isBlocked(x, y) || world.hitsProp(x, y, 0.45)) continue;
       const sb = Math.sign(b);
@@ -109070,7 +109076,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const ox = Math.min(0, ddx) - m, oy = Math.min(y0, y1) - m;
     const W4 = Math.abs(ddx) + 2 * m + 1, H5 = Math.abs(y1 - y0) + 2 * m + 1;
     if (W4 * H5 > 6e5) return connectRoad(world, ax, ay, bx, by, tile);
-    const at4 = (i) => ({ x: world.wx(x0 + ox + i % W4), y: oy + Math.floor(i / W4) });
+    const at5 = (i) => ({ x: world.wx(x0 + ox + i % W4), y: oy + Math.floor(i / W4) });
     const PAVED2 = /* @__PURE__ */ new Set([T2.COBBLE, T2.STONE, T2.MARBLE, T2.PLANK, T2.BRIDGE]);
     const cost = (x, y) => {
       const t = world.type(x, y);
@@ -109130,7 +109136,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (nx < 0 || ny < 0 || nx >= W4 || ny >= H5) continue;
         const j = ny * W4 + nx;
         if (done6[j]) continue;
-        const p = at4(j), c = j === goal ? 1 : cost(p.x, p.y);
+        const p = at5(j), c = j === goal ? 1 : cost(p.x, p.y);
         if (!Number.isFinite(c)) continue;
         const ng = g[i] + c;
         if (ng < g[j]) {
@@ -109142,7 +109148,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     }
     if (!done6[goal]) return connectRoad(world, ax, ay, bx, by, tile);
     for (let i = goal; i >= 0; i = from[i]) {
-      const p = at4(i);
+      const p = at5(i);
       for (const [ex, ey] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
         const x = world.wx(p.x + ex), y = p.y + ey;
         let cur = world.type(x, y);
@@ -119111,9 +119117,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     return Math.atan2(q2[1] - B5.y, q2[0] - B5.x);
   }
   function clipSeg(r4, x0, y0, h0, x1, y1, h1) {
-    const at4 = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, h0 + (h1 - h0) * u];
+    const at5 = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, h0 + (h1 - h0) * u];
     const ok = (u) => {
-      const [x, y, h2] = at4(u);
+      const [x, y, h2] = at5(u);
       return !!bill(r4, x, y, h2);
     };
     let u0 = 0, u1 = 1;
@@ -119151,7 +119157,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       u1 = lo;
     }
     if (u1 <= u0) return null;
-    const A2 = at4(u0), Bw = at4(u1);
+    const A2 = at5(u0), Bw = at5(u1);
     return { A: bill(r4, A2[0], A2[1], A2[2]), B: bill(r4, Bw[0], Bw[1], Bw[2]), u0, u1 };
   }
   function ringRuns(r4, pts) {
@@ -120298,8 +120304,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       return this.cfx(() => breakFreeFx(this, a));
     }
     /** The glint on a foe (or a shot) the moment before its blow lands: `breaks`, red (dodge it); else yellow (parry it). `k`: how plain, 0..1. */
-    parryCue(at4, breaks, k = 1) {
-      return this.cfx(() => parryCueFx(this, at4, breaks, k));
+    parryCue(at5, breaks, k = 1) {
+      return this.cfx(() => parryCueFx(this, at5, breaks, k));
     }
     tech(actor, step2, action, kind, extra) {
       return this.cfx(() => techFx(this, actor, step2, action, kind, extra));
@@ -121693,8 +121699,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         const f = footprint(it);
         const dd = Math.hypot(Math.max(f.u0 - u, 0, u - f.u1), Math.max(f.v0 - v, 0, v - f.v1));
         if (dd > 1.1) continue;
-        const at4 = deckToWorld(own, (it.u + d.L / 2) / d.L, it.v);
-        cands.push({ d: dd + 0.3, x: at4.x, y: at4.y, label: `Sleep in the ${it.kind} (wake here if you fall)`, run: () => game.services.restAboard(own, it) });
+        const at5 = deckToWorld(own, (it.u + d.L / 2) / d.L, it.v);
+        cands.push({ d: dd + 0.3, x: at5.x, y: at5.y, label: `Sleep in the ${it.kind} (wake here if you fall)`, run: () => game.services.restAboard(own, it) });
       }
     }
     const on = p.deck?.ship;
@@ -121705,8 +121711,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (Math.abs((p.deck.h ?? 0) - st.floor) > 0.6) continue;
         const dd = Math.hypot(st.u - u, st.v - v);
         if (dd > 1.25) continue;
-        const at4 = deckToWorld(on, (st.u + d.L / 2) / d.L, st.v);
-        cands.push({ d: dd + 0.4, x: at4.x, y: at4.y, label: `Sit on the ${st.kind}`, run: () => game.sitAboard(p, on, st) });
+        const at5 = deckToWorld(on, (st.u + d.L / 2) / d.L, st.v);
+        cands.push({ d: dd + 0.4, x: at5.x, y: at5.y, label: `Sit on the ${st.kind}`, run: () => game.sitAboard(p, on, st) });
       }
     }
     for (const it of game.groundItems || []) {
@@ -122404,8 +122410,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       c.pos.x = ex.x;
       c.pos.y = ex.y;
     }
-    const dk3 = p.deck, at4 = dk3?.plank ? dk3.plank.footA() : p.seat?.from && p.seat.ship === dk3?.ship ? p.seat.from : dk3;
-    if (p.mode !== "sail" && dk3?.ship?.uid && !dk3.ship.sunk) c.pos.deck = { uid: dk3.ship.uid, t: at4.t, v: at4.v, h: at4.h };
+    const dk3 = p.deck, at5 = dk3?.plank ? dk3.plank.footA() : p.seat?.from && p.seat.ship === dk3?.ship ? p.seat.from : dk3;
+    if (p.mode !== "sail" && dk3?.ship?.uid && !dk3.ship.sunk) c.pos.deck = { uid: dk3.ship.uid, t: at5.t, v: at5.v, h: at5.h };
     const afloat = liveShips(game);
     c.ships = afloat.map((s) => ({
       uid: s.uid,
@@ -122918,8 +122924,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const learned = c.techniques.includes(d.ability);
       if (!learned) {
         c.techniques.push(d.ability);
-        const at4 = addToHotbar(c, "item:" + id);
-        game.log(`You can use the ${d.name} now${at4 >= 0 ? ` \u2014 its key on the hotbar (${at4 === 9 ? 0 : at4 + 1}) fires it` : " \u2014 put it on the hotbar to fire it"}.`, "#80deea");
+        const at5 = addToHotbar(c, "item:" + id);
+        game.log(`You can use the ${d.name} now${at5 >= 0 ? ` \u2014 its key on the hotbar (${at5 === 9 ? 0 : at5 + 1}) fires it` : " \u2014 put it on the hotbar to fire it"}.`, "#80deea");
       }
       return true;
     }
@@ -122940,7 +122946,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     c.fruitsEaten = 1;
     c.fruitAwakened = false;
     for (const tid of unlockedFruitTechniques(fid, 0)) if (!c.techniques.includes(tid)) c.techniques.push(tid);
-    const at4 = addToHotbar(c, ENTRY.fruit);
+    const at5 = addToHotbar(c, ENTRY.fruit);
     refreshPlayer(game);
     if (p) {
       if (p.drawn) setDrawn(game, false);
@@ -122950,7 +122956,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);
     game.fx.burst(p.x, p.y - 0.8, 30, { color: [f.color, "#ffffff"], speed: 5, g: 0, life: 0.8, kind: "star" });
     const K = keysOf(game.settings).skills.filter(Boolean).slice(0, Math.min(5, f.techniques.length)).map(keyLabel).join(" ");
-    game.log(`You ate the ${f.name}! You can never swim again. Its powers are yours: out now, its techniques are on ${K}${at4 >= 0 ? ` \u2014 ${at4 === 9 ? 0 : at4 + 1} on the hotbar takes it out or puts it away` : ""}. Fighting worthy foes with it opens up the rest.`, "#ffab91");
+    game.log(`You ate the ${f.name}! You can never swim again. Its powers are yours: out now, its techniques are on ${K}${at5 >= 0 ? ` \u2014 ${at5 === 9 ? 0 : at5 + 1} on the hotbar takes it out or puts it away` : ""}. Fighting worthy foes with it opens up the rest.`, "#ffab91");
     game.emit("fruitEaten", fid);
     persist(game);
     return true;
@@ -123722,9 +123728,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         z.acc += dt;
         if (z.whileOwner || z.shrink || z.cage || z.grounds) zoneRules(this, z, dt);
         const near = this.actorsNear(z.x, z.y, z.r + 1);
-        const at4 = { zone: z, x: z.x, y: z.y - 0.4 };
+        const at5 = { zone: z, x: z.x, y: z.y - 0.4 };
         for (const a of near) {
-          if (!this.combat.canHit(z.owner, a, at4)) continue;
+          if (!this.combat.canHit(z.owner, a, at5)) continue;
           const d = this.world.distance(z.x, z.y, a.x, a.y);
           if (d > z.r) continue;
           if (z.slow) a.zoneSlow = z.slow, a.zoneSlowT = 0.2;
@@ -126322,15 +126328,15 @@ button:disabled { cursor: not-allowed; }
       }
       if (press && e.type === "pointerup" && globeHere() && game.creative?.on && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && game.world === game.surface) {
         const rect2 = globe2.el.getBoundingClientRect();
-        const at4 = globe2.pick(e.clientX - rect2.left, e.clientY - rect2.top);
-        if (at4) {
+        const at5 = globe2.pick(e.clientX - rect2.left, e.clientY - rect2.top);
+        if (at5) {
           press = null;
           ptrs.clear();
           drag = null;
           pinch = null;
           globe2.dragging = false;
           game.closeMap();
-          game.creative.teleport((at4.x % W + W) % W, Math.max(2, Math.min(H - 2, at4.y)));
+          game.creative.teleport((at5.x % W + W) % W, Math.max(2, Math.min(H - 2, at5.y)));
           return;
         }
       }
@@ -126803,8 +126809,8 @@ button:disabled { cursor: not-allowed; }
       const c = this.canvas, p = game.player, w = game.world;
       const was = this.at;
       if (was && was.w === w && p && Math.max(Math.abs(w.dx(was.x, p.x)), Math.abs(p.y - was.y)) * was.z > MARGIN2 - 2) this.draw(game, 0);
-      const at4 = this.at, buf = this.buf;
-      if (!buf || !at4 || at4.w !== w || !p) return;
+      const at5 = this.at, buf = this.buf;
+      if (!buf || !at5 || at5.w !== w || !p) return;
       const css2 = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
       const size2 = Math.round(css2 * dpr);
       if (c.width !== size2) {
@@ -126816,10 +126822,10 @@ button:disabled { cursor: not-allowed; }
       g.globalCompositeOperation = "source-over";
       g.fillStyle = `rgb(${BLANK.map((v) => v | 0)})`;
       g.fillRect(0, 0, size2, size2);
-      const k = css2 / at4.css, bs = buf.width * k;
-      const ox = -w.dx(at4.x, p.x) * at4.z * k * dpr, oy = -(p.y - at4.y) * at4.z * k * dpr;
+      const k = css2 / at5.css, bs = buf.width * k;
+      const ox = -w.dx(at5.x, p.x) * at5.z * k * dpr, oy = -(p.y - at5.y) * at5.z * k * dpr;
       g.drawImage(buf, (size2 - bs) / 2 + ox, (size2 - bs) / 2 + oy, bs, bs);
-      const z = at4.z * k, r4 = css2 / 2 - 2;
+      const z = at5.z * k, r4 = css2 / 2 - 2;
       g.setTransform(dpr, 0, 0, dpr, css2 / 2 * dpr, css2 / 2 * dpr);
       for (const s of game.ships) {
         if (s.sunk) continue;
@@ -126912,7 +126918,7 @@ button:disabled { cursor: not-allowed; }
      * upright; the far quests and the Log Pose's island on the rim.
      */
     pins(game, up) {
-      const o = this.overlay, mm = this.canvas, at4 = this.at;
+      const o = this.overlay, mm = this.canvas, at5 = this.at;
       if (!o) return;
       const css2 = mm.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
       const left = mm.offsetLeft + mm.clientLeft, top = mm.offsetTop + mm.clientTop;
@@ -126927,16 +126933,16 @@ button:disabled { cursor: not-allowed; }
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, o.width, o.height);
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!at4 || at4.w !== game.world || !this.pinList?.length) {
+      if (!at5 || at5.w !== game.world || !this.pinList?.length) {
         this.flashOver(g, css2);
         return;
       }
       const th = up == null ? 0 : -Math.PI / 2 - up, cs = Math.cos(th), sn = Math.sin(th);
-      const r4 = css2 / 2, k = css2 / at4.css, w = at4.w, p = game.player;
-      const mx = -w.dx(at4.x, p.x) * at4.z, my = -(p.y - at4.y) * at4.z;
+      const r4 = css2 / 2, k = css2 / at5.css, w = at5.w, p = game.player;
+      const mx = -w.dx(at5.x, p.x) * at5.z, my = -(p.y - at5.y) * at5.z;
       this.flashOver(g, css2);
       for (const pin of this.pinList) {
-        const vx = (pin.rim ? w.dx(p.x, pin.x) * at4.z : pin.sx + mx) * k, vy = (pin.rim ? (pin.y - p.y) * at4.z : pin.sy + my) * k;
+        const vx = (pin.rim ? w.dx(p.x, pin.x) * at5.z : pin.sx + mx) * k, vy = (pin.rim ? (pin.y - p.y) * at5.z : pin.sy + my) * k;
         let sx = vx * cs - vy * sn, sy = vx * sn + vy * cs;
         const d = Math.hypot(sx, sy), R5 = r4 - (pin.rim ? 11 : 9);
         let edge = false;
@@ -127970,11 +127976,11 @@ button:disabled { cursor: not-allowed; }
       for (const [id, s] of Object.entries(c.quests || {})) {
         const d = DEFS.get(id);
         if (!d || !s || s.done || !d.stages.length) continue;
-        const at4 = (sid2) => d.stages.findIndex((x) => x.id === sid2);
+        const at5 = (sid2) => d.stages.findIndex((x) => x.id === sid2);
         const sid = s.sid || (d.was ? d.was[s.stage] : d.stages[s.stage]?.id);
-        let i = sid ? at4(sid) : -1;
+        let i = sid ? at5(sid) : -1;
         const old = d.was || [];
-        for (let k = old.indexOf(sid) + 1; i < 0 && k > 0 && k < old.length; k++) i = at4(old[k]);
+        for (let k = old.indexOf(sid) + 1; i < 0 && k > 0 && k < old.length; k++) i = at5(old[k]);
         if (i < 0) i = Math.max(0, Math.min(s.stage | 0, d.stages.length - 1));
         s.stage = i;
         s.sid = d.stages[i].id;
@@ -128296,9 +128302,9 @@ button:disabled { cursor: not-allowed; }
       const fight = g.type === "defeat" || !!st?.foes;
       let live = fight && who.length ? this.liveOf(who, label) : null;
       if (live) return live;
-      const at4 = st?.at || (g.type === "event" || g.type === "counter") && EVENT_AT.get(g.event);
-      if (at4) {
-        const m = typeof at4 === "function" ? at4(this.game) : this.placeOf(at4.island || home2, at4, label);
+      const at5 = st?.at || (g.type === "event" || g.type === "counter") && EVENT_AT.get(g.event);
+      if (at5) {
+        const m = typeof at5 === "function" ? at5(this.game) : this.placeOf(at5.island || home2, at5, label);
         if (m) return { ...m, label };
       }
       if (!fight && who.length) live = this.liveOf(who, label);
@@ -128457,20 +128463,20 @@ button:disabled { cursor: not-allowed; }
       for (const def of defs) {
         if (!def.name) continue;
         const parts = [def.name, ...def.name.split(/\s+/).filter((t) => t.length >= 3 && /^[A-Z]/.test(t) && !STOP.has(t) && !PLACE_WORDS.has(t) && NAME_FREQ.get(t) === 1 && t !== def.name)];
-        let at4 = Infinity;
+        let at5 = Infinity;
         parts.forEach((t, n) => {
           const re = new RegExp(`\\b${esc(t)}\\b`, n === 0 && /\s/.test(t) ? "gi" : "g");
           for (let m; m = re.exec(text2); ) {
             const rest = text2.slice(m.index + t.length);
             if (rest.startsWith("'s") && !THEIR_PLACE.test(rest)) continue;
-            if (m.index < at4) at4 = m.index;
+            if (m.index < at5) at5 = m.index;
             break;
           }
         });
-        if (at4 === Infinity) continue;
-        const sent = SEND_TO.test(text2.slice(0, at4));
+        if (at5 === Infinity) continue;
+        const sent = SEND_TO.test(text2.slice(0, at5));
         if (def.island !== home2 && !(sent && (this.placeNamed(def.island, text2) || this.sameSea(def.island, home2)))) continue;
-        const score = (def.island === home2 ? 0 : 4e6) + (sent ? 0 : 2e6) + at4;
+        const score = (def.island === home2 ? 0 : 4e6) + (sent ? 0 : 2e6) + at5;
         if (!best || score < best.score) best = { id: def.id, score };
       }
       const v = best ? best.id : null;
@@ -128516,14 +128522,14 @@ button:disabled { cursor: not-allowed; }
      * or role), a landmark ({ landmark }: by name), its harbour ({ dock: true }:
      * the pier head; 'stand': where the shipwright works) — or nothing: the island.
      */
-    placeOf(islandId, at4, label) {
+    placeOf(islandId, at5, label) {
       if (!islandId) return null;
       const g = this.game, w = g.world, surf3 = g.surface;
       const zone = ZONE_OF.get(islandId) || null;
       if (zone ? w.id === zone : w === surf3) {
         const isl2 = w.islands.find((i) => i.id === islandId);
         if (!isl2) return null;
-        const s = at4 ? placeIn(isl2, at4) : null;
+        const s = at5 ? placeIn(isl2, at5) : null;
         if (s) return { x: s.x, y: s.y, label, place: s.place || isl2.name, zone };
         return { x: isl2.x, y: isl2.y, label, place: isl2.name, zone };
       }
@@ -128554,29 +128560,29 @@ button:disabled { cursor: not-allowed; }
   function registerPlaces(map) {
     for (const [k, v] of Object.entries(map || {})) EVENT_AT.set(k, v);
   }
-  function placeIn(isl, at4) {
-    if (typeof at4 === "string") at4 = { spot: at4 };
-    if (at4.spot) {
-      const s = isl.spots?.[at4.spot];
-      return s ? { x: s.x + (at4.ox || 0), y: s.y + (at4.oy || 0), place: at4.place } : null;
+  function placeIn(isl, at5) {
+    if (typeof at5 === "string") at5 = { spot: at5 };
+    if (at5.spot) {
+      const s = isl.spots?.[at5.spot];
+      return s ? { x: s.x + (at5.ox || 0), y: s.y + (at5.oy || 0), place: at5.place } : null;
     }
-    if (at4.landmark) {
-      const l = isl.landmarks?.find((o) => o.name === at4.landmark);
+    if (at5.landmark) {
+      const l = isl.landmarks?.find((o) => o.name === at5.landmark);
       return l ? { x: l.x, y: l.y, place: l.name } : null;
     }
-    if (at4.dock) {
+    if (at5.dock) {
       const t = isl.towns?.[0], docks = isl.docks || [];
       const d = t ? docks.slice().sort((a, b) => Math.hypot(a.land.x - t.x, a.land.y - t.y) - Math.hypot(b.land.x - t.x, b.land.y - t.y))[0] : docks[0];
       if (!d) return null;
-      const p = at4.dock === "stand" ? d.stand || d.land : d.end || d;
+      const p = at5.dock === "stand" ? d.stand || d.land : d.end || d;
       return { x: p.x, y: p.y, place: `${d.name || isl.name} harbour` };
     }
     for (const t of isl.towns || []) {
-      if (at4.town && t.id !== at4.town && t.name !== at4.town) continue;
-      if (at4.door) {
-        const b = (t.buildings || []).find((x) => x.name === at4.door || x.role === at4.door);
+      if (at5.town && t.id !== at5.town && t.name !== at5.town) continue;
+      if (at5.door) {
+        const b = (t.buildings || []).find((x) => x.name === at5.door || x.role === at5.door);
         if (b?.door) return { x: b.door.x, y: b.door.y, place: b.name ? `${b.name}, ${t.name}` : t.name };
-      } else if (at4.town) return { x: t.plaza.x, y: t.plaza.y, place: at4.place || t.name };
+      } else if (at5.town) return { x: t.plaza.x, y: t.plaza.y, place: at5.place || t.name };
     }
     return null;
   }
@@ -129424,11 +129430,18 @@ button:disabled { cursor: not-allowed; }
         this.building(a.talk.building);
         return;
       }
-      if (a.talk?.kind === "townsfolk") {
+      if (a.talk?.kind === "country" && g.countryTalk) {
+        g.countryTalk(a);
+        return;
+      }
+      if (a.talk?.kind === "townsfolk" || a.talk?.kind === "country") {
         const rng4 = new RNG(a.talk.seed + g.env.day);
         const isl = this.islandOf(a.x, a.y);
+        const letter = g.countryLetter?.(a, isl);
         g.dialogue.open(a, { start: "a", nodes: {
+          ...letter ? { cq_letter: g.countryLetterNode(isl) } : {},
           a: { text: rumorFor(g, isl, rng4, a), choices: [
+            ...letter ? [letter] : [],
             { text: "Thanks. Take care.", end: true },
             { text: "Pick their pocket while they talk. (a crime)", do: () => {
               g.dialogue.close();
@@ -132375,7 +132388,7 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
           if (it.heirloom) ex.heirloom = it;
         } else seen.set(it.id, { id: it.id, d, qty: it.qty || 1, heirloom: it.heirloom ? it : null });
       }
-      const items9 = [...seen.values()].sort((a, b) => TYPE_ORDER.indexOf(a.d.type) - TYPE_ORDER.indexOf(b.d.type) || a.d.name.localeCompare(b.d.name));
+      const items10 = [...seen.values()].sort((a, b) => TYPE_ORDER.indexOf(a.d.type) - TYPE_ORDER.indexOf(b.d.type) || a.d.name.localeCompare(b.d.name));
       const grid2 = h("div.inv-grid", {
         on: {
           dragover: (ev) => ev.preventDefault(),
@@ -132397,7 +132410,7 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
           }
         }
       });
-      for (const x of items9) {
+      for (const x of items10) {
         const worn = isEquipped(c, x.id);
         const tile = h("div.inv-tile" + (st.selected === x.id ? ".sel" : "") + (worn ? ".worn" : ""), {
           title: `${x.d.name}${statLine(x.d) ? "\n" + statLine(x.d) : ""}`,
@@ -132414,7 +132427,7 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
         dragSource(tile, "inv:" + x.id);
         grid2.appendChild(tile);
       }
-      if (!items9.length) grid2.appendChild(h("p.muted", { style: { gridColumn: "1 / -1" } }, st.cat === "all" ? "Your bag is empty." : "Nothing here."));
+      if (!items10.length) grid2.appendChild(h("p.muted", { style: { gridColumn: "1 / -1" } }, st.cat === "all" ? "Your bag is empty." : "Nothing here."));
       if (onBar.size) grid2.appendChild(h("p.muted.inv-onbar", { style: { gridColumn: "1 / -1" } }, `${onBar.size === 1 ? "One item is" : onBar.size + " items are"} on your hotbar \u2014 drag a slot back here to put it away.`));
       if (onBar.has(st.selected) && !isEquipped(c, st.selected)) st.selected = null;
       const sd = ITEMS[st.selected];
@@ -132676,13 +132689,13 @@ Trains by: ${TRAINS_BY[k]}` },
   function movesetCards(game, c, p, render2) {
     const pick6 = game.ui.hotbarPick;
     const card = (payload, img2, name, sub, lock2 = "") => {
-      const at4 = (c.hotbar || []).indexOf(payload);
-      const el = h("div.ms-card" + (lock2 ? ".locked" : "") + (pick6 === payload ? ".sel" : "") + (at4 >= 0 ? ".onbar" : ""), {
+      const at5 = (c.hotbar || []).indexOf(payload);
+      const el = h("div.ms-card" + (lock2 ? ".locked" : "") + (pick6 === payload ? ".sel" : "") + (at5 >= 0 ? ".onbar" : ""), {
         title: lock2 || "Drag onto your hotbar, or click and then click a slot on it",
         on: { click: () => {
           if (!lock2) pickForHotbar(game, payload, render2);
         } }
-      }, img2, h("div.grow", h("b", name), h("div.sub", lock2 || sub)), at4 >= 0 ? h("span.tag", `key ${HOTBAR_KEYS[at4]}`) : null);
+      }, img2, h("div.grow", h("b", name), h("div.sub", lock2 || sub)), at5 >= 0 ? h("span.tag", `key ${HOTBAR_KEYS[at5]}`) : null);
       return lock2 ? el : dragSource(el, payload);
     };
     const out = [card(ENTRY.fists, skillImg({ id: "ms_fists", name: "Fists", source: "style:brawler", style: "brawler" }, 34), "Fists", "Bare hands: the weapon sheathed, the fruit put away")];
@@ -134111,7 +134124,7 @@ ${tip}` }), cd: h("div.cd") };
      * In-game replacement for confirm()/prompt() (native dialogs are blocked in
      * some embeds). Resolves to true / the typed text, or null when cancelled.
      */
-    ask({ title: title2 = "", text: text2 = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
+    ask({ title: title2 = "", text: text2 = "", input, ok = "OK", cancel = "Cancel", danger: danger2 = false } = {}) {
       return new Promise((resolve) => {
         let done6 = false;
         this.asking = (this.asking || 0) + 1;
@@ -134124,7 +134137,7 @@ ${tip}` }), cd: h("div.cd") };
           this.game?.input?.consumeMouse?.(0);
           resolve(v);
         };
-        const okBtn = h("button.btn" + (danger ? ".red" : ".gold"), { on: { click: () => finish2(field ? field.value.trim() || null : true) } }, ok);
+        const okBtn = h("button.btn" + (danger2 ? ".red" : ".gold"), { on: { click: () => finish2(field ? field.value.trim() || null : true) } }, ok);
         const panel = h(
           "div.panel.ask",
           title2 ? h("h2", title2) : null,
@@ -134552,13 +134565,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const on = sub3 || qq;
         const st = on.def.stages[on.s.stage];
         const pr = q2.progress(on.id);
-        const at4 = where(qq.id);
+        const at5 = where(qq.id);
         return [
           main3 ? h("div.qt-head", uiImg("quest", 14), qq.def.part ? `MAIN STORY \xB7 PART ${qq.def.part}` : "MAIN STORY") : null,
           h("div.qt-title", qq.def.name),
           sub3 ? h("div.qt-sub", sub3.def.name) : null,
           h("div.qt-obj", st?.desc || "", pr ? h("span.qt-n", ` ${pr.n}/${pr.of}`) : null),
-          at4 ? h("div.qt-where", at4 === "here" ? "You are here" : at4) : null
+          at5 ? h("div.qt-where", at5 === "here" ? "You are here" : at5) : null
         ];
       };
       const main2 = q2.main();
@@ -135970,8 +135983,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const steps = act2.def.steps || [];
         act2.angle = a.facing;
         while (act2.step < steps.length && act2.t >= (steps[act2.step].at ?? act2.def.windup ?? 0)) {
-          const at4 = steps[act2.step].at ?? act2.def.windup ?? 0;
-          if (act2.t - at4 < 0.5) {
+          const at5 = steps[act2.step].at ?? act2.def.windup ?? 0;
+          if (act2.t - at5 < 0.5) {
             try {
               ghostStep(a, steps[act2.step], game, act2, this.zones);
             } catch (e) {
@@ -138621,17 +138634,18 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   function countryBuilder(ctx) {
     const { island, game, spawner, list, rng: rng4 } = ctx;
     if (!island.country?.length || !game.state?.char) return;
-    const danger = island.def?.danger || 1;
+    const danger2 = island.def?.danger || 1;
     const races = island.def?.population || townRaces(island);
     for (const site of island.country) {
       if (site.folk === "bandits") {
-        const n = rng4.int(2, 2 + Math.min(2, danger));
+        const n = rng4.int(2, 2 + Math.min(2, danger2));
         for (let i = 0; i < n; i++) {
           const p = spawner.findFree(site.x, site.y, 7, rng4);
           if (!p) continue;
-          const a = makeEnemy("bandit", 2 + danger * 3 + rng4.int(0, 2), p.x, p.y, { seed: rng4.int(1, 1e9) });
+          const a = makeEnemy("bandit", 2 + danger2 * 3 + rng4.int(0, 2), p.x, p.y, { seed: rng4.int(1, 1e9) });
           a.game = game;
           if (a.controller) a.controller.leash = 22;
+          a.camp = island.id;
           game.addActor(a);
           list.push(a);
         }
@@ -138653,7 +138667,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           attrs: { str: 4, agi: 3, end: 4, vit: 4, wil: 3 },
           ai: { kind: "wander" }
         }, list);
-        a.talk = { kind: "townsfolk", town: `the ${W4.label}`, island: island.name, seed: rng4.int(0, 1e6) };
+        a.talk = { kind: "country", folk: site.folk, island: island.id, town: `the ${W4.label}`, seed: rng4.int(0, 1e6) };
         a.showName = false;
         a.wanderRadius = 6;
       }
@@ -139180,8 +139194,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (i === start4) break;
     }
     cells3.reverse();
-    const at4 = (i) => ({ x: w.wx(sx + x0 + (i % nx + 0.5) * c), y: sy + y0 + (Math.floor(i / nx) + 0.5) * c });
-    const pts = cells3.map(at4);
+    const at5 = (i) => ({ x: w.wx(sx + x0 + (i % nx + 0.5) * c), y: sy + y0 + (Math.floor(i / nx) + 0.5) * c });
+    const pts = cells3.map(at5);
     pts.push({ x: w.wx(tx), y: ty });
     const out = [];
     let cur = { x: sx, y: sy }, k = 0;
@@ -141057,10 +141071,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const list = game.spawner.populated.get(def.island);
     if (!list && !pos) return null;
     let p = pos;
-    const at4 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
+    const at5 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
     if (!p && isl) {
-      const s = at4?.spot && isl.spots[at4.spot];
-      p = s ? game.spawner.findFree(s.x, s.y, 4) : at4 && (at4.town || at4.dock || at4.door || at4.building || at4.plaza || at4.dx !== void 0) ? placeFor(game, isl, def) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
+      const s = at5?.spot && isl.spots[at5.spot];
+      p = s ? game.spawner.findFree(s.x, s.y, 4) : at5 && (at5.town || at5.dock || at5.door || at5.building || at5.plaza || at5.dx !== void 0) ? placeFor(game, isl, def) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
     }
     if (!p) p = { x: game.player.x + 4, y: game.player.y };
     const a = makeNPC(def, p.x, p.y);
@@ -141555,8 +141569,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         n = clamp(Math.round(n) || 1, 1, 8);
         let a = null;
         for (let i = 0; i < n; i++) {
-          const at4 = C3.ahead(4 + i % 3 * 0.6, (i - (n - 1) / 2) * 0.45);
-          const s = game.spawner.findFree(at4.x, at4.y, 3) || at4;
+          const at5 = C3.ahead(4 + i % 3 * 0.6, (i - (n - 1) / 2) * 0.45);
+          const s = game.spawner.findFree(at5.x, at5.y, 3) || at5;
           a = C3.keep(makeEnemy(arch, lvl, s.x, s.y, {}));
         }
         return n > 1 ? `${n} level ${lvl} ${a.name}s appear!` : `A level ${lvl} ${a.name} appears!`;
@@ -141570,8 +141584,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const def = npcDef(id);
         if (!game.player || !def?.boss) return "";
         if (C3.aboard()) return C3.aboard();
-        const at4 = C3.ahead(6);
-        const s = game.spawner.findFree(at4.x, at4.y, 4) || at4;
+        const at5 = C3.ahead(6);
+        const s = game.spawner.findFree(at5.x, at5.y, 4) || at5;
         const stand = { ...def, hostile: true, dialogue: null, marker: null, when: null, once: false };
         const a = makeNPC(stand, s.x, s.y);
         a.npcId = null;
@@ -141620,41 +141634,41 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if (!p) return "";
         lvl = clamp(Math.round(lvl) || 30, 1, 120);
         if (kind === "seaking") {
-          const at5 = C3.waterNear(3, 14, 45);
-          if (!at5) return "A Sea King needs open water \u2014 go down to the sea.";
-          const k = C3.keep(makeSeaKing(game, at5.x, at5.y, lvl));
-          game.fx.ring(at5.x, at5.y, 1, 6, "#e1f5fe", 1.2, 0.3);
+          const at6 = C3.waterNear(3, 14, 45);
+          if (!at6) return "A Sea King needs open water \u2014 go down to the sea.";
+          const k = C3.keep(makeSeaKing(game, at6.x, at6.y, lvl));
+          game.fx.ring(at6.x, at6.y, 1, 6, "#e1f5fe", 1.2, 0.3);
           game.audio?.sfx("seaking");
           return `A level ${lvl} ${k.name} rises from the depths!`;
         }
         if (kind === "monkeys") {
-          const at5 = C3.waterNear(3, 30, 45);
-          if (!at5) return "Sea Monkeys need open water \u2014 go down to the sea.";
-          C3.keep(makeSeaMonkeys(game, at5.x, at5.y));
+          const at6 = C3.waterNear(3, 30, 45);
+          if (!at6) return "Sea Monkeys need open water \u2014 go down to the sea.";
+          C3.keep(makeSeaMonkeys(game, at6.x, at6.y));
           return "A troop of Sea Monkeys surfaces nearby, ready to play!";
         }
         if (kind === "kraken") {
-          const at5 = C3.waterNear(3, 12, 40);
-          if (!at5) return "A Kraken needs open water \u2014 go down to the sea.";
-          const k = C3.keep(makeKraken(game, at5.x, at5.y, lvl));
-          game.fx.ring(at5.x, at5.y, 1, 7, "#e1f5fe", 1.2, 0.3);
+          const at6 = C3.waterNear(3, 12, 40);
+          if (!at6) return "A Kraken needs open water \u2014 go down to the sea.";
+          const k = C3.keep(makeKraken(game, at6.x, at6.y, lvl));
+          game.fx.ring(at6.x, at6.y, 1, 7, "#e1f5fe", 1.2, 0.3);
           game.audio?.sfx("seaking");
           return `A level ${lvl} ${k.name} rises beside you!`;
         }
         if (kind === "seacow" || kind === "fightfish") {
-          const at5 = C3.waterNear(3.5, 12, 40);
-          if (!at5 || !game.seaLife) return "It needs deep water \u2014 go out past the shallows.";
-          const k = game.seaLife.shark(at5.x, at5.y, lvl, kind);
+          const at6 = C3.waterNear(3.5, 12, 40);
+          if (!at6 || !game.seaLife) return "It needs deep water \u2014 go out past the shallows.";
+          const k = game.seaLife.shark(at6.x, at6.y, lvl, kind);
           C3.spawned.add(k);
           return `A level ${lvl} ${k.name} is hunting in the water!`;
         }
         const def = FISH[kind];
         if (!def || !game.seaLife) return "";
-        const at4 = C3.waterNear(def.depth[0] + 0.6, 8, 30);
-        if (!at4) return `No water deep enough for ${def.name} near you \u2014 go out to sea.`;
-        const depth = game.seaDepth ? game.seaDepth(at4.x, at4.y) : 10;
+        const at5 = C3.waterNear(def.depth[0] + 0.6, 8, 30);
+        if (!at5) return `No water deep enough for ${def.name} near you \u2014 go out to sea.`;
+        const depth = game.seaDepth ? game.seaDepth(at5.x, at5.y) : 10;
         const z = clamp(def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
-        C3.spawned.add(game.seaLife.spawn(kind, at4.x, at4.y, z, Math.random() * TAU));
+        C3.spawned.add(game.seaLife.spawn(kind, at5.x, at5.y, z, Math.random() * TAU));
         return `${def.name[0].toUpperCase() + def.name.slice(1)} \u2014 in the water ahead of you.`;
       },
       /** Take away everything called up here (foes, bosses, ships and their crews, sea life). */
@@ -142702,17 +142716,17 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const q2 = bl(b, a.x, a.y, w);
         const ax = Math.abs(q2.lx - d.lx);
         const zIn = -WALL_T - 0.75, zOut = 0.75;
-        const at4 = (z) => {
+        const at5 = (z) => {
           const r4 = bw(b, d.lx, z);
           return { x: w.wx(r4.x), y: r4.y };
         };
         if (ba) {
-          if (ax > 0.3 && q2.lz < zIn + 0.35) return at4(zIn);
-          if (ax > 0.3) return at4(Math.min(q2.lz, zIn));
-          return at4(zOut);
+          if (ax > 0.3 && q2.lz < zIn + 0.35) return at5(zIn);
+          if (ax > 0.3) return at5(Math.min(q2.lz, zIn));
+          return at5(zOut);
         }
-        if (ax > 0.3 || q2.lz > zOut + 0.4 || q2.lz < 0) return at4(zOut);
-        return at4(zIn);
+        if (ax > 0.3 || q2.lz > zOut + 0.4 || q2.lz < 0) return at5(zOut);
+        return at5(zIn);
       },
       /** "E" things around enterable buildings (for interact.js). */
       candidates(p, out) {
@@ -170444,8 +170458,174 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     install: (game) => installMainStory(game)
   };
 
+  // src/content/countryQuests.js
+  var ISLES = ALL_ISLANDS.filter((d) => GROW[d.sea] > 1 && !d.noCountry);
+  var KINDS7 = { farm: "Farmstead", camp: "Camp", ruins: "Old Ruins", graves: "Graveyard", wood: "Woodcutters' Camp" };
+  function siteOf(g, islandId, kind) {
+    const isl = (g.surface || g.world)?.islands?.find((i2) => i2.id === islandId);
+    const list = isl?.country || [];
+    const i = list.findIndex((s) => s.name === KINDS7[kind]);
+    return i < 0 ? null : { ...list[i], i };
+  }
+  var at4 = (kind, place2) => (islandId) => (g) => {
+    const s = siteOf(g, islandId, kind);
+    return s && g.world === g.surface ? { x: s.x, y: s.y, place: place2 } : null;
+  };
+  var danger = (d) => d.danger || 1;
+  var quests9 = [];
+  for (const d of ISLES) {
+    const id = d.id, k = danger(d);
+    quests9.push(
+      {
+        id: `cq_bandits_${id}`,
+        name: "Trouble on the Road",
+        island: id,
+        kind: "side",
+        summary: `Bandits camped out in the wilds of ${d.name} keep raiding the farm.`,
+        stages: [
+          { id: "clear", desc: "Drive off the bandits at their camp in the wilds.", goal: { type: "event", event: `camp_cleared_${id}` }, where: at4("camp", "Bandit camp")(id) },
+          { id: "report", desc: "Tell the farmer the road is safe.", where: at4("farm", "Farmstead")(id) }
+        ],
+        rewards: { berries: 900 + k * 700, items: [["meat", 2]] }
+      },
+      {
+        id: `cq_supper_${id}`,
+        name: "The Woodcutters' Supper",
+        island: id,
+        kind: "side",
+        summary: "The woodcutters have worked through the day with nothing for the pot.",
+        stages: [
+          { id: "meat", desc: "Bring three cuts of Meat on the Bone (a town's tavern or market sells them).", goal: { type: "item", item: "meat", n: 3 } },
+          { id: "bring", desc: "Take the meat to the woodcutters' camp.", where: at4("wood", "Woodcutters' camp")(id) }
+        ],
+        rewards: { berries: 500 + k * 300, items: [["bandage", 2]] }
+      },
+      {
+        id: `cq_ruins_${id}`,
+        name: "Grandfather's Chest",
+        island: id,
+        kind: "side",
+        summary: "Someone's grandfather hid a chest in the old ruins out in the country, and never went back for it.",
+        stages: [
+          { id: "find", desc: "Find the chest in the old ruins and open it.", goal: { type: "check", fn: (c, g) => {
+            const s = siteOf(g, id, "ruins");
+            const key2 = s && `chest_country_${id}_${s.i}`;
+            return !!key2 && !!(c.world?.chests?.[key2] || c.world?.containers?.[key2]);
+          } }, where: at4("ruins", "Old ruins")(id) },
+          { id: "report", desc: "Tell whoever asked you what you found." }
+        ],
+        rewards: { berries: 400 + k * 250 }
+      },
+      {
+        id: `cq_graves_${id}`,
+        name: "Lanterns for the Dead",
+        island: id,
+        kind: "side",
+        summary: "Nobody's lit the lantern at the old graveyard since the bandits came.",
+        stages: [
+          {
+            id: "light",
+            desc: "Go to the graveyard and light its lantern (stand by it a moment).",
+            goal: { type: "check", fn: (c, g) => {
+              const s = siteOf(g, id, "graves"), p = g.player;
+              return !!s && !!p && g.world === g.surface && g.world.distance(p.x, p.y, s.x, s.y) < 7;
+            } },
+            where: at4("graves", "Graveyard")(id),
+            onComplete: (ctx, g) => g.log("You light the lantern among the graves. The flame steadies in the wind.", "#ffe082")
+          },
+          { id: "report", desc: "Tell whoever asked you that it's lit." }
+        ],
+        rewards: { berries: 300 + k * 200, reputation: 2 }
+      },
+      {
+        id: `cq_letter_${id}`,
+        name: "A Letter for the Farm",
+        island: id,
+        kind: "side",
+        summary: "A letter from town for the farmer out in the country.",
+        stages: [{ id: "deliver", desc: "Carry the letter out to the farmer at the farmstead.", where: at4("farm", "Farmstead")(id) }],
+        rewards: { berries: 250 + k * 150 }
+      }
+    );
+  }
+  var OFFERS = {
+    farmer: ["bandits", "ruins", "graves"],
+    woodcutters: ["supper", "graves", "ruins"]
+  };
+  var NEEDS = { bandits: "camp", supper: "wood", ruins: "ruins", graves: "graves", letter: "farm" };
+  var ASK = {
+    bandits: `"Bandits. They've a camp out in the wilds, and every week they come down and take what they like \u2014 grain, the hens, the cart. I can't fight them. Could you?"`,
+    supper: `"We've been felling since dawn and there's nothing in the pot. Bring us three good cuts of meat and we'll make it worth your while."`,
+    ruins: `"My grandfather always said he'd left a chest in the old ruins out here \u2014 never went back for it. If you find it, whatever's in it is yours. I'd just like to know he wasn't spinning tales."`,
+    graves: `"Nobody's lit the lantern at the old graveyard since the bandits came. My folks are buried there. Would you light it for them?"`
+  };
+  var DONE = {
+    bandits: `"Gone? The whole lot of them? ...Then we can work the field again without looking over our shoulders. Here \u2014 it isn't much, but take it, and some of the meat we'd been hiding from them."`,
+    supper: `"Now THAT'S a supper! Sit, sit \u2014 no? Then take these, for the road. A woodcutter's always got bandages."`,
+    ruins: `"So it was real! Grandfather, you old dog... Keep what you found. Here's something for the walk, too."`,
+    graves: `"Lit? ...Thank you. They'd have liked you."`
+  };
+  function install9(game) {
+    game.on("knockout", (a) => {
+      if (!a.camp) return;
+      const left = game.actors.some((b) => b !== a && b.camp === a.camp && b.alive && b.state !== "knocked" && b.state !== "dead");
+      if (!left) {
+        game.emit("questEvent", `camp_cleared_${a.camp}`);
+        game.log("The bandit camp is cleared.", "#a5d6a7");
+      }
+    });
+    const Q2 = game.quests;
+    game.countryTalk = (a) => {
+      const T5 = a.talk, isl = T5.island, folk = T5.folk;
+      const has2 = (q2) => !!siteOf(game, isl, NEEDS[q2]);
+      const qid = (q2) => `cq_${q2}_${isl}`;
+      const choices = [];
+      if (folk === "farmer" && Q2.stageId(qid("letter")) === "deliver") choices.push({ text: "I've a letter for you, from town.", quest: true, next: "letter" });
+      for (const q2 of OFFERS[folk] || []) {
+        if (!has2(q2)) continue;
+        const st = Q2.stageId(qid(q2));
+        if (st === "report" || q2 === "supper" && st === "bring") choices.push({ text: q2 === "supper" ? "Here's your meat." : "It's done.", quest: true, next: "done_" + q2, if: () => q2 !== "supper" || count(game.state.char, "meat") >= 3 });
+      }
+      const offer = (OFFERS[folk] || []).find((q2) => has2(q2) && !Q2.state(qid(q2)));
+      if (offer) choices.push({ text: "Need a hand with anything?", quest: true, next: "ask_" + offer });
+      choices.push({ text: "Good day to you.", end: true });
+      const nodes = {
+        a: { text: folk === "farmer" ? `"Out here it's the field, the weather, and the road to town. Not much else."` : `"Mind the axes. We're felling for the shipwrights in town."`, choices },
+        letter: { text: '"A letter? For me? ...From my daughter in town! Thank you, truly \u2014 here, for your trouble."', onEnter: () => Q2.complete(qid("letter")) }
+      };
+      for (const q2 of Object.keys(ASK)) {
+        nodes["ask_" + q2] = { text: ASK[q2], choices: [{ text: "I'll do it.", quest: true, do: () => {
+          Q2.start(qid(q2));
+        }, end: true }, { text: "Not now.", end: true }] };
+        nodes["done_" + q2] = { text: DONE[q2], onEnter: () => {
+          if (q2 === "supper") removeItem(game, "meat", 3);
+          Q2.complete(qid(q2));
+        } };
+      }
+      game.dialogue.open(a, { start: "a", nodes });
+    };
+    game.countryLetter = (a, isl) => {
+      if (!isl || !siteOf(game, isl.id, "farm")) return null;
+      const id = `cq_letter_${isl.id}`;
+      if (Q2.state(id)) return null;
+      if ((a.talk?.seed || 0) % 5) return null;
+      return { text: "Anything I can do for you?", quest: true, next: "cq_letter" };
+    };
+    game.countryLetterNode = (isl) => ({ text: `"Would you? My father works the farm out in the country, and the post never goes that far. Take him this letter \u2014 he'll see you right."`, choices: [{ text: "I'll take it.", quest: true, do: () => {
+      Q2.start(`cq_letter_${isl.id}`);
+      addItem(game, "letter_farm", 1);
+    }, end: true }, { text: "Not today.", end: true }] });
+    game.on("questDone", (qid) => {
+      if (qid.startsWith("cq_letter_")) removeItem(game, "letter_farm", 1);
+    });
+  }
+  var items9 = {
+    letter_farm: { name: "Letter for the Farm", icon: "", type: "key", price: 0, desc: "A folded letter, addressed to the farmer out in the country." }
+  };
+  var countryQuests_default = { id: "country_quests", quests: quests9, items: items9, install: install9 };
+
   // src/content/index.js
-  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default, redLine_default, crewmates_default, mainStory_default];
+  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default, redLine_default, crewmates_default, mainStory_default, countryQuests_default];
   for (const p of PACKS) {
     if (p.abilities) registerAbilities(p.abilities, "npc");
     if (p.items) Object.assign(ITEMS, p.items);
@@ -170651,8 +170831,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     /** Debris, sparks, splinters, grains: `n` tiny random pops over `dur`. */
     crackle(dt, dur, n, { freq = 3e3, gain = 0.12, spread: spread2 = 0.6, q: q2 = 2.2, dest, len = 0.025 } = {}) {
       for (let i = 0; i < n; i++) {
-        const at4 = dt + Math.random() * dur, f = freq * (1 - spread2 / 2 + Math.random() * spread2);
-        this.noise(at4, 0.01 + Math.random() * len, { freq: f, q: q2, gain: gain * (0.4 + Math.random() * 0.6), attack: 1e-3, dest });
+        const at5 = dt + Math.random() * dur, f = freq * (1 - spread2 / 2 + Math.random() * spread2);
+        this.noise(at5, 0.01 + Math.random() * len, { freq: f, q: q2, gain: gain * (0.4 + Math.random() * 0.6), attack: 1e-3, dest });
       }
     }
     /** The body of a blow: a sine dropping fast from `f0` to `f1`, with a click on top. */
@@ -170755,10 +170935,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       h2.frequency.value = hp;
       g.gain.setValueAtTime(1e-4, t);
       for (let k = 0; k * step2 < dur; k++) {
-        const at4 = t + k * step2 * (0.6 + Math.random() * 0.8);
-        o.frequency.setValueAtTime(minF((f0 + Math.random() * (f1 - f0)) * this.pj), at4);
+        const at5 = t + k * step2 * (0.6 + Math.random() * 0.8);
+        o.frequency.setValueAtTime(minF((f0 + Math.random() * (f1 - f0)) * this.pj), at5);
         const fall2 = 1 - k * step2 / dur;
-        g.gain.setValueAtTime(gain * fall2 * (Math.random() < 0.25 ? 0.15 : 0.5 + Math.random() * 0.5), at4);
+        g.gain.setValueAtTime(gain * fall2 * (Math.random() < 0.25 ? 0.15 : 0.5 + Math.random() * 0.5), at5);
       }
       g.gain.setValueAtTime(gain * 0.1, t + dur);
       g.gain.exponentialRampToValueAtTime(1e-4, t + dur + 0.03);
@@ -171445,8 +171625,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
      * on you beats one across the harbour) and `max` how many of the same sound
      * may overlap. Null: there's no room for it (never so for a blow).
      */
-    open(name, { bus = "sfx", vol = 1, pan = 0, lp = 0, send = 0, drive: drv = 0, prio = 5, max = 4, at: at4 = null, kind = "foley" } = {}) {
-      const c = this.ctx, t = at4 ?? this.now();
+    open(name, { bus = "sfx", vol = 1, pan = 0, lp = 0, send = 0, drive: drv = 0, prio = 5, max = 4, at: at5 = null, kind = "foley" } = {}) {
+      const c = this.ctx, t = at5 ?? this.now();
       const list = this.voices[bus];
       for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) this.retired.push(list.splice(i, 1)[0]);
       this.retire(t);
@@ -171785,9 +171965,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
   function chain3(v, t, dur, n, s = 1) {
     for (let i = 0; i < n; i++) {
-      const at4 = t + i / n * dur + rnd4(0, 0.012);
-      v.ring(at4, rnd4(1700, 2700), 0.06, 0.028 * s, [1, 2.7, 4.1], { spread: 0.05 });
-      v.noise(at4, 0.01, { type: "highpass", freq: 4500, gain: 0.05 * s, attack: 6e-4 });
+      const at5 = t + i / n * dur + rnd4(0, 0.012);
+      v.ring(at5, rnd4(1700, 2700), 0.06, 0.028 * s, [1, 2.7, 4.1], { spread: 0.05 });
+      v.noise(at5, 0.01, { type: "highpass", freq: 4500, gain: 0.05 * s, attack: 6e-4 });
     }
   }
   function drips(v, t, span2, n, s = 1) {
@@ -173616,13 +173796,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       v.thump(0.2, { f0: 55, f1: 38, dur: 0.1, gain: 0.12 });
     } }
   };
-  var KINDS7 = {
+  var KINDS8 = {
     hit: ["punch", "punch_heavy", "slash_hit", "slash_heavy", "block", "parry", "guardbreak", "ko", "fire", "magma", "ice", "snow", "lightning", "thunder_small", "water", "swamp", "poison", "gas", "smoke", "sand", "light", "dark", "quake", "string", "explosion", "cannon", "crash", "doorbreak"],
     tech: ["whoosh", "dodge", "haki", "haki_off", "haki_out", "haki_obs", "foresight", "conqueror_rise", "conqueror", "conqueror_clash", "knocked", "getup", "dry"],
     move: ["step", "jump", "jump_big", "land", "land_heavy", "splash", "splash_big", "splash_out", "wade", "gasp", "choke", "swim_pull", "swim_kick", "swim_breath", "swim_under", "tread", "thrash", "dive", "surface", "climb", "board", "oar_catch", "oar_pull", "oar_release"],
     world: ["thunder", "hull_creak", "rigging", "hull_slap", "bell", "seaking"]
   };
-  for (const [kind, names] of Object.entries(KINDS7)) for (const n of names) if (SFX2[n]) SFX2[n].kind = kind;
+  for (const [kind, names] of Object.entries(KINDS8)) for (const n of names) if (SFX2[n]) SFX2[n].kind = kind;
   var GURA = (v, k, s = 1) => {
     const r4 = Math.max(0.12, k.rel || 0);
     const q2 = Math.min(1.2, s);
@@ -174717,19 +174897,19 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   };
   var INSTRUMENTS = ["piano", "pluck", "musicbox", "pad", "strings", "choir", ...Object.keys(STRUCK), ...Object.keys(BLOWN)];
   var Deck = class {
-    constructor(mu, T5, { at: at4, fade: fade2 = 1.2, level = 2.2, loop = false, key: key2 = null, stems = null } = {}) {
+    constructor(mu, T5, { at: at5, fade: fade2 = 1.2, level = 2.2, loop = false, key: key2 = null, stems = null } = {}) {
       this.mu = mu;
       this.T = T5;
       this.loop = loop;
       const c = mu.ctx;
       this.S = compose(T5, key2);
       this.bus = c.createGain();
-      this.bus.gain.setValueAtTime(1e-4, at4);
-      this.bus.gain.linearRampToValueAtTime(level, at4 + fade2);
+      this.bus.gain.setValueAtTime(1e-4, at5);
+      this.bus.gain.linearRampToValueAtTime(level, at5 + fade2);
       this.bus.connect(mu.E.music);
       this.bus.connect(mu.E.hall);
       this.level = level;
-      this.fadeIn = { at: at4, fade: fade2 };
+      this.fadeIn = { at: at5, fade: fade2 };
       this.stems = {};
       this.stemTo = {};
       for (const s of STEMS) {
@@ -174738,7 +174918,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         g.connect(this.bus);
         this.stems[s] = g;
       }
-      this.t0 = at4 + 0.15;
+      this.t0 = at5 + 0.15;
       this.t = this.t0;
       this.bar = 0;
       this.pieces = 1;
@@ -174795,15 +174975,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       return 1e-4 + (this.level - 1e-4) * (time - f.at) / f.fade;
     }
     /** Fade the deck out from `at` over `sec`, then let it go. */
-    fadeOut(at4, sec) {
+    fadeOut(at5, sec) {
       const g = this.bus.gain, c = this.mu.ctx, now3 = c.currentTime;
-      at4 = Math.max(at4, now3);
-      if (this.fading && this.stopAt <= at4 + sec) return;
-      const v0 = this.fading ? Math.max(1e-4, g.value) : this.levelAt(at4);
-      g.cancelScheduledValues(at4);
-      g.setValueAtTime(v0, at4);
-      g.linearRampToValueAtTime(1e-4, at4 + sec);
-      this.stopAt = Math.min(this.stopAt, at4 + sec);
+      at5 = Math.max(at5, now3);
+      if (this.fading && this.stopAt <= at5 + sec) return;
+      const v0 = this.fading ? Math.max(1e-4, g.value) : this.levelAt(at5);
+      g.cancelScheduledValues(at5);
+      g.setValueAtTime(v0, at5);
+      g.linearRampToValueAtTime(1e-4, at5 + sec);
+      this.stopAt = Math.min(this.stopAt, at5 + sec);
       this.fading = true;
       const bus = this.bus;
       this.mu.E.later(() => {
@@ -174811,35 +174991,35 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           bus.disconnect();
         } catch {
         }
-      }, at4 - now3 + sec + 6);
+      }, at5 - now3 + sec + 6);
     }
     /** Bring the stems to these levels (0..1), over `sec` from `at`. */
-    setStems(levels, at4, sec = 0.6) {
+    setStems(levels, at5, sec = 0.6) {
       this.stemAt = this.stemAt || {};
       this.stemFrom = this.stemFrom || {};
       for (const [s, v] of Object.entries(levels)) {
         const g = this.stems[s];
         if (!g || Math.abs(this.stemTo[s] - v) < 0.01) continue;
-        const again = at4 <= (this.stemAt[s] ?? -1) + 1e-3;
+        const again = at5 <= (this.stemAt[s] ?? -1) + 1e-3;
         const from = again ? this.stemFrom[s] : this.stemTo[s];
-        g.gain.cancelScheduledValues(at4);
-        g.gain.setValueAtTime(from, at4);
-        g.gain.linearRampToValueAtTime(v, at4 + sec);
+        g.gain.cancelScheduledValues(at5);
+        g.gain.setValueAtTime(from, at5);
+        g.gain.linearRampToValueAtTime(v, at5 + sec);
         this.stemFrom[s] = from;
-        this.stemAt[s] = at4;
+        this.stemAt[s] = at5;
         this.stemTo[s] = v;
       }
     }
     /** A closing chord on the next bar line (a fight resolving), the deck fading under it. */
-    cadence(at4) {
+    cadence(at5) {
       const S6 = this.S, T5 = this.T, mu = this.mu;
       for (const d of S6.chords[0]) {
-        mu.inst(T5.battle ? "brass" : T5.arp || "piano", at4, S6.barDur * 0.9, S6.midi(d, -1), 0.05, this.stems.lead);
-        mu.inst("strings", at4, S6.barDur * 1.5, S6.midi(d, 0), 0.02, this.stems.pad);
+        mu.inst(T5.battle ? "brass" : T5.arp || "piano", at5, S6.barDur * 0.9, S6.midi(d, -1), 0.05, this.stems.lead);
+        mu.inst("strings", at5, S6.barDur * 1.5, S6.midi(d, 0), 0.02, this.stems.pad);
       }
-      mu.drum(at4, "crash", this.stems.perc2, 1);
-      mu.drum(at4, "taiko", this.stems.perc, 1);
-      this.stopAt = at4;
+      mu.drum(at5, "crash", this.stems.perc2, 1);
+      mu.drum(at5, "taiko", this.stems.perc, 1);
+      this.stopAt = at5;
     }
     playBar(bar2, t0) {
       const mu = this.mu, S6 = this.S, T5 = S6.T, e = S6.eighth, n = S6.perBar, st = this.stems;
@@ -174885,18 +175065,18 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const D4 = T5.drums, v = D4.vol ?? 1;
         const fill2 = T5.battle && bar2 % 4 === 3;
         for (let i = 0; i < n; i++) {
-          const at4 = t0 + i * e;
-          if (D4.kick && D4.kick[i % D4.kick.length]) mu.drum(at4, D4.kickKind || "kick", st.perc, v);
-          if (D4.hat && i % 2 === 1) mu.drum(at4, "hat", st.perc, v);
-          if (D4.shaker && D4.shaker[i % D4.shaker.length]) mu.drum(at4, "shaker", st.perc, v);
-          if (D4.block && D4.block[i % D4.block.length]) mu.drum(at4, "block", st.perc, v);
+          const at5 = t0 + i * e;
+          if (D4.kick && D4.kick[i % D4.kick.length]) mu.drum(at5, D4.kickKind || "kick", st.perc, v);
+          if (D4.hat && i % 2 === 1) mu.drum(at5, "hat", st.perc, v);
+          if (D4.shaker && D4.shaker[i % D4.shaker.length]) mu.drum(at5, "shaker", st.perc, v);
+          if (D4.block && D4.block[i % D4.block.length]) mu.drum(at5, "block", st.perc, v);
           if (fill2 && i >= n - 3) {
-            mu.drum(at4, "tom", st.perc2, v * (0.8 + 0.1 * (i - n + 3)));
+            mu.drum(at5, "tom", st.perc2, v * (0.8 + 0.1 * (i - n + 3)));
             continue;
           }
-          if (D4.snare && D4.snare[i % D4.snare.length]) mu.drum(at4, D4.snareKind || "snare", st.perc2, v);
-          if (D4.tom && D4.tom[i % D4.tom.length]) mu.drum(at4, "tom", st.perc2, v);
-          if (D4.taiko && D4.taiko[i % D4.taiko.length]) mu.drum(at4, "taiko", st.perc2, v);
+          if (D4.snare && D4.snare[i % D4.snare.length]) mu.drum(at5, D4.snareKind || "snare", st.perc2, v);
+          if (D4.tom && D4.tom[i % D4.tom.length]) mu.drum(at5, "tom", st.perc2, v);
+          if (D4.taiko && D4.taiko[i % D4.taiko.length]) mu.drum(at5, "taiko", st.perc2, v);
         }
         if (T5.battle && bar2 % 4 === 0) mu.drum(t0, "crash", st.perc2, 0.8);
       }
@@ -175436,12 +175616,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (this.state === "battle") return;
       const quick = k === "under" || from === "under" || k === "rm" || from === "rm" || k === "title" || from === "title";
       if (D4) {
-        const at4 = quick ? now3 + 0.05 : D4.nextBar(now3, 0.1);
+        const at5 = quick ? now3 + 0.05 : D4.nextBar(now3, 0.1);
         const fade2 = quick ? 1.2 : Math.min(3, Math.max(1.5, D4.barDur * 1.5));
-        D4.fadeOut(at4, fade2);
+        D4.fadeOut(at5, fade2);
         this.fading.push(D4);
         this.deck = null;
-        this.restUntil = at4 + fade2 * 0.6 + (quick ? 0.4 : 1.2);
+        this.restUntil = at5 + fade2 * 0.6 + (quick ? 0.4 : 1.2);
       } else {
         this.restUntil = Math.min(this.restUntil, now3 + (from === "title" ? 0.8 : quick ? 0.6 : 2.2));
       }
@@ -175467,16 +175647,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const old = this.deck;
       const place2 = placeTheme({ ...w, night: false, under: false, rm: false });
       const T5 = battleOf(place2 && !place2.battle ? place2 : THEMES.sea, cb.boss);
-      const at4 = old ? old.nextBeat(now3, 0.12) : now3 + 0.12;
+      const at5 = old ? old.nextBeat(now3, 0.12) : now3 + 0.12;
       if (old) {
-        old.fadeOut(Math.max(now3, at4 - 0.25), 0.9);
+        old.fadeOut(Math.max(now3, at5 - 0.25), 0.9);
         this.fading.push(old);
       }
       F4.kos = 0;
       F4.bossDown = false;
       F4.boss = cb.boss;
       F4.intensity = cb.intensity;
-      this.deck = new Deck(this.mu, T5, { at: at4, fade: 0.15, loop: true, stems: this.layers(cb.intensity, cb.boss) });
+      this.deck = new Deck(this.mu, T5, { at: at5, fade: 0.15, loop: true, stems: this.layers(cb.intensity, cb.boss) });
       this.deck.place = this.place;
       this.state = "battle";
       this.theme = T5.id;
@@ -175493,20 +175673,20 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         this.restUntil = now3 + 2;
         return;
       }
-      const at4 = D4.nextBar(now3, 0.1);
-      D4.cadence(at4);
-      D4.fadeOut(at4 + 0.05, 2.4);
+      const at5 = D4.nextBar(now3, 0.1);
+      D4.cadence(at5);
+      D4.fadeOut(at5 + 0.05, 2.4);
       this.fading.push(D4);
       const won = F4.kos > 0 || F4.bossDown;
-      if (won) this.stinger(F4.bossDown ? "victory_boss" : "victory", at4, D4);
-      this.restUntil = at4 + (won ? F4.bossDown ? 5 : 3.5 : 2) + 2.5;
+      if (won) this.stinger(F4.bossDown ? "victory_boss" : "victory", at5, D4);
+      this.restUntil = at5 + (won ? F4.bossDown ? 5 : 3.5 : 2) + 2.5;
     }
     /**
      * A short musical phrase on its own bus, in the deck's key: 'start' (a taiko
      * hit with a cymbal swelling into it), 'victory' (ta-ta-ta-DAAA on brass over
      * a timpani roll), 'victory_boss' (the same, held longer, with strings and a choir).
      */
-    stinger(kind, at4, D4) {
+    stinger(kind, at5, D4) {
       const mu = this.mu, c = mu.ctx, E = this.audio.E;
       const bus = c.createGain();
       bus.gain.value = 2.2;
@@ -175522,24 +175702,24 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         hp.frequency.value = 4500;
         const g = c.createGain();
         g.gain.value = 0;
-        g.gain.setValueAtTime(1e-4, Math.max(c.currentTime, at4 - 0.55));
-        g.gain.linearRampToValueAtTime(0.05, at4);
-        g.gain.exponentialRampToValueAtTime(1e-4, at4 + 0.5);
+        g.gain.setValueAtTime(1e-4, Math.max(c.currentTime, at5 - 0.55));
+        g.gain.linearRampToValueAtTime(0.05, at5);
+        g.gain.exponentialRampToValueAtTime(1e-4, at5 + 0.5);
         src.connect(hp);
         hp.connect(g);
         g.connect(bus);
-        src.start(Math.max(c.currentTime, at4 - 0.55));
-        src.stop(at4 + 0.55);
-        mu.drum(at4, "taiko", bus, 1.2);
-        mu.drum(at4, "crash", bus, 0.8);
+        src.start(Math.max(c.currentTime, at5 - 0.55));
+        src.stop(at5 + 0.55);
+        mu.drum(at5, "taiko", bus, 1.2);
+        mu.drum(at5, "crash", bus, 0.8);
       } else {
         const step2 = Math.min(0.12, S6.eighth * 0.6);
-        [0, 4, 7].forEach((iv, i) => mu.inst("brass", at4 + i * step2, step2 * 0.9, root4 + iv, 0.045, bus));
-        const hold = at4 + 3 * step2;
+        [0, 4, 7].forEach((iv, i) => mu.inst("brass", at5 + i * step2, step2 * 0.9, root4 + iv, 0.045, bus));
+        const hold = at5 + 3 * step2;
         for (const iv of [0, 4, 7, 12]) mu.inst("brass", hold, dur - 0.8, root4 + iv, 0.03, bus);
         for (const iv of [0, 7]) mu.inst("strings", hold, dur - 0.4, root4 - 12 + iv, 0.03, bus);
         if (kind === "victory_boss") for (const iv of [0, 4, 7]) mu.inst("choir", hold, dur, root4 + iv, 0.018, bus);
-        for (let i = 0; i < 6; i++) mu.drum(at4 + i * step2 * 0.5, "timp", bus, 0.5 + i * 0.08, root4 - 24);
+        for (let i = 0; i < 6; i++) mu.drum(at5 + i * step2 * 0.5, "timp", bus, 0.5 + i * 0.08, root4 - 24);
         mu.drum(hold, "timp", bus, 1.2, root4 - 24);
         mu.drum(hold, "crash", bus, 1);
       }
@@ -175548,7 +175728,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           bus.disconnect();
         } catch {
         }
-      }, at4 - c.currentTime + dur + 5);
+      }, at5 - c.currentTime + dur + 5);
     }
   };
 
@@ -176131,11 +176311,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
      * Where a sound is, as heard: { vol, pan, lp (air absorption), far 0..1 },
      * or null out of earshot. `at`: an actor, a ship or a point { x, y }.
      */
-    place(at4, range = 70) {
-      if (!at4 || !this.ear) return { vol: 1, pan: 0, lp: 0, far: 0 };
+    place(at5, range = 70) {
+      if (!at5 || !this.ear) return { vol: 1, pan: 0, lp: 0, far: 0 };
       const e = this.ear();
-      if (!e || at4 === e) return { vol: 1, pan: 0, lp: 0, far: 0 };
-      const dx = this.dxOf ? this.dxOf(e.x, at4.x) : at4.x - e.x, dy = at4.y - e.y;
+      if (!e || at5 === e) return { vol: 1, pan: 0, lp: 0, far: 0 };
+      const dx = this.dxOf ? this.dxOf(e.x, at5.x) : at5.x - e.x, dy = at5.y - e.y;
       const d = Math.hypot(dx, dy);
       if (d > range) return null;
       const rel3 = Math.atan2(dy, dx) - this.yaw();
@@ -176152,14 +176332,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
      * across the harbour is quieter (and duller, and further to one side) than
      * one in your face, and one out of earshot silent. `k`: extra say about it.
      */
-    sfx(name, at4 = null, k0 = null) {
+    sfx(name, at5 = null, k0 = null) {
       if (!this.ctx) return;
       if (this.ctx.state !== "running") {
         this.ctx.resume?.();
         return;
       }
       try {
-        this.play(name, at4, k0);
+        this.play(name, at5, k0);
       } catch (e) {
         if (!this.warned) {
           this.warned = true;
@@ -176167,13 +176347,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         }
       }
     }
-    play(name, at4, k0) {
+    play(name, at5, k0) {
       const g = this.game, p = g?.player;
       const k = { ...k0 || {} };
       let key2 = name;
-      if (name === "whoosh" && at4?.action?.def && at4.action.t === 0) return this.tech(at4);
+      if (name === "whoosh" && at5?.action?.def && at5.action.t === 0) return this.tech(at5);
       let def = SFX2[name];
-      if (HITS[name] && at4 && g) this.hitContext(at4, k, name);
+      if (HITS[name] && at5 && g) this.hitContext(at5, k, name);
       if (name === "haki" && k.hit) {
         key2 = "haki_hit";
         def = { ...def, kind: "hit" };
@@ -176184,32 +176364,32 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         key2 = "punch";
         def = SFX2.punch;
       }
-      if (HAKI_VOICED.has(name) && k.voice === void 0) k.voice = at4?.hakiSig?.voice ?? 0.5;
-      if (name === "block" && at4) {
-        k.sword = !!(at4.hasWeapon?.("sword") && at4.drawn !== false);
-        k.armament = !!at4.armament;
+      if (HAKI_VOICED.has(name) && k.voice === void 0) k.voice = at5?.hakiSig?.voice ?? 0.5;
+      if (name === "block" && at5) {
+        k.sword = !!(at5.hasWeapon?.("sword") && at5.drawn !== false);
+        k.armament = !!at5.armament;
       }
-      if (name === "parry" && at4) k.perfect = !!at4.parryPerfect;
-      if ((name === "jump" || name === "jump_big" || name === "land_heavy" || name === "ko" || name === "dodge") && at4 && at4 === p) k.surf = this.foley?.surf();
+      if (name === "parry" && at5) k.perfect = !!at5.parryPerfect;
+      if ((name === "jump" || name === "jump_big" || name === "land_heavy" || name === "ko" || name === "dodge") && at5 && at5 === p) k.surf = this.foley?.surf();
       if (name === "door" && /chest/i.test(p?.controller?.interaction?.label || "")) k.chest = true;
       if (name === "equip" && /^Pick (?!up)/.test(p?.controller?.interaction?.label || "")) return;
-      if ((name === "splash" || name === "splash_big") && at4 && at4.vz < -1 && k.v === void 0) k.v = -at4.vz;
+      if ((name === "splash" || name === "splash_big") && at5 && at5.vz < -1 && k.v === void 0) k.v = -at5.vz;
       if (name === "equip" && p && !!p.drawn !== this.lastDrawn) {
         const kind = p.weapon?.kind;
         k.draw = !p.drawn ? kind === "sword" ? "sheathe" : null : kind === "sword" ? "sword" : kind === "gun" ? "gun" : null;
         this.lastDrawn = !!p.drawn;
       }
-      if (name === "cannon" && at4 && at4.owner && at4.owner !== "player" && this.place(at4, 90)) this.hint("battle", 12);
-      if (name === "step" && at4?.climb?.ladder) k.creak = Math.random() < 0.3;
+      if (name === "cannon" && at5 && at5.owner && at5.owner !== "player" && this.place(at5, 90)) this.hint("battle", 12);
+      if (name === "step" && at5?.climb?.ladder) k.creak = Math.random() < 0.3;
       if (!def) def = { prio: 3, cd: 0.02, play: (v2) => v2.noise(0, 0.05, { freq: 1500, gain: 0.05 }) };
       const t = this.E.now();
       const cd = def.cd ?? 0.02;
       const cdKey = k.side ? key2 + ":" + k.side : key2;
       if (this.last[cdKey] && t - this.last[cdKey] < cd) return;
-      const pl = def.bus === "ui" ? { vol: 1, pan: 0, lp: 0, far: 0 } : this.place(at4);
+      const pl = def.bus === "ui" ? { vol: 1, pan: 0, lp: 0, far: 0 } : this.place(at5);
       if (!pl) return;
       this.last[cdKey] = t;
-      const mine = !at4 || at4 === p || at4.isPlayer || at4.captain === p || at4 === p?.ship || !!HITS[name] && (at4.lastHitBy === p && at4.lastHitT === g?.time || !!p?.action && pl.vol > 0.9);
+      const mine = !at5 || at5 === p || at5.isPlayer || at5.captain === p || at5 === p?.ship || !!HITS[name] && (at5.lastHitBy === p && at5.lastHitT === g?.time || !!p?.action && pl.vol > 0.9);
       const prio = (def.prio ?? 5) + (mine ? 2 : 0) - Math.round(pl.far * 3);
       const v = this.E.open(key2, {
         bus: def.bus || (mine ? "sfx" : "npc"),
@@ -176235,12 +176415,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (def.duck) this.E.duck(def.duck * near);
     }
     /** What landed the blow on `at`, and how: its weight, a kick, Haki, a counter, the Devil Fruit behind it. */
-    hitContext(at4, k, name) {
+    hitContext(at5, k, name) {
       const g = this.game;
       const now3 = g.env ? g.env.time : g.time;
-      if (at4.hitT === now3 && at4.hitW != null) k.w = at4.hitW;
+      if (at5.hitT === now3 && at5.hitW != null) k.w = at5.hitW;
       if (name === "haki") k.hit = true;
-      const att = at4.lastHitT === g.time ? at4.lastHitBy : null;
+      const att = at5.lastHitT === g.time ? at5.lastHitBy : null;
       if (!att) return;
       k.armament = !!att.armament;
       if (att.hakiSig) k.voice = att.hakiSig.voice;
@@ -176263,9 +176443,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const p = this.game?.player;
       const i = (def.steps || []).findIndex((s2) => s2.hit || s2.proj || s2.zone || s2.dash?.hit);
       const s = i >= 0 ? def.steps[i] : null;
-      const at4 = s?.at ?? def.windup ?? 0;
+      const at5 = s?.at ?? def.windup ?? 0;
       const speed2 = def.noSpeedup ? 1 : actor.atkSpeed?.() || 1;
-      const rel3 = at4 / speed2 * (a.slow || 1);
+      const rel3 = at5 / speed2 * (a.slow || 1);
       const mine = actor === p;
       const v = this.E.open(key2, { bus: mine ? "sfx" : "npc", kind: "tech", vol: pl.vol, pan: pl.pan, lp: pl.lp, send: 0.08 + pl.far * 0.2, prio: (def.fruit ? 6 : 5) + (mine ? 2 : 0) - Math.round(pl.far * 3), max: 3 });
       if (!v) return;
@@ -176288,10 +176468,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
      * to a sprint): the heel and the roll of the foot, each sounding of what it
      * lands on, left and right a little different (see steps.js).
      */
-    step(surface, loud = 0.6, at4 = null) {
+    step(surface, loud = 0.6, at5 = null) {
       if (!this.ready()) return;
       try {
-        this.foot1(surface, loud, at4);
+        this.foot1(surface, loud, at5);
       } catch (e) {
         if (!this.warned) {
           this.warned = true;
@@ -176299,13 +176479,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         }
       }
     }
-    foot1(surface, loud, at4) {
-      const pl = this.place(at4, 16);
+    foot1(surface, loud, at5) {
+      const pl = this.place(at5, 16);
       if (!pl) return;
       const p = this.game?.player;
       this.foot = -this.foot;
       const hard = surface === "wood" || surface === "stone" || surface === "metal" || surface === "ice";
-      const hush = !at4 && p?.crouch ? 0.35 : 1;
+      const hush = !at5 && p?.crouch ? 0.35 : 1;
       const v = this.E.open("step", { kind: "move", vol: pl.vol * (0.75 + 0.45 * loud) * STEP4 * hush, pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
       if (!v) return;
       v.pj = 0.98 + Math.random() * 0.04;
@@ -176470,9 +176650,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     island.docks.forEach((dock, i) => {
       const st = dock.stand;
       if (!st) return;
-      const at4 = game.spawner.freeSpot(st.x, st.y) ? st : game.spawner.findFree(st.x, st.y, 1.2);
-      if (!at4) return;
-      const a = makeShipwright(island, dock, i, at4.x, at4.y);
+      const at5 = game.spawner.freeSpot(st.x, st.y) ? st : game.spawner.findFree(st.x, st.y, 1.2);
+      if (!at5) return;
+      const a = makeShipwright(island, dock, i, at5.x, at5.y);
       a.facing = a.faceHome = st.face;
       a.game = game;
       game.addActor(a);
@@ -176616,12 +176796,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const lvl = a.attrs?.str || a.def?.level || 5;
     const seaK = Math.min(3, 0.5 + bountySea(game) * 0.4);
     const f = a.faction, beast = f === "beast" || !!a.def?.beast;
-    const items9 = [];
+    const items10 = [];
     const give2 = (id, n = 1) => {
       if (ITEMS[id]) {
-        const e = items9.find((x) => x.id === id);
+        const e = items10.find((x) => x.id === id);
         if (e) e.qty += n;
-        else items9.push({ id, qty: n });
+        else items10.push({ id, qty: n });
       }
     };
     const r4 = Math.random;
@@ -176651,7 +176831,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if (r4() < 0.5) give2(r4() < 0.4 ? "jewels" : "gold_coins");
       }
     }
-    return { berries, items: items9 };
+    return { berries, items: items10 };
   }
   function empty(a) {
     return !a.pocket || !a.pocket.berries && !a.pocket.items.length;
@@ -176742,39 +176922,39 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     return table[0][0];
   }
-  function put(items9, id, qty = 1) {
-    const have = items9.find((x) => x.id === id);
+  function put(items10, id, qty = 1) {
+    const have = items10.find((x) => x.id === id);
     if (have) have.qty += qty;
-    else items9.push({ id, qty });
+    else items10.push({ id, qty });
   }
   function roll(kind, rng4, tier, o = {}) {
-    const items9 = [];
+    const items10 = [];
     let berries = 0;
     if (kind === "home") {
       if (rng4.chance(0.55)) berries = Math.round(rng4.range(12, 90) * tier);
       const n = rng4.chance(0.15) ? 0 : rng4.int(1, 3);
-      for (let i = 0; i < n; i++) put(items9, weighted(rng4, HOME));
+      for (let i = 0; i < n; i++) put(items10, weighted(rng4, HOME));
     } else if (kind === "hoard") {
       berries = Math.round(rng4.range(700, 2e3) * tier);
-      put(items9, rng4.pick(["gold_coins", "gold_coins", "jewels"]));
-      if (rng4.chance(0.35)) put(items9, rng4.pick(["jewels", "gold_coins", "golden_statue"]));
-      for (let i = rng4.int(1, 2); i > 0; i--) put(items9, weighted(rng4, HOARD_EXTRA));
+      put(items10, rng4.pick(["gold_coins", "gold_coins", "jewels"]));
+      if (rng4.chance(0.35)) put(items10, rng4.pick(["jewels", "gold_coins", "golden_statue"]));
+      for (let i = rng4.int(1, 2); i > 0; i--) put(items10, weighted(rng4, HOARD_EXTRA));
     } else if (kind === "ship") {
       berries = o.berries || 0;
       for (let i = 0; i < (o.n || 2); i++) {
         const id = rng4.pick(o.goods || ["gold_coins"]);
-        if (id !== "seastone" || rng4.chance(0.15)) put(items9, id);
+        if (id !== "seastone" || rng4.chance(0.15)) put(items10, id);
       }
     } else {
       berries = Math.round(rng4.range(300, 1200) * (o.tier || 1) * (o.luck || 1));
-      if (o.item) put(items9, o.item);
-      else if (rng4.chance(0.35 * (o.luck || 1))) put(items9, rng4.pick((o.tier || 1) > 2 ? ["jewels", "gold_coins", "golden_statue", "rumble_ball"] : ["gold_coins", "meat", "bandage", "jewels"]));
+      if (o.item) put(items10, o.item);
+      else if (rng4.chance(0.35 * (o.luck || 1))) put(items10, rng4.pick((o.tier || 1) > 2 ? ["jewels", "gold_coins", "golden_statue", "rumble_ball"] : ["gold_coins", "meat", "bandage", "jewels"]));
     }
     if (kind !== "home" && o.rollDevil && rng4.chance(o.devil ?? 0.04)) {
       const fid = o.rollDevil(rng4);
-      if (fid) items9.push({ id: "fruit_" + fid, qty: 1, kept: true });
+      if (fid) items10.push({ id: "fruit_" + fid, qty: 1, kept: true });
     }
-    return { berries, items: items9 };
+    return { berries, items: items10 };
   }
   var DEVIL2 = { treasure: 0.12, hoard: 0.1, ship: 0.08 };
   function installContainers(game) {

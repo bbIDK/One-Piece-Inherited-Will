@@ -26,6 +26,8 @@ export function countryBuilder(ctx) {
         const a = makeEnemy('bandit', 2 + danger * 3 + rng.int(0, 2), p.x, p.y, { seed: rng.int(1, 1e9) });
         a.game = game;
         if (a.controller) a.controller.leash = 22;
+        // (the camp's: when the last of them is down it's cleared — content/countryQuests.js)
+        a.camp = island.id;
         game.addActor(a);
         list.push(a);
       }
@@ -41,7 +43,8 @@ export function countryBuilder(ctx) {
         x: p.x, y: p.y, name: randomName(rng, race), look: makeLook(race, rng.int(1, 1e9), civilianOutfit(W.outfit, rng)),
         race, faction: 'civilian', attrs: { str: 4, agi: 3, end: 4, vit: 4, wil: 3 }, ai: { kind: 'wander' },
       }, list);
-      a.talk = { kind: 'townsfolk', town: `the ${W.label}`, island: island.name, seed: rng.int(0, 1e6) };
+      // (they've jobs for you: content/countryQuests.js)
+      a.talk = { kind: 'country', folk: site.folk, island: island.id, town: `the ${W.label}`, seed: rng.int(0, 1e6) };
       a.showName = false;
       a.wanderRadius = 6;
     }

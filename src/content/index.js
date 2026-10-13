@@ -24,8 +24,9 @@ import newWorld2 from './newWorld2.js';
 import redLine from './redLine.js';
 import crewmates from './crewmates.js';
 import mainStory from './mainStory.js';
+import countryQuests from './countryQuests.js';
 
-export const PACKS = [eastBlue, northBlue, westBlue, southBlue, paradise1, paradise2, newWorld, newWorld2, redLine, crewmates, mainStory];
+export const PACKS = [eastBlue, northBlue, westBlue, southBlue, paradise1, paradise2, newWorld, newWorld2, redLine, crewmates, mainStory, countryQuests];
 
 for (const p of PACKS) {
   if (p.abilities) registerAbilities(p.abilities, 'npc');
