@@ -94,7 +94,12 @@ class SeaSurface {
           const g = makeDolphin(this.mats);
           g.scale.setScalar(0.9 + Math.random() * 0.25);
           this.scene.add(g);
-          ds.push({ g, side: i % 2 ? 1 : -1, u: 0.25 + Math.random() * 0.3, v: 1.5 + Math.random() * 2.5, ph: Math.random() * TAU, per: 1.9 + Math.random() * 0.6 });
+          // (they come in from out at sea, off to one side and ahead — never
+          // just there beside the hull — and swim on their own from then on)
+          const side = i % 2 ? 1 : -1, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+          const u0 = 30 + Math.random() * 25, v0 = side * (25 + Math.random() * 20);
+          const x0 = w.wx(s.x + c * u0 - sn * v0), y0 = s.y + sn * u0 + c * v0;
+          ds.push({ g, side, u: 0.25 + Math.random() * 0.3, v: 1.5 + Math.random() * 2.5, ph: Math.random() * TAU, per: 1.9 + Math.random() * 0.6, x: x0, y: y0, hd: Math.atan2(s.y - y0, w.dx(x0, s.x)), sp: 0 });
         }
         this.pod = { ds, ship: s, t: 0, life: 30 + Math.random() * 15 };
       }
@@ -108,14 +113,30 @@ class SeaSurface {
       if ((P.fall || 0) > 40) this.clearPod();
       else {
         const c = Math.cos(sh.heading), sn = Math.sin(sh.heading), L = sh.def.length || 12, B = sh.def.beam || 4;
+        const shipV = Math.abs(sh.speed);
         for (const d of P.ds) {
-          const u = d.u * L - (P.fall || 0), vv = d.side * (B * 0.5 + d.v);
-          const x = sh.x + c * u - sn * vv, y = sh.y + sn * u + c * vv;
+          // where it wants to be: its spot in the bow wave (dropping astern as they leave)
+          const u = d.u * L - (P.fall || 0) * 1.5, vv = d.side * (B * 0.5 + d.v + (P.fall || 0) * 0.6);
+          const tx = sh.x + c * u - sn * vv, ty = sh.y + sn * u + c * vv;
+          // it swims there: a heading that turns at most so fast, a speed a
+          // little over the ship's to catch up (a turn of the ship leaves it
+          // to curve round after her, not swung round with the hull)
+          const ex = w.dx(d.x, tx), ey = ty - d.y, dist = Math.hypot(ex, ey);
+          let want = dist > 0.5 ? Math.atan2(ey, ex) : sh.heading;
+          // (close in, it swims along with her rather than nosing at its spot)
+          if (dist < 4) want = sh.heading + Math.atan2(Math.sin(want - sh.heading), Math.cos(want - sh.heading)) * (dist / 4);
+          let dh = Math.atan2(Math.sin(want - d.hd), Math.cos(want - d.hd));
+          const turn = 1.4 * dt;
+          d.hd += Math.max(-turn, Math.min(turn, dh));
+          const goal = Math.min(shipV + 6, shipV * (dist < 3 ? 1 : 1.1) + dist * 0.6) * (P.fall ? 0.4 : 1);
+          d.sp += (goal - d.sp) * Math.min(1, dt * 1.5);
+          d.x = w.wx(d.x + Math.cos(d.hd) * d.sp * dt); d.y += Math.sin(d.hd) * d.sp * dt;
+          const x = d.x, y = d.y;
           // the leap: under, then up out of the water in an arc and back in
           const ph = ((t + d.ph) % d.per) / d.per, leap = ph < 0.45 ? Math.sin((ph / 0.45) * Math.PI) : 0;
           const h = swellAt(x, y) + (leap ? leap * 1.6 - 0.2 : -0.7 - Math.sin(t * 2 + d.ph) * 0.1);
           d.g.position.set(w.dx(ox, x), h, y - oy);
-          d.g.rotation.set(0, -sh.heading, leap ? Math.cos((ph / 0.45) * Math.PI) * 0.7 : 0);
+          d.g.rotation.set(0, -d.hd, leap ? Math.cos((ph / 0.45) * Math.PI) * 0.7 : 0);
           d.g.userData.tail.rotation.z = Math.sin(t * 10 + d.ph) * 0.35;
           // a splash as it goes in, and as it comes out
           if (leap && !d.up) { d.up = true; game.fx.burst(x, y, 6, { color: ['#ffffff', '#e1f5fe'], speed: 1.5, vz: 3, g: 10, life: 0.5, size: 0.12 }); }

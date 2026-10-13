@@ -93144,6 +93144,14 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const glute = c < 0 ? bell(y + 0.09, 0.09) * bell(sn, 0.9) * (sh.fem ? 0.022 : 0.012 + 8e-3 * sh.m) * Math.pow(-c, 0.8) : 0;
     return [c >= 0 ? supEl(c, 0.8) * Df : supEl(c, 0.8) * Db - glute, y, supEl(sn, 0.8) * W4];
   }
+  function outerPt(p, sh, a, off) {
+    const y = p[1];
+    if (y > 0.12 || y < -0.215) return p;
+    const q2 = pelvisPt(sh, Math.max(-0.215, Math.min(0.08, y)), a, off);
+    const w = y > 0.08 ? 1 - (y - 0.08) / 0.04 : 1;
+    const mx = (u, v) => Math.abs(v) > Math.abs(u) ? u + (v - u) * w : u;
+    return [mx(p[0], q2[0]), y, mx(p[2], q2[2])];
+  }
   function weldGrid(g, U4, V5) {
     const n = g.attributes.normal, W4 = U4 + 1;
     for (let j = 0; j <= V5; j++) {
@@ -93696,7 +93704,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const off = (s) => 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
     const rows = cut2(TR, -0.1, 0.99);
     const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
-    const pt = (k) => (s, a) => torsoPt(sh, s, a, off(s) - k, 0);
+    const pt = (k) => (s, a) => outerPt(torsoPt(sh, s, a, off(s) - k, 0), sh, a, 0.03 - k);
     add7(band2(pt(0), rows, open, (s) => TAU17 - open(s), U4), M(), c, B.chest);
     if (cloth) add7(band2(pt(6e-3), rows, open, (s) => TAU17 - open(s), U4, true), M(), lining2, B.chest);
     const cr = cloth ? [1.1, 1.04, 0.98] : [1.1, 0.98];
@@ -93719,7 +93727,8 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const tp = (inset) => (y, a) => {
       const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
       const k = 1 + clamp5(-y / L3, 0, 1) * C3.flare;
-      return [p[0] * k - 8e-3, y, p[2] * k];
+      const r4 = outerPt([p[0] * k - 8e-3, y, p[2] * k], sh, a, 0.03 - inset);
+      return r4;
     };
     const openT = C3.open, span2 = TAU17 - 2 * openT;
     const skin = { skin: (x, y, z) => {
@@ -96564,7 +96573,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   var SKIRT_FEEL = { g: 9.8, wind: 0.8, damp: 4.2, damp2: 3.4, link: 9, max: 1.2, max2: 1.2, smooth: 0.09 };
   var SKIRT_FEEL_LONG = { g: 9.8, wind: 0.45, damp: 5.2, damp2: 4.8, link: 9, max: 0.9, max2: 0.75, smooth: 0.12, spread: 0.32 };
-  var COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
+  var COAT_FEEL = { g: 9.8, wind: 0.62, damp: 4.2, damp2: 3.6, link: 6, max: 0.85, max2: 0.95, smooth: 0.16, acc: 6 };
   var _cv = new Vector3();
   var _cv2 = new Vector3();
   var _cv3 = new Vector3();
@@ -97372,7 +97381,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       v.y = 0;
       v.lerpVectors(S6.v, v, 1 - Math.exp(-dt / K.smooth));
       const acc = _cv3.subVectors(v, S6.v).divideScalar(dt);
-      if (acc.lengthSq() > 900) acc.setLength(30);
+      if (acc.lengthSq() > K.acc * K.acc) acc.setLength(K.acc);
       _cq2.copy(S6.q).invert().premultiply(_cq);
       const yawRate = 2 * Math.atan2(_cq2.y, _cq2.w) / dt;
       S6.p.copy(p);
@@ -104226,7 +104235,10 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             const g = makeDolphin(this.mats);
             g.scale.setScalar(0.9 + Math.random() * 0.25);
             this.scene.add(g);
-            ds.push({ g, side: i % 2 ? 1 : -1, u: 0.25 + Math.random() * 0.3, v: 1.5 + Math.random() * 2.5, ph: Math.random() * TAU24, per: 1.9 + Math.random() * 0.6 });
+            const side = i % 2 ? 1 : -1, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+            const u0 = 30 + Math.random() * 25, v0 = side * (25 + Math.random() * 20);
+            const x0 = w.wx(s.x + c * u0 - sn * v0), y0 = s.y + sn * u0 + c * v0;
+            ds.push({ g, side, u: 0.25 + Math.random() * 0.3, v: 1.5 + Math.random() * 2.5, ph: Math.random() * TAU24, per: 1.9 + Math.random() * 0.6, x: x0, y: y0, hd: Math.atan2(s.y - y0, w.dx(x0, s.x)), sp: 0 });
           }
           this.pod = { ds, ship: s, t: 0, life: 30 + Math.random() * 15 };
         }
@@ -104239,13 +104251,25 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if ((P6.fall || 0) > 40) this.clearPod();
         else {
           const c = Math.cos(sh.heading), sn = Math.sin(sh.heading), L3 = sh.def.length || 12, B5 = sh.def.beam || 4;
+          const shipV = Math.abs(sh.speed);
           for (const d of P6.ds) {
-            const u = d.u * L3 - (P6.fall || 0), vv = d.side * (B5 * 0.5 + d.v);
-            const x = sh.x + c * u - sn * vv, y = sh.y + sn * u + c * vv;
+            const u = d.u * L3 - (P6.fall || 0) * 1.5, vv = d.side * (B5 * 0.5 + d.v + (P6.fall || 0) * 0.6);
+            const tx = sh.x + c * u - sn * vv, ty = sh.y + sn * u + c * vv;
+            const ex = w.dx(d.x, tx), ey = ty - d.y, dist = Math.hypot(ex, ey);
+            let want = dist > 0.5 ? Math.atan2(ey, ex) : sh.heading;
+            if (dist < 4) want = sh.heading + Math.atan2(Math.sin(want - sh.heading), Math.cos(want - sh.heading)) * (dist / 4);
+            let dh = Math.atan2(Math.sin(want - d.hd), Math.cos(want - d.hd));
+            const turn = 1.4 * dt;
+            d.hd += Math.max(-turn, Math.min(turn, dh));
+            const goal = Math.min(shipV + 6, shipV * (dist < 3 ? 1 : 1.1) + dist * 0.6) * (P6.fall ? 0.4 : 1);
+            d.sp += (goal - d.sp) * Math.min(1, dt * 1.5);
+            d.x = w.wx(d.x + Math.cos(d.hd) * d.sp * dt);
+            d.y += Math.sin(d.hd) * d.sp * dt;
+            const x = d.x, y = d.y;
             const ph = (t + d.ph) % d.per / d.per, leap = ph < 0.45 ? Math.sin(ph / 0.45 * Math.PI) : 0;
             const h2 = swellAt(x, y) + (leap ? leap * 1.6 - 0.2 : -0.7 - Math.sin(t * 2 + d.ph) * 0.1);
             d.g.position.set(w.dx(ox, x), h2, y - oy);
-            d.g.rotation.set(0, -sh.heading, leap ? Math.cos(ph / 0.45 * Math.PI) * 0.7 : 0);
+            d.g.rotation.set(0, -d.hd, leap ? Math.cos(ph / 0.45 * Math.PI) * 0.7 : 0);
             d.g.userData.tail.rotation.z = Math.sin(t * 10 + d.ph) * 0.35;
             if (leap && !d.up) {
               d.up = true;

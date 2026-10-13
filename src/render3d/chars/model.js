@@ -74,7 +74,9 @@ function panelNeed(u, h, r, len, psi, a, reach = SKIRT_REACH) {
 export const SKIRT_FEEL = { g: 9.8, wind: 0.8, damp: 4.2, damp2: 3.4, link: 9, max: 1.2, max2: 1.2, smooth: 0.09 };
 // (a long skirt: more cloth, heavier — the stride swings its hem, the air barely lifts it)
 export const SKIRT_FEEL_LONG = { g: 9.8, wind: 0.45, damp: 5.2, damp2: 4.8, link: 9, max: 0.9, max2: 0.75, smooth: 0.12, spread: 0.32 };
-export const COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
+// (a coat is heavy cloth: it drapes — its own weight wins; the air of a run
+// streams it back, a start or stop only sways it, never flings it out flat)
+export const COAT_FEEL = { g: 9.8, wind: 0.62, damp: 4.2, damp2: 3.6, link: 6, max: 0.85, max2: 0.95, smooth: 0.16, acc: 6 };
 const _cv = new THREE.Vector3(), _cv2 = new THREE.Vector3(), _cv3 = new THREE.Vector3(), _cq = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _cm = new THREE.Matrix4(), _cax = new THREE.Vector3();
 const _cpts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
 const _crad = new Float32Array(SKIRT_T.length * 2), _cleg = new Uint8Array(SKIRT_T.length * 2);
@@ -886,7 +888,7 @@ export class CharacterModel {
     v.y = 0;
     v.lerpVectors(S.v, v, 1 - Math.exp(-dt / K.smooth));
     const acc = _cv3.subVectors(v, S.v).divideScalar(dt);
-    if (acc.lengthSq() > 900) acc.setLength(30);
+    if (acc.lengthSq() > K.acc * K.acc) acc.setLength(K.acc);
     // (how fast the hips turn about the upright)
     _cq2.copy(S.q).invert().premultiply(_cq);
     const yawRate = 2 * Math.atan2(_cq2.y, _cq2.w) / dt;

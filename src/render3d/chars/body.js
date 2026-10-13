@@ -241,6 +241,19 @@ function pelvisPt(sh, y, a, off = 0) {
   return [c >= 0 ? supEl(c, 0.8) * Df : supEl(c, 0.8) * Db - glute, y, supEl(sn, 0.8) * W];
 }
 
+/**
+ * An outer layer's point: the torso's, pushed out to clear the pelvis (and
+ * whatever's worn at the waist) where the hips are broader than the waist.
+ */
+function outerPt(p, sh, a, off) {
+  const y = p[1];
+  if (y > 0.12 || y < -0.215) return p;
+  const q = pelvisPt(sh, Math.max(-0.215, Math.min(0.08, y)), a, off);
+  const w = y > 0.08 ? 1 - (y - 0.08) / 0.04 : 1;
+  const mx = (u, v) => (Math.abs(v) > Math.abs(u) ? u + (v - u) * w : u);
+  return [mx(p[0], q[0]), y, mx(p[2], q[2])];
+}
+
 /** Average the normals across a closed grid's seam (the back of the torso). */
 function weldGrid(g, U, V) {
   const n = g.attributes.normal, W = U + 1;
@@ -891,7 +904,8 @@ function coat(add, sh, c, TR, U, cloth, d, q) {
   const off = (s) => 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
   const rows = cut(TR, -0.1, 0.99);
   const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
-  const pt = (k) => (s, a) => torsoPt(sh, s, a, off(s) - k, 0);
+  // (clear of the hips and a belt or sash, too)
+  const pt = (k) => (s, a) => outerPt(torsoPt(sh, s, a, off(s) - k, 0), sh, a, 0.03 - k);
   add(band(pt(0), rows, open, (s) => TAU - open(s), U), M(), c, B.chest);
   if (cloth) add(band(pt(0.006), rows, open, (s) => TAU - open(s), U, true), M(), lining, B.chest);
   // stand-up collar behind the neck
@@ -921,7 +935,9 @@ function coatTail(add, sh, c, U, cloth, d, off0) {
   const tp = (inset) => (y, a) => {
     const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
     const k = 1 + clamp(-y / L, 0, 1) * C.flare;
-    return [p[0] * k - 0.008, y, p[2] * k];
+    // (never in through the hips and seat: the pelvis is broader than the waist)
+    const r = outerPt([p[0] * k - 0.008, y, p[2] * k], sh, a, 0.03 - inset);
+    return r;
   };
   const openT = C.open, span = TAU - 2 * openT;
   const skin = { skin: (x, y, z) => {

@@ -685,6 +685,47 @@ export const scenarios = {
       }
     },
   },
+  // coats over every frame and race, from behind and the side, standing and
+  // running (an outer layer must never let the body through)
+  //   --sets=m,f,races  --wear=coat,cape  --run
+  c3coats: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
+      const WEAR = {
+        coat: { topStyle: 'coat', coat: '#1b5e20' },
+        cape: { topStyle: 'tank', top: '#333333', coat: '#1b5e20' },
+      };
+      const SETS = {
+        m: ['average', 'lean', 'athletic', 'slim', 'brawny', 'heavy', 'lanky', 'stocky'].map((f) => ({ fem: false, frame: f, muscle: 1 })),
+        f: ['average', 'slim', 'curvy', 'athletic', 'petite', 'heavy'].map((f) => ({ fem: true, frame: f })),
+        races: ['human', 'fishman', 'mink', 'skypiean', 'buccaneer', 'three_eye', 'lunarian'].map((r) => ({ race: r, fem: false, frame: 'brawny', muscle: 1 })),
+      };
+      for (const wear of String(args.wear || 'coat,cape').split(',')) {
+        for (const set of String(args.sets || 'm,f,races').split(',')) {
+          const list = SETS[set];
+          await page.evaluate(([list, w]) => {
+            window.OP.hold = true;
+            const C = window.__C3; C.clear();
+            list.forEach((l, i) => C.spawn({ name: 'c' + i, race: l.race || 'human', id: 'coat-' + i, showName: false, look: { race: 'human', seed: 30 + i, idle: 'rest', hair: 'mohawk', skin: '#e8b98f', bottomStyle: 'trousers', bottom: '#2d3436', shoeStyle: 'boots', ...w, ...l } }, 3.4, (i - (list.length - 1) / 2) * 0.85, 0));
+            C.view(0, -0.08);
+          }, [list, WEAR[wear]]);
+          await settle(page, 6);
+          await snap(`${wear}-${set}-back`);
+          await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = Math.PI / 2; });
+          await settle(page, 3);
+          await snap(`${wear}-${set}-side`);
+          if (args.run) {
+            await page.evaluate(() => { for (const a of window.__C3.npcs) { a.facing = 0; a.intent.mx = 1; a.intent.my = 0; a.intent.sprint = true; } });
+            for (let i = 0; i < 20; i++) { await step(page, 0.05); await frames(page, 1); }
+            await page.evaluate(() => window.__C3.view(0, -0.08, 'first'));
+            await frames(page, 2);
+            await snap(`${wear}-${set}-run`);
+          }
+        }
+      }
+    },
+  },
   // hair and clothes in motion: someone walks, runs and stops across the view (from the side)
   //   --looks=dress,coat,skirt
   c3motion: {
