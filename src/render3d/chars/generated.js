@@ -24,12 +24,19 @@ import wooden_sword from '../../assets/models/wooden_sword.js';
 import bo_staff from '../../assets/models/bo_staff.js';
 import marine_rifle from '../../assets/models/marine_rifle.js';
 import slingshot from '../../assets/models/slingshot.js';
+import morgan_axe from '../../assets/models/morgan_axe.js';
+import sorcery_clima_tact from '../../assets/models/sorcery_clima_tact.js';
+import kuro_kabuto from '../../assets/models/kuro_kabuto.js';
+import wano_katana from '../../assets/models/wano_katana.js';
+import nb_shibireru from '../../assets/models/nb_shibireru.js';
+import p2_funkfreed from '../../assets/models/p2_funkfreed.js';
 
 const GEN = {
   cutlass: [cutlass, 0.0348], marine_saber: [marine_saber, 0.0295], fine_katana: [fine_katana, -0.0036], yoru: [yoru, 0.0426],
   wado_ichimonji: [wado_ichimonji, 0.0041], flintlock: [flintlock, 0.0113], woodsman_axe: [woodsman_axe, 0.068], giant_axe: [giant_axe, 0.0142],
   kabuto: [kabuto, -0.0009], sandai_kitetsu: [sandai_kitetsu, 0.0017], shusui: [shusui, 0.002], enma: [enma, 0.0039], kikoku: [kikoku, 0.0887], clima_tact: [clima_tact, -0.0015],
   shigure: [shigure, -0.0022], yubashiri: [yubashiri, -0.0014], rusty_katana: [rusty_katana, 0.0002], wooden_sword: [wooden_sword, 0.0038], bo_staff: [bo_staff, -0.0007], marine_rifle: [marine_rifle, 0.0768], slingshot: [slingshot, 0.0055],
+  morgan_axe: [morgan_axe, 0.0976], sorcery_clima_tact: [sorcery_clima_tact, -0.0015], kuro_kabuto: [kuro_kabuto, -0.0004], wano_katana: [wano_katana, 0.0064], nb_shibireru: [nb_shibireru, 0.0019], p2_funkfreed: [p2_funkfreed, 0.014],
 };
 const CACHE = new Map();
 const dec = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
