@@ -84189,31 +84189,62 @@ vec3 paneView(vec3 dir, float night) {
     k.add(cyl(0.03, 0.03, 0.03, 8), { at: [0.07, 0.785, 0.05], color: "#4a2e18" });
   });
   var crate = () => model("crate", (k) => {
-    const s = 0.74, h2 = 0.74, e = 0.07, dark = "#7a5a30";
-    k.add(box(s - 0.02, h2 - 0.02, s - 0.02), { at: [0, 0.01, 0], color: "#b08850", tint: 1, outline: 0.02 });
-    for (const x of [-1, 1]) for (const z of [-1, 1]) k.add(box(e, h2, e), { at: [x * (s / 2 - e / 2), 0, z * (s / 2 - e / 2)], color: dark });
-    for (const y of [0, h2 - e]) {
-      for (const z of [-1, 1]) k.add(box(s, e, e), { at: [0, y, z * (s / 2 - e / 2)], color: dark });
-      for (const x of [-1, 1]) k.add(box(e, e, s), { at: [x * (s / 2 - e / 2), y, 0], color: dark });
-    }
-    const diag = Math.hypot(s, h2) - 0.12, ang = Math.atan2(s, h2);
-    for (const [fx, fz, ry] of [[0, 1, 0], [0, -1, 0], [1, 0, Math.PI / 2], [-1, 0, Math.PI / 2]]) {
+    const s = 0.74, h2 = 0.74, e = 0.075, dark = "#6e4f2a", PL = ["#b8894f", "#a97c46", "#c2945a"];
+    k.add(box(s - 0.06, h2 - 0.06, s - 0.06), { at: [0, 0.03, 0], color: "#5a3f22" });
+    const ph = (h2 - 2 * e) / 3;
+    for (const [fx, fz, ry] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]]) {
       k.save();
-      k.translate(fx * s / 2, h2 / 2, fz * s / 2);
+      k.translate(fx * (s / 2 - 0.02), 0, fz * (s / 2 - 0.02));
       k.rotateY(ry);
-      k.rotateZ(ang);
-      k.add(cbox(0.06, diag, 0.025), { color: dark });
+      for (let i = 0; i < 3; i++) k.add(box(s - 2 * e, ph - 0.012, 0.03), { at: [0, e + i * ph + 6e-3, 0], color: PL[(i + (fx ? 1 : 0)) % 3], tint: 1, outline: 0.012 });
       k.restore();
     }
+    for (const x of [-1, 1]) for (const z of [-1, 1]) k.add(box(e, h2, e), { at: [x * (s / 2 - e / 2), 0, z * (s / 2 - e / 2)], color: dark, outline: 0.012 });
+    for (const y of [0, h2 - e]) {
+      for (const z of [-1, 1]) k.add(box(s - 2 * e, e, e), { at: [0, y, z * (s / 2 - e / 2)], color: dark });
+      for (const x of [-1, 1]) k.add(box(e, e, s - 2 * e), { at: [x * (s / 2 - e / 2), y, 0], color: dark });
+    }
+    const iw = s - 2 * e, ih = h2 - 2 * e, diag = Math.hypot(iw, ih), ang = Math.atan2(iw, ih);
+    for (const [fx, fz, ry] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]]) {
+      k.save();
+      k.translate(fx * (s / 2 + 5e-3), h2 / 2, fz * (s / 2 + 5e-3));
+      k.rotateY(ry);
+      k.save();
+      k.rotateZ(ang);
+      k.add(cbox(0.07, diag, 0.03), { color: dark, outline: 0.01 });
+      k.restore();
+      for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(cbox(0.018, 0.018, 0.012), { at: [x * (s / 2 - e / 2), y * (h2 / 2 - e / 2), 0.04], color: "#3a3a3e" });
+      k.restore();
+    }
+    for (let i = 0; i < 4; i++) k.add(box(iw / 4 - 0.01, 0.025, iw), { at: [-iw / 2 + (i + 0.5) * iw / 4, h2 - 0.05, 0], color: PL[i % 3], tint: 1 });
   });
   var haystack = () => model("haystack", (k) => {
-    k.add(lathe([[0.68, 0], [0.7, 0.2], [0.63, 0.48], [0.46, 0.74], [0.22, 0.9], [0.02, 0.94]], 14), { split: true, color: (p, n, i) => Math.floor(i / 30) % 2 ? "#d4ac0d" : "#c49a18", outline: 0.03 });
-    const R5 = rng2(3);
-    for (let i = 0; i < 9; i++) {
-      const a = R5() * Math.PI * 2;
-      k.add(cone(0.05, 0.4, 3), { at: [Math.cos(a) * 0.35, 0.72, Math.sin(a) * 0.35], rot: [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9], color: "#e0bf3a" });
+    const R5 = rng2(3), HAY = ["#d8b13a", "#c99f22", "#e2c055", "#bf9420"];
+    const skirt = (rT, rB, y, hh, seed) => {
+      const g = cyl(rT, rB, hh, 22, true, 2), p = g.attributes.position, r23 = rng2(seed);
+      for (let i = 0; i < p.count; i++) {
+        const y0 = p.getY(i);
+        if (y0 < 1e-3) {
+          const f = 1 + (i % 2 ? 0.07 : -0.02) + (r23() - 0.5) * 0.05;
+          p.setX(i, p.getX(i) * f);
+          p.setZ(i, p.getZ(i) * f);
+          p.setY(i, (i % 2 ? -0.07 : 0) - r23() * 0.04);
+        }
+      }
+      g.computeVertexNormals();
+      k.add(g, { at: [0, y, 0], split: true, color: (pp3, n, i) => HAY[Math.floor(i / 3) % 4], double: true, backShade: 0.55, outline: 0.025 });
+    };
+    k.add(lathe([[0.62, 0], [0.64, 0.25], [0.54, 0.5], [0.36, 0.76], [0.13, 0.98], [0.02, 1.02]], 14), { color: "#8f6f18" });
+    skirt(0.56, 0.76, 0.06, 0.4, 1);
+    skirt(0.4, 0.68, 0.4, 0.36, 2);
+    skirt(0.14, 0.5, 0.7, 0.32, 3);
+    k.add(torus(0.5, 0.03, 4, 18), { at: [0, 0.5, 0], rot: [Math.PI / 2, 0, 0], color: "#8a6a3c" });
+    k.add(cone(0.12, 0.28, 6), { at: [0, 0.98, 0], color: "#e2c055", outline: 0.015 });
+    k.add(torus(0.09, 0.02, 4, 8), { at: [0, 1.04, 0], rot: [Math.PI / 2, 0, 0], color: "#8a6a3c" });
+    for (let i = 0; i < 14; i++) {
+      const a = R5() * Math.PI * 2, rr = 0.66 + R5() * 0.12;
+      k.add(cbox(0.012, 0.3 + R5() * 0.15, 0.02), { at: [Math.cos(a) * rr, 0.08, Math.sin(a) * rr], rot: [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2], color: HAY[i % 4] });
     }
-    k.add(torus(0.6, 0.035, 4, 16), { at: [0, 0.35, 0], rot: [Math.PI / 2, 0, 0], color: "#8d6e4a" });
   });
   var bench = () => model("bench", (k) => {
     k.add(box(1.5, 0.07, 0.2), { at: [0, 0.45, 0.1], color: WOOD2, outline: 0.012 });
@@ -84390,13 +84421,28 @@ vec3 paneView(vec3 dir, float night) {
     k.add(cone(0.4, 0.4, 4), { at: [0, 3, 0], rot: [0, Math.PI / 4, 0], color: "#6d4c41", outline: 0.02 });
   });
   var dummy = () => model("dummy", (k) => {
-    k.add(box(0.1, 1.8, 0.1), { color: "#6d4c33", outline: 0.012 });
-    k.add(box(1.05, 0.09, 0.09), { at: [0, 1.32, 0], color: "#6d4c33", outline: 0.012 });
-    k.add(new SphereGeometry(0.3, 9, 7), { at: [0, 1.05, 0], scale: [1, 1.45, 0.85], color: "#d4ac0d", outline: 0.02 });
-    for (const y of [0.8, 1.3]) k.add(torus(0.27, 0.025, 4, 10), { at: [0, y, 0], rot: [Math.PI / 2, 0, 0], scale: [1, 0.85, 1], color: "#8d6e4a" });
-    k.add(new SphereGeometry(0.21, 9, 7), { at: [0, 1.8, 0], color: "#e8d5b5", outline: 0.015 });
-    k.add(torus(0.08, 0.02, 4, 10), { at: [0, 1.8, 0.2], color: "#c0392b" });
-    k.add(torus(0.14, 0.018, 4, 12), { at: [0, 1.05, 0.26], color: "#c0392b" });
+    const POST = "#6d4c33", SACK = "#c9b083", STRAW3 = "#d8b13a", ROPE3 = "#7d5f3a", RED3 = "#b8352a";
+    k.add(cyl(0.06, 0.07, 1.95, 7), { color: POST, outline: 0.012 });
+    k.add(cyl(0.18, 0.22, 0.14, 8), { color: POST, outline: 0.012 });
+    k.save();
+    k.translate(0, 1.36, 0);
+    k.rotateZ(Math.PI / 2);
+    k.add(cyl(0.045, 0.045, 1.1, 6), { at: [0, -0.55, 0], color: POST, outline: 0.01 });
+    for (const s of [-1, 1]) {
+      k.add(cyl(0.075, 0.09, 0.32, 8), { at: [0, s > 0 ? 0.2 : -0.52, 0], color: STRAW3, outline: 0.012 });
+      for (const t of [0.24, 0.42]) k.add(torus(0.085, 0.016, 4, 8), { at: [0, s > 0 ? t : -t, 0], rot: [Math.PI / 2, 0, 0], color: ROPE3 });
+      for (let i = 0; i < 5; i++) k.add(cbox(0.01, 0.12, 0.012), { at: [Math.cos(i) * 0.05, s * 0.6, Math.sin(i) * 0.05], rot: [Math.sin(i) * 0.5, 0, Math.cos(i) * 0.5], color: STRAW3 });
+    }
+    k.restore();
+    k.add(lathe([[0.16, 0], [0.27, 0.08], [0.31, 0.3], [0.3, 0.52], [0.25, 0.66], [0.12, 0.72]], 12), { at: [0, 0.78, 0], scale: [1, 1, 0.8], color: SACK, outline: 0.02 });
+    for (const y of [0.83, 1.47]) k.add(torus(y < 1 ? 0.2 : 0.17, 0.022, 4, 12), { at: [0, y, 0], rot: [Math.PI / 2, 0, 0], scale: [1, 0.8, 1], color: ROPE3 });
+    for (const [r4, c] of [[0.17, "#f2ead8"], [0.12, RED3], [0.065, "#f2ead8"], [0.03, RED3]]) k.add(new CircleGeometry(r4, 14), { at: [0, 1.1, 0.25 + (0.17 - r4) * 0.04], color: c });
+    k.add(new SphereGeometry(0.2, 10, 8), { at: [0, 1.72, 0], scale: [1, 1.08, 0.92], color: SACK, outline: 0.018 });
+    k.add(lathe([[0.07, 0], [0.1, 0.06], [0.06, 0.12], [1e-3, 0.13]], 7), { at: [0, 1.9, 0], color: SACK });
+    k.add(torus(0.07, 0.016, 4, 8), { at: [0, 1.91, 0], rot: [Math.PI / 2, 0, 0], color: ROPE3 });
+    for (const s of [-1, 1]) for (const r4 of [0.6, -0.6]) k.add(cbox(0.07, 0.014, 0.01), { at: [s * 0.075, 1.75, 0.185], rot: [0, 0, r4], color: "#2b1d14" });
+    for (let i = -2; i <= 2; i++) k.add(cbox(0.012, 0.04, 0.01), { at: [i * 0.03, 1.64, 0.18], color: "#2b1d14" });
+    k.add(cbox(0.14, 0.01, 0.01), { at: [0, 1.64, 0.182], color: "#2b1d14" });
   });
   var stall = () => model("stall", (k) => {
     k.add(box(1.8, 0.85, 0.7), { at: [0, 0, 0.1], color: WOOD2, outline: 0.02 });
@@ -84477,13 +84523,25 @@ vec3 paneView(vec3 dir, float night) {
     for (const [w, y] of [[0.8, 1.32], [0.62, 1.17]]) k.add(box(w, 0.04, 0.01), { at: [0, y, 0.11], color: "#3b2a1a" });
   });
   var skull3 = () => model("skull", (k) => {
-    const W4 = "#ecf0f1", D4 = "#2d3436";
-    k.add(new SphereGeometry(0.85, 14, 10), { at: [0, 0.8, 0], scale: [1, 0.92, 1.05], color: W4, outline: 0.035 });
-    k.add(box(0.95, 0.42, 0.7), { at: [0, 0.05, 0.28], color: W4, outline: 0.025 });
-    for (const s of [-1, 1]) k.add(new SphereGeometry(0.22, 8, 6), { at: [s * 0.32, 0.9, 0.72], scale: [1, 1.15, 0.45], color: D4 });
-    k.add(slab([[-0.1, 0], [0.1, 0], [0, 0.2]], 0.1), { at: [0, 0.52, 0.82], color: D4 });
-    for (let i = -3; i <= 3; i++) k.add(box(0.1, 0.16, 0.06), { at: [i * 0.12, 0.26, 0.64], color: "#dfe6e9" });
-    k.add(box(0.9, 0.05, 0.05), { at: [0, 0.24, 0.62], color: D4 });
+    const W4 = "#ece6d6", S6 = "#d6ceb8", D4 = "#231c18";
+    k.add(new SphereGeometry(0.82, 16, 12), { at: [0, 0.95, -0.08], scale: [0.95, 0.9, 1.05], color: W4, outline: 0.035 });
+    k.add(new SphereGeometry(0.6, 12, 8), { at: [0, 0.55, 0.28], scale: [1.02, 0.75, 0.85], color: W4, outline: 0.03 });
+    k.add(new SphereGeometry(0.5, 12, 6), { at: [0, 0.98, 0.5], scale: [1.05, 0.26, 0.6], color: S6, outline: 0.02 });
+    for (const s of [-1, 1]) {
+      k.add(new SphereGeometry(0.24, 10, 8), { at: [s * 0.3, 0.74, 0.74], scale: [1, 0.95, 0.4], color: D4 });
+      k.add(new SphereGeometry(0.2, 8, 6), { at: [s * 0.52, 0.5, 0.48], scale: [0.7, 0.55, 1], color: S6, outline: 0.015 });
+    }
+    k.add(slab([[-0.11, 0.18], [0, 0], [0.11, 0.18], [0.06, 0.24], [0, 0.2], [-0.06, 0.24]], 0.06), { at: [0, 0.38, 0.87], color: D4 });
+    k.add(box(0.72, 0.18, 0.42), { at: [0, 0.18, 0.42], color: W4, outline: 0.02 });
+    for (let i = -3; i <= 3; i++) k.add(box(0.085, 0.14, 0.05), { at: [i * 0.095, 0.16, 0.64 - Math.abs(i) * 0.012], color: i % 2 ? "#f6f1e3" : "#efe8d6", outline: 6e-3 });
+    k.add(box(0.68, 0.03, 0.04), { at: [0, 0.15, 0.62], color: D4 });
+    k.save();
+    k.translate(0, 0.1, 0.18);
+    k.rotateX(0.18);
+    k.add(box(0.66, 0.14, 0.52), { at: [0, -0.12, 0.08], color: S6, outline: 0.02 });
+    for (let i = -3; i <= 3; i++) k.add(box(0.08, 0.1, 0.045), { at: [i * 0.09, 0, 0.33 - Math.abs(i) * 0.012], color: "#efe8d6" });
+    k.restore();
+    for (const [x, y, z, r4] of [[0.2, 1.42, 0.35, 0.3], [-0.35, 1.25, 0.5, 0.2]]) k.add(cbox(0.012, r4, 0.015), { at: [x, y, z], rot: [0.6, 0.4, 0.5], color: "#9c9480" });
   });
   var planter = () => model("planter", (k) => {
     k.add(box(1, 0.36, 0.34), { color: WOOD2, tint: 1, outline: 0.015 });
@@ -84497,19 +84555,24 @@ vec3 paneView(vec3 dir, float night) {
     }
   });
   var sacks = () => model("sacks", (k) => {
-    const S6 = "#c8b48a", T5 = "#8d6e4a";
-    const one = (x, y, z, ry, lie) => {
+    const S6 = ["#c8b48a", "#bba67b", "#d2c096"], T5 = "#6d4c33";
+    const one = (x, y, z, ry, lie, c) => {
       k.save();
       k.translate(x, y, z);
       k.rotateY(ry);
-      if (lie) k.rotateZ(Math.PI / 2 - 0.15);
-      k.add(lathe([[0.2, 0], [0.26, 0.08], [0.27, 0.3], [0.22, 0.48], [0.1, 0.56], [0.06, 0.62], [0.09, 0.68]], 9), { color: S6, tint: 1, outline: 0.015 });
-      k.add(torus(0.07, 0.02, 4, 8), { at: [0, 0.58, 0], rot: [Math.PI / 2, 0, 0], color: T5 });
+      if (lie) {
+        k.rotateZ(Math.PI / 2 - 0.08);
+        k.translate(0, -0.3, 0);
+      }
+      k.add(lathe([[1e-3, 0], [0.24, 0.01], [0.31, 0.08], [0.33, 0.22], [0.31, 0.36], [0.25, 0.46], [0.14, 0.53], [0.075, 0.57], [0.07, 0.6]], 12), { scale: [1, 1, 0.78], color: S6[c], tint: 1, outline: 0.018 });
+      k.add(lathe([[0.065, 0.6], [0.1, 0.66], [0.13, 0.7], [0.1, 0.715], [1e-3, 0.72]], 8), { split: true, color: (p, n, i) => i % 2 ? S6[c] : shade2(S6[c], -0.12) });
+      k.add(torus(0.075, 0.022, 4, 10), { at: [0, 0.595, 0], rot: [Math.PI / 2, 0, 0], color: T5 });
+      k.add(cyl(0.327, 0.327, 0.07, 12, true), { at: [0, 0.2, 0], scale: [1.005, 1, 0.79], color: "#8a3b2b", double: true });
       k.restore();
     };
-    one(-0.22, 0, 0.05, 0.3, false);
-    one(0.25, 0, -0.05, -0.5, false);
-    one(0, 0.3, 0.32, 1.2, true);
+    one(-0.27, 0, 0.02, 0.3, false, 0);
+    one(0.3, 0, -0.06, -0.5, false, 1);
+    one(0, 0.42, 0.26, 1.35, true, 2);
   });
   var weaponRack = () => model("weaponrack", (k) => {
     for (const x of [-0.6, 0.6]) k.add(box(0.08, 1.3, 0.08), { at: [x, 0, 0], color: DARK_WOOD, outline: 0.012 });
@@ -93119,10 +93182,10 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     if (az < 0.46 && s > 0.02 && s < 0.6) {
       const across = 1 - sstep(0.3, 0.46, az);
       const upDown = sstep(0.02, 0.12, s) * (1 - sstep(0.52, 0.6, s));
-      let plate = 3e-3 + 9e-3 * m;
-      for (const g of [0.505, 0.415, 0.325]) plate -= bell(s - g, 0.03) * (2e-3 + 6e-3 * m);
-      plate -= bell(az, 0.045) * (2e-3 + 5e-3 * m);
-      b += plate * across * upDown;
+      let plate2 = 3e-3 + 9e-3 * m;
+      for (const g of [0.505, 0.415, 0.325]) plate2 -= bell(s - g, 0.03) * (2e-3 + 6e-3 * m);
+      plate2 -= bell(az, 0.045) * (2e-3 + 5e-3 * m);
+      b += plate2 * across * upDown;
     }
     b -= bell(az, 0.05) * bell(s - 0.19, 0.03) * 6e-3;
     if (m > 0.4 && az > 0.72 && s > 0.42 && s < 0.66) for (let i = 0; i < 3; i++) b += bell(s - (0.47 + i * 0.055) - (az - 0.8) * 0.3, 0.022) * bell(az - 0.86, 0.12) * (m - 0.4) * 8e-3;
@@ -94835,6 +94898,283 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     let n = 0;
     add7(g, m, () => _c4.fromArray(col6.array, n++ * 3), bone);
   }
+  var SWORD_MODELS = Object.fromEntries(Object.keys(SWORD_LOOKS).map((k) => [k, () => swordGeo(k)]));
+
+  // src/render3d/chars/weapons.js
+  var SLOT3 = { main: 0, second: 1, mouth: 2 };
+  var GEOS2 = /* @__PURE__ */ new Map();
+  function geo(key2, make) {
+    let g = GEOS2.get(key2);
+    if (!g) {
+      const b = new Builder();
+      make(b);
+      g = b.buildStatic();
+      g.userData.shared = true;
+      GEOS2.set(key2, g);
+    }
+    return g;
+  }
+  function plate(pts, t) {
+    const sh = new three_module_exports.Shape();
+    pts.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y));
+    sh.closePath();
+    const g = new three_module_exports.ExtrudeGeometry(sh, { depth: t, bevelEnabled: false, curveSegments: 4 });
+    g.translate(0, 0, -t / 2);
+    return g;
+  }
+  function axeBit(b, x0, s, reach3, span2, cols, t = 0.016) {
+    const P6 = [], E = [], n = 9;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n, a = (u - 0.5) * 2;
+      P6.push([x0 + a * span2 * 0.5 + (1 - a * a) * 0, -s * (reach3 - Math.abs(a) ** 2.2 * reach3 * 0.22)]);
+    }
+    const neck = [[x0 + span2 * 0.16, -s * 0.03], [x0 - span2 * 0.16, -s * 0.03]];
+    const out = [...P6, ...neck];
+    b.add(plate(s > 0 ? out : out.slice().reverse(), t), M(0, 0, 0), cols.cheek);
+    for (let i = 0; i < n; i++) {
+      const a0 = P6[i], a1 = P6[i + 1];
+      b.add(Prim.cyl(4), between([a0[0], a0[1] + s * 0.012, 0], [a1[0], a1[1] + s * 0.012, 0], 0.013, t * 0.6, 6e-3), cols.edge);
+    }
+  }
+  var AXES = {
+    woodsman_axe: { haft: [-0.12, 0.74], r: 0.02, wood: "#8a5a32", wrap: "#4a3022", head: 0.68, bits: [1], reach: 0.23, span: 0.25, cheek: "#7d8a94", edge: "#e4ebef", poll: true },
+    giant_axe: { haft: [-0.3, 1.05], r: 0.03, wood: "#5b3a24", wrap: "#7a2a20", head: 0.92, bits: [1, -1], reach: 0.3, span: 0.36, cheek: "#6f7b86", edge: "#dfe7ec", bands: "#c9a24e", spike: true },
+    morgan_axe: { haft: [-0.08, 0.6], r: 0.026, wood: "#9aa3ad", wrap: "#2d3436", head: 0.5, bits: [1], reach: 0.34, span: 0.42, cheek: "#a9b4bd", edge: "#f1f5f8", socket: true }
+  };
+  function axeGeo(id) {
+    const A2 = AXES[id] || AXES.woodsman_axe;
+    return geo("axe:" + (AXES[id] ? id : "woodsman_axe"), (b) => {
+      const [h0, h1] = A2.haft, wood = A2.wood;
+      b.add(Prim.cyl(8), between([h0, 0, 0], [h1, 0, 0], A2.r, A2.r * 0.9), wood);
+      for (let x = h0 + 0.05; x < h0 + 0.3; x += 0.045) b.add(Prim.torus(0.32, 4, 10), M(x, 0, 0, 0, Math.PI / 2, 0.25, A2.r * 1.05), A2.wrap);
+      b.add(Prim.sphere(8, 5), M(h0, 0, 0, 0, 0, 0, [A2.r * 1.3, A2.r * 1.25, A2.r * 1.25]), A2.socket ? "#2d3436" : shadeHex(wood, -0.2));
+      if (A2.socket) b.add(Prim.cyl(10), between([h0 - 0.02, 0, 0], [h0 + 0.12, 0, 0], 0.05, 0.05), "#5c6670");
+      if (A2.bands) for (const x of [A2.head - A2.span * 0.6, (h0 + A2.head) / 2]) b.add(Prim.cyl(8), between([x - 0.02, 0, 0], [x + 0.02, 0, 0], A2.r * 1.25), A2.bands);
+      b.add(Prim.rbox(0.3), M(A2.head, 0, 0, 0, 0, 0, [A2.span * 0.24, A2.r * 1.9, A2.r * 1.5]), A2.cheek);
+      for (const s of A2.bits) axeBit(b, A2.head, s, A2.reach, A2.span, A2, A2.socket ? 0.02 : 0.016);
+      if (A2.poll) b.add(Prim.rbox(0.3), M(A2.head, 0.05, 0, 0, 0, 0, [0.03, 0.03, A2.r * 1.3]), shadeHex(A2.cheek, -0.15));
+      if (A2.spike) b.add(Prim.cone(6), between([A2.head + A2.span * 0.2, 0, 0], [A2.head + A2.span * 0.55, 0, 0], 0.03), A2.edge);
+    });
+  }
+  function propGeo(kind) {
+    return geo("prop:" + kind, (b) => {
+      if (kind === "broom") {
+        b.add(Prim.cyl(6), between([-0.5, 0, 0], [0.82, 0, 0], 0.016), "#9c6b3f");
+        b.add(Prim.frustum(0.45, 8), M(0.95, 0, 0, 0, 0, Math.PI / 2, [0.11, 0.3, 0.05]), "#d9b45a");
+        b.add(Prim.cyl(6), M(0.83, 0, 0, 0, 0, Math.PI / 2, [0.055, 0.05, 0.035]), "#7a4f2a");
+      } else if (kind === "rod") {
+        b.add(Prim.cyl(5), between([-0.25, 0, 0], [1.75, 0, 0], 0.012, 0.012), "#6d4c33");
+        b.add(Prim.torus(0.35, 5, 10), M(0.05, -0.04, 0, 0, Math.PI / 2, 0, 0.04), "#37474f");
+        b.add(Prim.cyl(4), between([1.75, 0, 0], [1.9, -1.1, 0], 3e-3, 3e-3), "#eceff1");
+        b.add(Prim.sphere(6, 4), M(1.9, -1.1, 0, 0, 0, 0, 0.025), "#e53935");
+      } else if (kind === "mug") {
+        b.add(Prim.cyl(10), M(0.07, 0, 0, 0, 0, Math.PI / 2, [0.055, 0.13, 0.055]), "#8d6e4a");
+        b.add(Prim.cyl(10), M(0.137, 0, 0, 0, 0, Math.PI / 2, [0.05, 0.012, 0.05]), "#fff3e0");
+        for (const x of [0.03, 0.11]) b.add(Prim.cyl(10), M(x, 0, 0, 0, 0, Math.PI / 2, [0.058, 0.012, 0.058]), "#5d4037");
+      }
+    });
+  }
+  var STAFFS = {
+    bo_staff: { segs: 1, rod: "#9c6b3f", grain: "#7d522c", cap: "#5f6a72", wrap: "#e8dcc0" },
+    clima_tact: { segs: 3, rod: "#4fb3e8", grain: "#3a95c9", cap: "#1f6fa8", joint: "#1f6fa8" },
+    sorcery_clima_tact: { segs: 3, rod: "#2a4f8f", grain: "#1f3d70", cap: "#f2c94c", joint: "#f2c94c", orb: "#9fe3ff" }
+  };
+  function staffGeo(id) {
+    const S6 = STAFFS[id] || STAFFS.bo_staff;
+    return geo("staff:" + (STAFFS[id] ? id : "bo_staff"), (b) => {
+      const x0 = -0.34, x1 = 0.76, r4 = 0.016;
+      if (S6.segs === 1) {
+        b.add(Prim.cyl(8), between([x0, 0, 0], [x1, 0, 0], r4), S6.rod);
+        for (let x = x0 + 0.12; x < x1 - 0.1; x += 0.13) b.add(Prim.cyl(8), between([x, 0, 0], [x + 0.012, 0, 0], r4 * 1.04), S6.grain);
+        for (const x of [x0, x1]) b.add(Prim.cyl(8), between([x - 0.035 * Math.sign(x), 0, 0], [x + 4e-3 * Math.sign(x), 0, 0], r4 * 1.22), S6.cap);
+        for (let x = -0.08; x < 0.12; x += 0.03) b.add(Prim.torus(0.3, 4, 10), M(x, 0, 0, 0, Math.PI / 2, 0.3, r4 * 1.12), S6.wrap);
+      } else {
+        const L3 = (x1 - x0) / 3;
+        for (let i = 0; i < 3; i++) {
+          const a = x0 + i * L3, c = a + L3;
+          b.add(Prim.cyl(8), between([a + 0.02, 0, 0], [c - 0.02, 0, 0], r4 * 0.95), S6.rod);
+          b.add(Prim.cyl(8), between([a + L3 * 0.45, 0, 0], [a + L3 * 0.55, 0, 0], r4 * 1.08), S6.grain);
+        }
+        for (let i = 0; i <= 3; i++) {
+          const x = x0 + i * L3, end = i === 0 || i === 3;
+          b.add(Prim.sphere(8, 6), M(x, 0, 0, 0, 0, 0, end ? r4 * 2.3 : r4 * 1.55), end ? S6.cap : S6.joint);
+          if (end && S6.orb) b.add(Prim.sphere(8, 6), M(x + (i ? 0.02 : -0.02), 0, 0, 0, 0, 0, r4 * 1.2), S6.orb);
+        }
+      }
+    });
+  }
+  function gunGeo(kind, id) {
+    const key2 = id && GUNS[id] ? id : kind === "sling" ? "slingshot" : "flintlock";
+    return geo("gun:" + key2, (b) => GUNS[key2](b));
+  }
+  var HALF_RING = new three_module_exports.TorusGeometry(1, 0.18, 4, 10, Math.PI);
+  var BRASS = "#c9a24e";
+  var STEELD = "#3b4247";
+  var WALNUT = "#7a4a2a";
+  function flintlock(b, long = false) {
+    const end = long ? 0.95 : 0.42, stockBack = long ? -0.42 : -0.02;
+    b.add(Prim.cyl(8), between([0.03, 0.035, 0], [end, 0.035, 0], 0.016, 0.016), STEELD);
+    b.add(Prim.cyl(8), between([end - 0.02, 0.035, 0], [end, 0.035, 0], 0.02), BRASS);
+    b.add(Prim.cyl(5), between([0.1, 8e-3, 0], [end - 0.04, 8e-3, 0], 5e-3), "#6d4c33");
+    b.add(Prim.rbox(0.45), M((0.04 + end * 0.82) / 2, 0.02, 0, 0, 0, 0, [(end * 0.82 - 0.04) / 2, 0.016, 0.017]), WALNUT);
+    if (long) for (const x of [0.4, 0.62]) b.add(Prim.cyl(8), between([x, 0.026, 0], [x + 0.015, 0.026, 0], 0.024, 0.021), BRASS);
+    b.add(Prim.rbox(0.3), M(0.06, 0.03, 0.017, 0, 0, 0, [0.04, 0.014, 4e-3]), "#7f8c98");
+    b.add(Prim.rbox(0.3), M(0.03, 0.06, 0.012, 0, 0, -0.5, [8e-3, 0.024, 5e-3]), "#7f8c98");
+    b.add(Prim.box(), M(0.042, 0.082, 0.012, 0, 0, 0, [8e-3, 5e-3, 5e-3]), "#2b2b2b");
+    b.add(Prim.box(), M(0.075, 0.064, 0.012, 0, 0, 0.3, [4e-3, 0.016, 8e-3]), "#7f8c98");
+    if (long) {
+      b.add(Prim.rbox(0.4), M(-0.18, -5e-3, 0, 0, 0, 0.08, [0.24, 0.03, 0.02]), WALNUT);
+      b.add(Prim.rbox(0.4), M(stockBack + 0.06, -0.03, 0, 0, 0, 0.22, [0.07, 0.055, 0.021]), WALNUT);
+      b.add(Prim.box(), M(stockBack + 5e-3, -0.035, 0, 0, 0, 0.22, [6e-3, 0.06, 0.022]), BRASS);
+    } else {
+      b.add(Prim.rbox(0.45), M(0.03, 0.018, 0, 0, 0, 0, [0.05, 0.02, 0.017]), WALNUT);
+      b.add(Prim.cyl(10), between([0.015, 0.01, 0], [-0.045, -0.085, 0], 0.023, 0.016), WALNUT);
+      b.add(Prim.sphere(8, 6), M(-0.05, -0.09, 0, 0, 0, 0.55, [0.03, 0.022, 0.021]), BRASS);
+    }
+    b.add(Prim.box(), M(0.045, -8e-3, 0, 0, 0, 0.3, [4e-3, 0.016, 3e-3]), "#2b2b2b");
+    b.add(HALF_RING, M(0.045, 2e-3, 0, 0, 0, Math.PI, [0.028, 0.026, 0.026]), BRASS);
+  }
+  function sling(b, L3) {
+    const s = L3.size;
+    b.add(Prim.cyl(7), between([-0.06 * s, 0, 0], [0.12 * s, 0, 0], 0.017 * s), L3.wood);
+    for (let x = -0.05 * s; x < 0.08 * s; x += 0.02 * s) b.add(Prim.torus(0.22, 4, 8), M(x, 0, 0, 0, Math.PI / 2, 0.3, 0.0175 * s), L3.wrap);
+    const tips = [];
+    for (const k of [-1, 1]) {
+      const mid = [0.2 * s, k * 0.06 * s, 0], tip = [0.29 * s, k * 0.085 * s, 0];
+      b.add(Prim.cyl(7), between([0.12 * s, 0, 0], mid, 0.015 * s, 0.015 * s, 0.01), L3.wood);
+      b.add(Prim.cyl(7), between(mid, tip, 0.014 * s, 0.013 * s, 5e-3), L3.wood);
+      if (L3.horn) b.add(Prim.cone(6), between(tip, [0.33 * s, k * 0.06 * s, 0], 0.014 * s), L3.horn);
+      b.add(Prim.sphere(6, 4), M(tip[0], tip[1], tip[2], 0, 0, 0, 0.017 * s), L3.cap || L3.wood);
+      tips.push(tip);
+    }
+    if (L3.horn) {
+      b.add(Prim.cone(6), between([0.12 * s, 0, 0], [0.36 * s, 0, 0], 0.022 * s), L3.horn);
+      if (L3.dial) b.add(Prim.sphere(10, 8), M(0.11 * s, 0, 0, 0, 0, 0, [0.028 * s, 0.032 * s, 0.032 * s]), L3.dial);
+    }
+    const P6 = [0.16 * s, 0, 0];
+    for (const t of tips) b.add(Prim.cyl(4), between(t, P6, 45e-4 * s, 3e-3 * s), L3.band);
+    b.add(Prim.rbox(0.4), M(P6[0], P6[1], P6[2], 0, 0, 0, [0.012 * s, 0.02 * s, 0.012 * s]), "#6d4c33");
+  }
+  var GUNS = {
+    flintlock: (b) => flintlock(b),
+    marine_rifle: (b) => flintlock(b, true),
+    slingshot: (b) => sling(b, { size: 1, wood: "#8a5a32", wrap: "#c9b083", band: "#e8b77a" }),
+    kabuto: (b) => sling(b, { size: 1.5, wood: "#3e4f2b", wrap: "#2a2a2a", band: "#e8b77a", horn: "#55703a", cap: "#c9a24e", dial: "#f2e3b3" }),
+    kuro_kabuto: (b) => sling(b, { size: 1.6, wood: "#1d1b20", wrap: "#8e1f1f", band: "#d8d0c0", horn: "#2b2830", cap: "#b8352a", dial: "#9fd2ff" })
+  };
+  function shadeHex(c, k) {
+    const col6 = new three_module_exports.Color(c);
+    col6.offsetHSL(0, 0, k * 0.5);
+    return "#" + col6.getHexString();
+  }
+  var WEAPON_MODELS = {
+    ...Object.fromEntries(Object.keys(AXES).map((k) => [k, () => axeGeo(k)])),
+    ...Object.fromEntries(Object.keys(STAFFS).map((k) => [k, () => staffGeo(k)])),
+    ...Object.fromEntries(Object.keys(GUNS).map((k) => [k, () => gunGeo(null, k)]))
+  };
+  var EBLADE = null;
+  function energyBladeGeo() {
+    if (!EBLADE) {
+      EBLADE = new three_module_exports.SphereGeometry(1, 10, 6);
+      EBLADE.translate(1, 0, 0);
+      EBLADE.scale(0.52, 0.05, 0.02);
+      EBLADE.userData.shared = true;
+    }
+    return EBLADE;
+  }
+  var ICEBLADE = null;
+  function iceBladeGeo() {
+    if (ICEBLADE) return ICEBLADE;
+    const parts = [];
+    const main2 = new three_module_exports.OctahedronGeometry(1, 0);
+    main2.scale(0.54, 0.075, 0.03);
+    main2.translate(0.54, 0, 0);
+    parts.push(main2);
+    for (let i = 0; i < 7; i++) {
+      const t = 0.18 + i * 0.12, side = i % 2 ? 1 : -1;
+      const sp = new three_module_exports.ConeGeometry(0.025, 0.12 + i % 3 * 0.04, 4);
+      sp.rotateZ(-side * (Math.PI / 2 - 0.5));
+      sp.translate(t, side * 0.07, 0);
+      parts.push(sp);
+    }
+    let n = 0;
+    for (const g of parts) n += (g.index ? g.toNonIndexed() : g).attributes.position.count;
+    const pos = new Float32Array(n * 3);
+    let o = 0;
+    for (let g of parts) {
+      if (g.index) g = g.toNonIndexed();
+      pos.set(g.attributes.position.array, o);
+      o += g.attributes.position.array.length;
+    }
+    ICEBLADE = new three_module_exports.BufferGeometry();
+    ICEBLADE.setAttribute("position", new three_module_exports.BufferAttribute(pos, 3));
+    ICEBLADE.computeVertexNormals();
+    ICEBLADE.userData.shared = true;
+    return ICEBLADE;
+  }
+  var HeldWeapon = class {
+    constructor(kind, opts = {}) {
+      this.kind = kind;
+      this.group = new three_module_exports.Group();
+      this.opts = opts;
+      this.set(kind, opts);
+    }
+    set(kind, opts) {
+      this.group.clear();
+      this.kind = kind;
+      let g;
+      if (kind === "sword") g = swordGeo(opts.id, SLOT3[opts.variant] || 0, opts.haki);
+      else if (kind === "axe") g = axeGeo(opts.id);
+      else if (kind === "staff") g = staffGeo(opts.id);
+      else if (kind === "gun") g = gunGeo(opts.gun, opts.id);
+      else if (kind === "prop") g = propGeo(opts.variant);
+      else if (kind === "energy") {
+        this.mesh = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial(opts.color || "#b3e5fc", 0.8));
+        this.core = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial("#ffffff", 0.9));
+        this.core.scale.set(0.95, 0.4, 0.6);
+        this.mesh.add(this.core);
+        if (/^#(b3e5fc|e1f5fe|81d4fa)$/i.test(opts.color || "")) {
+          const crystal2 = new three_module_exports.Mesh(iceBladeGeo(), glowMaterial("#e8f7ff", 0.55));
+          this.mesh.add(crystal2);
+          this.mesh.material.opacity = 0.45;
+        }
+        this.group.add(this.mesh);
+        return;
+      }
+      this.mesh = new three_module_exports.Mesh(g, opts.material || weaponMaterial());
+      this.mesh.castShadow = !opts.noShadow;
+      this.mesh.receiveShadow = true;
+      this.group.add(this.mesh);
+      if (!opts.noOutline) {
+        this.outline = new three_module_exports.Mesh(g, opts.outline || sharedOutline(false));
+        this.group.add(this.outline);
+      }
+      const aura = kind === "sword" && swordLook(opts.id, SLOT3[opts.variant] || 0).aura;
+      if (aura) {
+        const [x0, x1] = bladeSpan(opts.id, SLOT3[opts.variant] || 0);
+        const m = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial(aura, 0.28));
+        m.scale.set((x1 - x0) / 1.04, 1.5, 3);
+        m.position.x = x0;
+        m.renderOrder = 6;
+        this.group.add(m);
+      }
+    }
+    /** Place at a grip point with the blade along `dir` and the flat facing `plane`. */
+    place(grip, dir, plane2) {
+      const x = _x2.copy(dir).normalize();
+      const z = _z2.copy(plane2).addScaledVector(x, -plane2.dot(x));
+      if (z.lengthSq() < 1e-6) z.set(0, 0, 1).addScaledVector(x, -x.z);
+      z.normalize();
+      const y = _y2.crossVectors(z, x);
+      _mm.makeBasis(x, y, z);
+      this.group.quaternion.setFromRotationMatrix(_mm);
+      this.group.position.copy(grip);
+    }
+  };
+  var _x2 = new three_module_exports.Vector3();
+  var _y2 = new three_module_exports.Vector3();
+  var _z2 = new three_module_exports.Vector3();
+  var _mm = new three_module_exports.Matrix4();
 
   // src/render3d/chars/build.js
   var TAU19 = Math.PI * 2;
@@ -95520,9 +95860,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   var HATS2 = {
     straw(h2) {
-      disc(h2, 0.52, 1.72, 0.07, STRAW2, 0, 0.08);
-      dome(h2, 0.58, [0.96, 0.66, 0.96], STRAW_D2, 0.08);
-      ring(h2, 0.68, [0.975], 0.22, BAND_RED2, 0.08);
+      const U4 = h2.q.hat + 10, tilt = M(0, 0, 0, 0, 0, 0.08);
+      const weave = (rings2, a, b) => (x, y, z) => Math.floor(rings2(x, y, z)) % 2 ? a : b;
+      h2.addC(crownGeo([[0.97, 0.56], [0.985, 0.82], [0.95, 1.02], [0.84, 1.17], [0.6, 1.27], [0.3, 1.31], [0, 1.32]], U4), tilt, weave((x, y) => y * 13, STRAW_D2, shade(STRAW_D2, -0.07)), h2.bone);
+      h2.addC(Prim.cyl(U4, true), mul(tilt, M(0, 0.68, 0, 0, 0, 0, [0.992, 0.24, 0.992])), BAND_RED2, h2.bone);
+      h2.addC(Prim.cyl(U4, true), mul(tilt, M(0, 0.57, 0, 0, 0, 0, [0.995, 0.02, 0.995])), shade(BAND_RED2, -0.3), h2.bone);
+      const rOut = (ph) => 1.74 + 0.03 * Math.sin(ph * 7) + 0.012 * Math.sin(ph * 31), lift = (ph) => -0.13 - 0.04 * Math.sin(ph * 3 + 1);
+      h2.addC(brimGeo(0.95, rOut, lift, 0.06, U4 + 18, 5), mul(tilt, M(0, 0.55, 0)), weave((x, y, z) => Math.hypot(x, z) * 11, STRAW2, shade(STRAW2, -0.06)), h2.bone);
+      for (let i = 0; i < 9; i++) {
+        const ph = i * 2.39 + 0.4, r4 = rOut(ph), y = 0.55 + lift(ph);
+        h2.addC(Prim.cyl(3), mul(tilt, between([Math.cos(ph) * (r4 - 0.06), y, Math.sin(ph) * (r4 - 0.06)], [Math.cos(ph + 0.05) * (r4 + 0.13), y - 0.04, Math.sin(ph + 0.05) * (r4 + 0.13)], 0.012)), shade(STRAW2, -0.12), h2.bone);
+      }
     },
     chef(h2, col6) {
       const c = col6 || "#fafafa";
@@ -95922,9 +96270,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       add7(Prim.rbox(), M(0.06, 0.035, z, 0, 0, 1, [0.022, 0.058, 0.02]), "#8d5b33", B.hilts);
       add7(Prim.sphere(6, 4), M(0.1, 0.055, z, 0, 0, 0, [0.028, 0.026, 0.024]), "#6d4c41", B.hilts);
     } else if (wpn && (wpn.kind === "axe" || wpn.kind === "staff")) {
-      const a = [-0.16 * Bk, d.chestLen - 0.02, 0.22], e = [-0.17 * Bk, 0.05, -0.28];
-      add7(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === "axe" ? "#6d4c41" : "#4fc3f7", B.backWpn);
-      if (wpn.kind === "axe") add7(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), "#cfd8dc", B.backWpn);
+      const id = wpn.ids?.[0], g = wpn.kind === "axe" ? axeGeo(id) : staffGeo(id);
+      if (!g.boundingBox) g.computeBoundingBox();
+      const a = new three_module_exports.Vector3(-0.16 * Bk, d.chestLen - 0.02, 0.22), e = new three_module_exports.Vector3(-0.17 * Bk, 0.05, -0.28);
+      const up = a.clone().sub(e).normalize();
+      const flat3 = new three_module_exports.Vector3(-Bk, 0, 0).addScaledVector(up, Bk * up.x).normalize();
+      const y = new three_module_exports.Vector3().crossVectors(flat3, up);
+      const o = a.clone().addScaledVector(up, 0.12 - g.boundingBox.max.x * (wpn.kind === "axe" ? 0.92 : 0.6));
+      addBuilt(add7, g, new three_module_exports.Matrix4().makeBasis(up, y, flat3).setPosition(o), B.backWpn);
     }
     for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B.head || b.bone[i] === B.hairTail) b.part[i] = 5;
     b.limb = limbReach(b, d);
@@ -96499,172 +96852,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       return this;
     }
   };
-
-  // src/render3d/chars/weapons.js
-  var SLOT3 = { main: 0, second: 1, mouth: 2 };
-  var GEOS2 = /* @__PURE__ */ new Map();
-  function geo(key2, make) {
-    let g = GEOS2.get(key2);
-    if (!g) {
-      const b = new Builder();
-      make(b);
-      g = b.buildStatic();
-      g.userData.shared = true;
-      GEOS2.set(key2, g);
-    }
-    return g;
-  }
-  function axeGeo() {
-    return geo("axe", (b) => {
-      b.add(Prim.cyl(7), between([-0.3, 0, 0], [0.92, 0, 0], 0.022), "#6d4c41");
-      b.add(Prim.rbox(0.4), M(0.78, 0, 0, 0, 0, 0, [0.12, 0.05, 0.03]), "#90a4ae");
-      for (const s of [-1, 1]) {
-        b.add(Prim.rbox(0.45), M(0.78, s * 0.16, 0, 0, 0, s * 0.12, [0.09, 0.14, 0.012]), "#cfd8dc");
-        b.add(Prim.rbox(0.45), M(0.8, s * 0.27, 0, 0, 0, 0, [0.14, 0.04, 0.01]), "#eceff1");
-      }
-    });
-  }
-  function propGeo(kind) {
-    return geo("prop:" + kind, (b) => {
-      if (kind === "broom") {
-        b.add(Prim.cyl(6), between([-0.5, 0, 0], [0.82, 0, 0], 0.016), "#9c6b3f");
-        b.add(Prim.frustum(0.45, 8), M(0.95, 0, 0, 0, 0, Math.PI / 2, [0.11, 0.3, 0.05]), "#d9b45a");
-        b.add(Prim.cyl(6), M(0.83, 0, 0, 0, 0, Math.PI / 2, [0.055, 0.05, 0.035]), "#7a4f2a");
-      } else if (kind === "rod") {
-        b.add(Prim.cyl(5), between([-0.25, 0, 0], [1.75, 0, 0], 0.012, 0.012), "#6d4c33");
-        b.add(Prim.torus(0.35, 5, 10), M(0.05, -0.04, 0, 0, Math.PI / 2, 0, 0.04), "#37474f");
-        b.add(Prim.cyl(4), between([1.75, 0, 0], [1.9, -1.1, 0], 3e-3, 3e-3), "#eceff1");
-        b.add(Prim.sphere(6, 4), M(1.9, -1.1, 0, 0, 0, 0, 0.025), "#e53935");
-      } else if (kind === "mug") {
-        b.add(Prim.cyl(10), M(0.07, 0, 0, 0, 0, Math.PI / 2, [0.055, 0.13, 0.055]), "#8d6e4a");
-        b.add(Prim.cyl(10), M(0.137, 0, 0, 0, 0, Math.PI / 2, [0.05, 0.012, 0.05]), "#fff3e0");
-        for (const x of [0.03, 0.11]) b.add(Prim.cyl(10), M(x, 0, 0, 0, 0, Math.PI / 2, [0.058, 0.012, 0.058]), "#5d4037");
-      }
-    });
-  }
-  function staffGeo() {
-    return geo("staff", (b) => {
-      b.add(Prim.cyl(7), between([-0.34, 0, 0], [0.74, 0, 0], 0.016), "#4fc3f7");
-      for (const x of [-0.34, 0.2, 0.76]) b.add(Prim.sphere(7, 5), M(x, 0, 0, 0, 0, 0, x === 0.2 ? 0.028 : 0.04), "#0288d1");
-    });
-  }
-  function gunGeo(kind) {
-    return geo("gun:" + (kind || ""), (b) => {
-      if (kind === "sling") {
-        b.add(Prim.cyl(6), between([-0.04, 0, 0], [0.12, 0, 0], 0.016), "#6d4c41");
-        for (const s of [-1, 1]) b.add(Prim.cyl(6), between([0.12, 0, 0], [0.24, s * 0.08, 0], 0.013), "#6d4c41");
-        for (const s of [-1, 1]) b.add(Prim.cyl(4), between([0.24, s * 0.08, 0], [0.14, 0, 0], 5e-3), "#ffcc80");
-      } else {
-        b.add(Prim.cyl(8), between([0.02, 0.03, 0], [0.4, 0.03, 0], 0.018), "#2d3436");
-        b.add(Prim.rbox(0.4), M(0.13, 0.03, 0, 0, 0, 0, [0.1, 0.025, 0.022]), "#636e72");
-        b.add(Prim.rbox(0.45), M(-0.01, -0.04, 0, 0, 0, 0.55, [0.035, 0.07, 0.02]), "#8d5b33");
-        b.add(Prim.torus(0.25, 3, 7), M(0.06, -0.01, 0, 0, 0, 0, 0.02), "#b0bec5");
-      }
-    });
-  }
-  var EBLADE = null;
-  function energyBladeGeo() {
-    if (!EBLADE) {
-      EBLADE = new three_module_exports.SphereGeometry(1, 10, 6);
-      EBLADE.translate(1, 0, 0);
-      EBLADE.scale(0.52, 0.05, 0.02);
-      EBLADE.userData.shared = true;
-    }
-    return EBLADE;
-  }
-  var ICEBLADE = null;
-  function iceBladeGeo() {
-    if (ICEBLADE) return ICEBLADE;
-    const parts = [];
-    const main2 = new three_module_exports.OctahedronGeometry(1, 0);
-    main2.scale(0.54, 0.075, 0.03);
-    main2.translate(0.54, 0, 0);
-    parts.push(main2);
-    for (let i = 0; i < 7; i++) {
-      const t = 0.18 + i * 0.12, side = i % 2 ? 1 : -1;
-      const sp = new three_module_exports.ConeGeometry(0.025, 0.12 + i % 3 * 0.04, 4);
-      sp.rotateZ(-side * (Math.PI / 2 - 0.5));
-      sp.translate(t, side * 0.07, 0);
-      parts.push(sp);
-    }
-    let n = 0;
-    for (const g of parts) n += (g.index ? g.toNonIndexed() : g).attributes.position.count;
-    const pos = new Float32Array(n * 3);
-    let o = 0;
-    for (let g of parts) {
-      if (g.index) g = g.toNonIndexed();
-      pos.set(g.attributes.position.array, o);
-      o += g.attributes.position.array.length;
-    }
-    ICEBLADE = new three_module_exports.BufferGeometry();
-    ICEBLADE.setAttribute("position", new three_module_exports.BufferAttribute(pos, 3));
-    ICEBLADE.computeVertexNormals();
-    ICEBLADE.userData.shared = true;
-    return ICEBLADE;
-  }
-  var HeldWeapon = class {
-    constructor(kind, opts = {}) {
-      this.kind = kind;
-      this.group = new three_module_exports.Group();
-      this.opts = opts;
-      this.set(kind, opts);
-    }
-    set(kind, opts) {
-      this.group.clear();
-      this.kind = kind;
-      let g;
-      if (kind === "sword") g = swordGeo(opts.id, SLOT3[opts.variant] || 0, opts.haki);
-      else if (kind === "axe") g = axeGeo();
-      else if (kind === "staff") g = staffGeo();
-      else if (kind === "gun") g = gunGeo(opts.gun);
-      else if (kind === "prop") g = propGeo(opts.variant);
-      else if (kind === "energy") {
-        this.mesh = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial(opts.color || "#b3e5fc", 0.8));
-        this.core = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial("#ffffff", 0.9));
-        this.core.scale.set(0.95, 0.4, 0.6);
-        this.mesh.add(this.core);
-        if (/^#(b3e5fc|e1f5fe|81d4fa)$/i.test(opts.color || "")) {
-          const crystal2 = new three_module_exports.Mesh(iceBladeGeo(), glowMaterial("#e8f7ff", 0.55));
-          this.mesh.add(crystal2);
-          this.mesh.material.opacity = 0.45;
-        }
-        this.group.add(this.mesh);
-        return;
-      }
-      this.mesh = new three_module_exports.Mesh(g, opts.material || weaponMaterial());
-      this.mesh.castShadow = !opts.noShadow;
-      this.mesh.receiveShadow = true;
-      this.group.add(this.mesh);
-      if (!opts.noOutline) {
-        this.outline = new three_module_exports.Mesh(g, opts.outline || sharedOutline(false));
-        this.group.add(this.outline);
-      }
-      const aura = kind === "sword" && swordLook(opts.id, SLOT3[opts.variant] || 0).aura;
-      if (aura) {
-        const [x0, x1] = bladeSpan(opts.id, SLOT3[opts.variant] || 0);
-        const m = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial(aura, 0.28));
-        m.scale.set((x1 - x0) / 1.04, 1.5, 3);
-        m.position.x = x0;
-        m.renderOrder = 6;
-        this.group.add(m);
-      }
-    }
-    /** Place at a grip point with the blade along `dir` and the flat facing `plane`. */
-    place(grip, dir, plane2) {
-      const x = _x2.copy(dir).normalize();
-      const z = _z2.copy(plane2).addScaledVector(x, -plane2.dot(x));
-      if (z.lengthSq() < 1e-6) z.set(0, 0, 1).addScaledVector(x, -x.z);
-      z.normalize();
-      const y = _y2.crossVectors(z, x);
-      _mm.makeBasis(x, y, z);
-      this.group.quaternion.setFromRotationMatrix(_mm);
-      this.group.position.copy(grip);
-    }
-  };
-  var _x2 = new three_module_exports.Vector3();
-  var _y2 = new three_module_exports.Vector3();
-  var _z2 = new three_module_exports.Vector3();
-  var _mm = new three_module_exports.Matrix4();
 
   // src/render3d/chars/model.js
   var IDENT3 = new Matrix4();
@@ -103187,16 +103374,16 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     });
   }
   function tableGeo() {
-    const plate = new CircleGeometry(0.55, 11);
-    plate.rotateX(-Math.PI / 2);
-    const p = plate.attributes.position;
+    const plate2 = new CircleGeometry(0.55, 11);
+    plate2.rotateX(-Math.PI / 2);
+    const p = plate2.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i), z = p.getZ(i), rr = Math.hypot(x, z);
       p.setY(i, 0.36 + rr * 0.08 + Math.sin(Math.atan2(z, x) * 5) * 0.025 * rr);
     }
-    plate.computeVertexNormals();
+    plate2.computeVertexNormals();
     const stalk = limb3(V3(0, 0, 0), V3(0.02, 0.37, 0), 0.08, 0.05, 5);
-    return colored2(merge3([plate, stalk]), (c, x, y, z) => {
+    return colored2(merge3([plate2, stalk]), (c, x, y, z) => {
       const rr = Math.hypot(x, z);
       c.setScalar(y > 0.3 ? 0.8 + rr * 0.45 : 0.6);
     });

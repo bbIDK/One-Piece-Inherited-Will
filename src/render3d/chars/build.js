@@ -15,6 +15,7 @@ import { buildFigure } from './body.js';
 import { FACE_TOP, FACE_BOTTOM } from './face.js';
 import { shade, mixHex } from '../../core/math.js';
 import { swordLook, swordGeo, addBuilt } from './swords.js';
+import { axeGeo, staffGeo } from './weapons.js';
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
@@ -731,9 +732,20 @@ function skullBadge(h, x, y, k, tilt = 0) {
 }
 const HATS = {
   straw(h) {
-    disc(h, 0.52, 1.72, 0.07, STRAW, 0, 0.08);
-    dome(h, 0.58, [0.96, 0.66, 0.96], STRAW_D, 0.08);
-    ring(h, 0.68, [0.975], 0.22, BAND_RED, 0.08);
+    // (Luffy's: a round woven crown, the red band, a wide brim with a softly
+    // wavy, frayed edge drooping a little; the weave shows as rings of straw)
+    const U = h.q.hat + 10, tilt = M(0, 0, 0, 0, 0, 0.08);
+    const weave = (rings, a, b) => (x, y, z) => (Math.floor(rings(x, y, z)) % 2 ? a : b);
+    h.addC(crownGeo([[0.97, 0.56], [0.985, 0.82], [0.95, 1.02], [0.84, 1.17], [0.6, 1.27], [0.3, 1.31], [0, 1.32]], U), tilt, weave((x, y) => y * 13, STRAW_D, shade(STRAW_D, -0.07)), h.bone);
+    h.addC(Prim.cyl(U, true), mul(tilt, M(0, 0.68, 0, 0, 0, 0, [0.992, 0.24, 0.992])), BAND_RED, h.bone);
+    h.addC(Prim.cyl(U, true), mul(tilt, M(0, 0.57, 0, 0, 0, 0, [0.995, 0.02, 0.995])), shade(BAND_RED, -0.3), h.bone);
+    const rOut = (ph) => 1.74 + 0.03 * Math.sin(ph * 7) + 0.012 * Math.sin(ph * 31), lift = (ph) => -0.13 - 0.04 * Math.sin(ph * 3 + 1);
+    h.addC(brimGeo(0.95, rOut, lift, 0.06, U + 18, 5), mul(tilt, M(0, 0.55, 0)), weave((x, y, z) => Math.hypot(x, z) * 11, STRAW, shade(STRAW, -0.06)), h.bone);
+    // loose straws sticking out of the frayed edge
+    for (let i = 0; i < 9; i++) {
+      const ph = i * 2.39 + 0.4, r = rOut(ph), y = 0.55 + lift(ph);
+      h.addC(Prim.cyl(3), mul(tilt, between([Math.cos(ph) * (r - 0.06), y, Math.sin(ph) * (r - 0.06)], [Math.cos(ph + 0.05) * (r + 0.13), y - 0.04, Math.sin(ph + 0.05) * (r + 0.13)], 0.012)), shade(STRAW, -0.12), h.bone);
+    }
   },
   chef(h, col) {
     const c = col || '#fafafa';
@@ -1099,9 +1111,15 @@ function buildBody0(look, wpn, lod, articulated) {
     add(Prim.rbox(), M(0.06, 0.035, z, 0, 0, 1.0, [0.022, 0.058, 0.02]), '#8d5b33', B.hilts);
     add(Prim.sphere(6, 4), M(0.1, 0.055, z, 0, 0, 0, [0.028, 0.026, 0.024]), '#6d4c41', B.hilts);
   } else if (wpn && (wpn.kind === 'axe' || wpn.kind === 'staff')) {
-    const a = [-0.16 * Bk, d.chestLen - 0.02, 0.22], e = [-0.17 * Bk, 0.05, -0.28];
-    add(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === 'axe' ? '#6d4c41' : '#4fc3f7', B.backWpn);
-    if (wpn.kind === 'axe') add(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), '#cfd8dc', B.backWpn);
+    // the weapon itself slung diagonally across the back, its head (or the staff's top) over the shoulder
+    const id = wpn.ids?.[0], g = wpn.kind === 'axe' ? axeGeo(id) : staffGeo(id);
+    if (!g.boundingBox) g.computeBoundingBox();
+    const a = new THREE.Vector3(-0.16 * Bk, d.chestLen - 0.02, 0.22), e = new THREE.Vector3(-0.17 * Bk, 0.05, -0.28);
+    const up = a.clone().sub(e).normalize();
+    const flat = new THREE.Vector3(-Bk, 0, 0).addScaledVector(up, Bk * up.x).normalize();
+    const y = new THREE.Vector3().crossVectors(flat, up);
+    const o = a.clone().addScaledVector(up, 0.12 - g.boundingBox.max.x * (wpn.kind === 'axe' ? 0.92 : 0.6));
+    addBuilt(add, g, new THREE.Matrix4().makeBasis(up, y, flat).setPosition(o), B.backWpn);
   }
 
   // everything on the head (hair, hat, ears, nose) is tagged: your own first-person body leaves it out
