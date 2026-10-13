@@ -337,4 +337,12 @@ export class Builder {
 }
 function toColor(c) { return c && c.isColor ? c : lin(c); }
 
+/** The accessory ids a look wears (look.acc, comma-joined). */
+const ACC_SETS = new Map();
+export function accOf(look) {
+  const k = look?.acc || '';
+  let a = ACC_SETS.get(k);
+  if (!a) { a = new Set(k ? k.split(',') : []); ACC_SETS.set(k, a); }
+  return a;
+}
 export { THREE };

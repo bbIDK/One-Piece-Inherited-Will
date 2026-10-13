@@ -17,6 +17,7 @@
 // saya with white crosses. build.js hangs the saya at the hip from the same
 // looks (and Yoru on the back).
 import { Builder, Prim, M, mul, between, THREE } from './geom.js';
+import { generatedGeo } from './generated.js';
 
 const STEEL = { blade: '#c3cdd6', edge: '#f1f5f8', back: '#7f8c98', ridge: '#a3afba' };
 const DEFAULT = {
@@ -248,9 +249,12 @@ export function swordGeo(id, slot = 0, haki = false) {
   const key = `${id || '#' + slot}:${haki ? 1 : 0}`;
   let g = GEOS.get(key);
   if (!g) {
-    const b = new Builder();
-    build(b, swordLook(id, slot), haki);
-    g = b.buildStatic();
+    if (!haki && generatedGeo(id)) g = generatedGeo(id);
+    else {
+      const b = new Builder();
+      build(b, swordLook(id, slot), haki);
+      g = b.buildStatic();
+    }
     g.userData.shared = true;
     GEOS.set(key, g);
   }

@@ -1,6 +1,8 @@
 // Turn a generated GLB model (Meshy / Higgsfield 3D) into a game prop:
 //
 //   node tools/glb2prop.mjs <in.glb> <name> [--height=1] [--faces=4000]
+//   weapons: [--rot=x,y,z (degrees, applied first)] --length=0.95 --grip=0.11
+//            (laid along +X, the hilt end at -X, `length` long, the origin `grip` of the way from the hilt end)
 //
 // The game draws props as merged, instanced, cel-shaded geometry coloured per
 // vertex (props/kit.js Mesher) — not textured meshes. So the model's base
@@ -140,17 +142,27 @@ function cluster(src, n) {
   return out;
 }
 let simple = tris;
-for (let n = 64; simple.length > MAX_FACES && n >= 8; n = Math.floor(n * 0.8)) simple = cluster(tris, n);
+for (let n = +(opt.grid || 64); simple.length > MAX_FACES && n >= 8; n = Math.floor(n * 0.9)) simple = cluster(tris, n);
 if (simple.length !== tris.length) console.log(`simplified ${tris.length} → ${simple.length} faces`);
 tris.length = 0; tris.push(...simple);
 
-// ---- normalise: standing on y = 0, centred, HEIGHT tall
+// ---- optional turn first (degrees, XYZ)
+if (opt.rot) {
+  const [ax, ay, az] = opt.rot.split(',').map((d) => (+d * Math.PI) / 180);
+  const rx = ([x, y, z]) => [x, y * Math.cos(ax) - z * Math.sin(ax), y * Math.sin(ax) + z * Math.cos(ax)];
+  const ry = ([x, y, z]) => [x * Math.cos(ay) + z * Math.sin(ay), y, -x * Math.sin(ay) + z * Math.cos(ay)];
+  const rz = ([x, y, z]) => [x * Math.cos(az) - y * Math.sin(az), x * Math.sin(az) + y * Math.cos(az), z];
+  for (const t of tris) t.v = t.v.map((v) => rz(ry(rx(v))));
+}
+// ---- normalise: standing on y = 0, centred, HEIGHT tall (or, for a weapon, along +X)
 let lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
 for (const t of tris) for (const v of t.v) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], v[k]); hi[k] = Math.max(hi[k], v[k]); }
-const s = HEIGHT / (hi[1] - lo[1]), cx = (lo[0] + hi[0]) / 2, cz = (lo[2] + hi[2]) / 2;
+const LEN = opt.length ? +opt.length : 0, GRIP = +(opt.grip || 0);
+const s = LEN ? LEN / (hi[0] - lo[0]) : HEIGHT / (hi[1] - lo[1]), cx = LEN ? lo[0] + GRIP * (hi[0] - lo[0]) : (lo[0] + hi[0]) / 2, cz = (lo[2] + hi[2]) / 2;
+const cy = LEN ? (+opt.gripy || 0) : lo[1];
 const pos = new Float32Array(tris.length * 9), nor = new Float32Array(tris.length * 9), col = new Uint8Array(tris.length * 9);
 tris.forEach((t, i) => {
-  const v = t.v.map(([x, y, z]) => [(x - cx) * s, (y - lo[1]) * s, (z - cz) * s]);
+  const v = t.v.map(([x, y, z]) => [(x - cx) * s, (y - cy) * s, (z - cz) * s]);
   const e1 = [v[1][0] - v[0][0], v[1][1] - v[0][1], v[1][2] - v[0][2]], e2 = [v[2][0] - v[0][0], v[2][1] - v[0][1], v[2][2] - v[0][2]];
   const nx = e1[1] * e2[2] - e1[2] * e2[1], ny = e1[2] * e2[0] - e1[0] * e2[2], nz = e1[0] * e2[1] - e1[1] * e2[0], nl = Math.hypot(nx, ny, nz) || 1;
   for (let k = 0; k < 3; k++) {

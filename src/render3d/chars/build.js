@@ -8,7 +8,7 @@
 // -1 (the first-person viewmodel: articulated fingers). Geometry is cached
 // per look signature + level and shared (ref-counted) by every character
 // that looks the same.
-import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE, EAR_CEN } from './geom.js';
+import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE, EAR_CEN, accOf } from './geom.js';
 import { B, BONES, dims, bindPose, frameId, RUB, RUBL, RUB_N } from './bones.js';
 import { BLANK_UV } from './detail.js';
 import { buildFigure } from './body.js';
@@ -966,7 +966,7 @@ export function geoKey(look, wpn, lod = 0) {
   return [lod, L.race, L.skin, L.hair, L.hairColor, L.top, L.bottom, L.shoes, L.hat, L.hatColor, L.coat, L.openShirt ? 1 : 0, L.sleeve, L.noSleeves ? 1 : 0,
     L.hand, L.arms, L.legs, L.bulk, L.ears, L.fur, L.furFace ? 1 : 0, L.furWhite ? 1 : 0, L.tail, L.fin ? 1 : 0, L.wings, L.nose, L.kind, L.vest, L.belt,
     L.sandals ?? ((L.seed || 0) % 4 === 0 ? 's' : 'b'), L.neck, L.nika ? 1 : 0, L.drums ? 1 : 0, L.seed || 0, wpn ? `${wpn.kind}${wpn.count}${wpn.ids ? ':' + wpn.ids.join(',') : ''}` : '-',
-    L.fem ? 1 : 0, L.topStyle, L.bottomStyle, L.waist, L.waistCol, L.shoeStyle, L.top2, L.inner, L.sleeves, L.muscle, L.bust, L.tie, L.tucked, L.buckle, frameId(L),
+    L.fem ? 1 : 0, L.acc || '', L.topStyle, L.bottomStyle, L.waist, L.waistCol, L.shoeStyle, L.top2, L.inner, L.sleeves, L.muscle, L.bust, L.tie, L.tucked, L.buckle, frameId(L),
     headKey(headParams(L))].join('|');
 }
 
@@ -1034,6 +1034,12 @@ function buildBody0(look, wpn, lod, articulated) {
       // (seated on the skin, the rim standing about a tenth of the head's radius off it, more behind)
       const e = surf(98, s * 95, 0.985);
       add(Prim.ear(q.head[0] >= 14), HM(mul(M(e[0] - 0.03, e[1] + 0.01, e[2], 0, s * 0.34, 0.2), M(0, 0, 0, 0, 0, 0, [0.3, 0.3, 0.3 * s]))), col, hb);
+      // three gold drops through the left lobe (a swordsman's earrings)
+      if (s < 0 && accOf(look).has('gold_earrings')) for (let i = 0; i < 3; i++) {
+        const x = e[0] - 0.06 + i * 0.05, y = e[1] - 0.27 + i * 0.07, z = e[2] - 0.035;
+        add(Prim.torus(0.28, 4, 10), HM(M(x, y - 0.03, z, 0, Math.PI / 2, 0, 0.045)), GOLD, hb);
+        add(Prim.sphere(6, 4), HM(M(x, y - 0.085, z, 0, 0, 0, [0.028, 0.045, 0.028])), '#f2c94c', hb);
+      }
     }
   }
   if (look.fin && look.kind !== 'Octopus') {
@@ -1066,7 +1072,10 @@ function buildBody0(look, wpn, lod, articulated) {
 
   // ---- hands
   const fingers = {};
-  for (const [s, Hd, part] of [[1, 'R', 1], [-1, 'L', 2]]) fingers[Hd] = hands(b, Hd, s, pal.hand, Bk, part, q, outfit.fem ? 0.9 : 1.12);
+  for (const [s, Hd, part] of [[1, 'R', 1], [-1, 'L', 2]]) {
+    fingers[Hd] = hands(b, Hd, s, pal.hand, Bk, part, q, outfit.fem ? 0.9 : 1.12);
+    handAcc(b, Hd, s, accOf(look), Bk, part, q, outfit.fem ? 0.9 : 1.12);
+  }
 
   if (look.drums) {
     for (let k = 0; k < 6; k++) {
@@ -1185,6 +1194,40 @@ function minkEars(b, HM, look, pal, hb, q) {
  * The viewmodel level (q.hands 2) gets an articulated hand instead, and
  * returns where its joints sit (for model.js to pose).
  */
+/**
+ * Rings and wraps on the hands: the iron ring (a heavy dark band with a
+ * rivet) on the right hand's middle finger, the fallen king's signet (gold,
+ * a red stone in a square bezel) on the left's, the fighter's wraps round
+ * both knuckles — on the fist, the open palm and the viewmodel's fingers.
+ */
+function handAcc(b, H, s, acc, Bk, part, q, kMul = 1) {
+  const k = (0.95 + (Bk - 1) * 0.6) * kMul, th = -s;
+  const ring = H === 'R' ? acc.has('iron_ring') && 'iron' : acc.has('king_signet') && 'signet';
+  const wraps = acc.has('hand_wraps');
+  const metal = ring === 'iron' ? '#4a4f55' : '#e0b24a', stone = ring === 'iron' ? '#8a9198' : '#b3261e';
+  if (q.hands === 2) {
+    if (ring) {
+      b.add(Prim.torus(0.22, 4, 10), M(0, -0.012 * k, 0, Math.PI / 2, 0, 0, 0.0128 * k), metal, B['k2' + H], part);
+      b.add(Prim.rbox(0.4), M(0.012 * k, -0.012 * k, 0, 0, 0, 0, [0.004 * k, 0.006 * k, 0.006 * k]), stone, B['k2' + H], part);
+    }
+    if (wraps) for (let f = 1; f <= 4; f++) b.add(Prim.torus(0.35, 4, 8), M(0, -0.006 * k, 0, Math.PI / 2, 0, 0, 0.0122 * k), '#efe9dc', B['k' + f + H], part);
+    if (wraps) for (let i = 0; i < 3; i++) b.add(Prim.rbox(0.45), M(-0.002 * k, -0.02 * k - i * 0.018 * k, 0, 0.25 * (i % 2 ? 1 : -1), 0, 0, [0.021 * k, 0.008 * k, 0.045 * k]), '#efe9dc', B['hand' + H], part);
+    return;
+  }
+  const fist = B['fist' + H], palm = B['palm' + H];
+  if (ring) {
+    // (on the fist: across the front of the middle finger; on the open hand: round it)
+    b.add(Prim.rbox(0.45), M(0.031 * k, -0.07 * k, th * 0.004 * k, 0, 0, 0, [0.006 * k, 0.007 * k, 0.012 * k]), metal, fist, part);
+    b.add(Prim.rbox(0.4), M(0.037 * k, -0.07 * k, th * 0.004 * k, 0, 0, 0, [0.003 * k, 0.005 * k, 0.006 * k]), stone, fist, part);
+    if (q.hands) b.add(Prim.torus(0.25, 4, 10), M(0, -0.13 * k, th * 0.004 * k, Math.PI / 2, 0, 0, [0.019 * k, 0.012 * k, 0.019 * k]), metal, palm, part);
+  }
+  if (wraps) {
+    b.add(Prim.rbox(0.5, ...q.rboxS), M(0.002 * k, -0.06 * k, 0, 0, 0, 0, S3(k, 0.0345, 0.024, 0.0445)), '#efe9dc', fist, part);
+    b.add(Prim.rbox(0.5, ...q.rboxS), M(0, -0.02 * k, 0, 0.2, 0, 0, S3(k, 0.031, 0.012, 0.044)), '#e3dccb', fist, part);
+    if (q.hands) b.add(Prim.rbox(0.5, ...q.rboxS), M(0, -0.05 * k, 0, 0, 0, 0, S3(k, 0.019, 0.03, 0.047)), '#efe9dc', palm, part);
+  }
+}
+const S3 = (k, x, y, z) => [x * k, y * k, z * k];
 function hands(b, H, s, col, Bk, part, q, kMul = 1) {
   const k = (0.95 + (Bk - 1) * 0.6) * kMul;
   const th = -s; // thumb side on local Z (right hand: -Z)

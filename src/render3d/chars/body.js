@@ -18,7 +18,7 @@
 // Frames (see bones.js): the model faces +X, +Y up, +Z is the character's
 // right. The torso is built on the chest bone (origin at the hip pivot), the
 // pelvis on the hips bone, limbs hang along -Y from their joints.
-import { Prim, M, mul, grid, lathe, between, lin, THREE } from './geom.js';
+import { Prim, M, mul, grid, lathe, between, lin, THREE, accOf } from './geom.js';
 import { atlasUV, torsoUV, BLANK_UV } from './detail.js';
 import { B, frameOf, frameId, SKIRT_N, skirtShape, COAT_N, coatShape, RUB, RUBL } from './bones.js';
 import { shade, mixHex } from '../../core/math.js';
@@ -548,6 +548,41 @@ export function buildFigure(add0, look, d, pal, q) {
   // head, and rising into it right up to the nape — see build.js sdfHead)
   const nk = (o.fem ? 0.046 : 0.058 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14)) * d.F.neck;
   const neckTop = d.chestLen + d.neck;
+  // ---- round the neck and on the chest (accessories)
+  {
+    const ACC = accOf(look), off = 0.012;
+    // (round the base of the neck, dipping onto the chest at the front)
+    const R = nk * 1.55, y0 = d.chestLen - 0.008;
+    const at = (a, drop, r) => { const f = Math.max(0, Math.cos(a)) ** 1.6; return [Math.cos(a) * R * 1.12 + 0.012 + f * drop * 0.55 + r * 0.5 * Math.max(0, Math.cos(a)), y0 - f * drop, Math.sin(a) * R * (1 + f * 0.25)]; };
+    const strand = (n, droop, col, r) => {
+      for (let i = 0; i < n; i++) {
+        const a = -Math.PI + (i + 0.5) / n * Math.PI * 2, p = at(a, droop, r);
+        add(Prim.sphere(q.sph[0], q.sph[1]), M(p[0], p[1], p[2], 0, 0, 0, r), col, B.chest);
+      }
+    };
+    if (ACC.has('pearl_necklace')) strand(28, 0.07, '#f5f1e8', 0.0095);
+    const pendant = (col, glass) => {
+      strand(34, 0.12, '#5b3a24', 0.0035);
+      const p0 = at(0, 0.12, 0.004), p = [p0[0] + 0.012, p0[1] - 0.004, p0[2]];
+      if (glass) {
+        add(Prim.sphere(8, 6), M(p[0], p[1] - 0.018, p[2], 0, 0, 0, [0.008, 0.02, 0.013]), glass, B.chest);
+        for (const r of [-0.6, 0, 0.6]) add(Prim.cyl(4), M(p[0] + 0.003, p[1] - 0.018, p[2], r, 0, 0, [0.0025, 0.042, 0.0025]), '#c9a24e', B.chest);
+      } else {
+        add(Prim.rbox(0.4), M(p[0], p[1] - 0.018, p[2], 0, 0, 0, [0.006, 0.02, 0.014]), col, B.chest);
+        add(Prim.sphere(6, 4), M(p[0] + 0.006, p[1] - 0.018, p[2], 0, 0, 0, 0.006), '#c0392b', B.chest);
+      }
+    };
+    if (ACC.has('sea_prism_charm')) pendant(null, '#7fd3e0');
+    else if (ACC.has('lucky_charm')) pendant('#a8743f');
+    if (ACC.has('marine_medal')) {
+      // a ribbon bar and a gold star on the left breast
+      const p = torsoPt(sh, 0.74, -0.5, off + 0.006, 1);
+      add(Prim.box(), M(p[0], p[1] + 0.03, p[2], 0, 0.5, 0, [0.004, 0.012, 0.024]), '#1f4e8c', B.chest);
+      add(Prim.box(), M(p[0] + 0.001, p[1] + 0.03, p[2], 0, 0.5, 0, [0.004, 0.012, 0.007]), '#f5f1e8', B.chest);
+      add(Prim.cyl(10), M(p[0] + 0.004, p[1] - 0.006, p[2], 0, 0.5, Math.PI / 2, [0.02, 0.006, 0.02]), '#e0b24a', B.chest);
+      add(Prim.cyl(5), M(p[0] + 0.008, p[1] - 0.006, p[2], 0, 0.5, Math.PI / 2, [0.012, 0.004, 0.012]), '#f2d16b', B.chest);
+    }
+  }
   add(neckGeo(nk, d.chestLen - 0.05, neckTop + 0.05, o, cloth), M(), skin, B.chest, 0, { blend: (x, y) => { const w = 0.8 * sstep(d.chestLen + d.neck * 0.05, neckTop, y); return w > 0.002 ? [B.head, w] : null; } });
 
   // ---- tops worn over the body
@@ -739,6 +774,22 @@ export function buildFigure(add0, look, d, pal, q) {
       if (cloth && !wide) fore(torus(q), shade(armCol, -0.15), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022));
       bare(limbSeg(fa, d.A2, rs, bd === 2 ? 12 : 2, { t0: 0.8, capBot: true }), skin);
     }
+    // ---- what's worn on the wrists and forearms (accessories: build.js accOf)
+    const ACC = accOf(look);
+    if (ACC.has('leather_bracers')) {
+      // laced leather from the middle of the forearm to the wrist, a rolled cuff at each end
+      const r0 = fa(0.5) + (long ? 0.02 : 0.009), r1 = fa(0.9) + (long ? 0.02 : 0.009);
+      fore(Prim.frustum(r1 / r0, 10), '#7a4a2a', M(0, -d.A2 * 0.7, 0, 0, 0, 0, [r0, d.A2 * 0.4, r0 * 0.92]));
+      for (const t of [0.5, 0.9]) fore(torus(q), '#5b3520', ringAt(-d.A2 * t, fa(t) + (long ? 0.022 : 0.012), (fa(t) + (long ? 0.022 : 0.012)) * 0.92, 0.016));
+      for (let i = 0; i < 4; i++) { const t = 0.55 + i * 0.1, r = fa(t) + (long ? 0.024 : 0.013); fore(Prim.box(), '#d9c9a8', M(0, -d.A2 * t, s * r * 0.0 + 0, 0, 0, 0.6 * (i % 2 ? 1 : -1), [r * 1.02, 0.003, 0.004])); }
+    }
+    if (k === 1 && ACC.has('shell_bracelet')) {
+      // a cord of little shells round the left wrist
+      const t = 0.93, r = fa(t) + (long ? 0.024 : 0.012);
+      fore(torus(q), '#c9b38a', ringAt(-d.A2 * t, r, r * 0.92, 0.008));
+      for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2; fore(Prim.sphere(5, 4), ['#f6e7d8', '#f2c1b0', '#efe3c2'][i % 3], M(Math.cos(a) * r, -d.A2 * t - 0.004, Math.sin(a) * r * 0.92, 0, a, 0, [0.009, 0.011, 0.006])); }
+    }
+    if (ACC.has('hand_wraps')) for (let i = 0; i < 3; i++) { const t = 0.86 + i * 0.045, r = fa(t) + (long ? 0.021 : 0.006); fore(torus(q), i % 2 ? '#e3dccb' : '#efe9dc', ringAt(-d.A2 * t, r, r * 0.92, 0.022)); }
     // (the long-armed folk's second elbow, halfway down the forearm)
     if (d.Am > 1.2) (long ? fore : bare)(Prim.sphere(q.sph[0], q.sph[1]), long ? armCol : skin, M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.08));
     // the point of the elbow on bare arms

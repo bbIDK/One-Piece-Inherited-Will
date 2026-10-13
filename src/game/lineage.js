@@ -444,6 +444,13 @@ export function equippedLook(char) {
   const swords = ws.filter((w) => w.kind === 'sword').length;
   look.swords = swords;
   look.weapon = ws[0]?.kind === 'sword' ? 'sword' : ws[0]?.kind || null;
+  // (accessories are worn where you can see them: build.js / body.js draw each)
+  const acc = (char.equipped?.accessories || []).filter((id) => ITEMS[id]);
+  if (acc.length) {
+    look.acc = acc.slice().sort().join(',');
+    if (acc.includes('red_sash')) { look.waist = 'sash'; look.waistCol = '#b3261e'; }
+    if (acc.includes('haramaki')) { look.waist = 'haramaki'; look.waistCol = '#2e7d32'; }
+  }
   return look;
 }
 

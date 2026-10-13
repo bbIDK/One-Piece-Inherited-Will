@@ -1015,6 +1015,30 @@ export const scenarios = {
       }
     },
   },
+  // accessories worn on the body (earrings, rings, necklaces, charms, medal, bracers, wraps, sash)
+  //   --sets=gold_earrings+pearl_necklace,iron_ring+hand_wraps,...  --dist=1.6
+  c3acc: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; window.__C3.goSunny(); });
+      const SETS = String(args.sets || 'gold_earrings+pearl_necklace,iron_ring+leather_bracers+marine_medal,hand_wraps+lucky_charm+king_signet,shell_bracelet+sea_prism_charm+red_sash').split(',');
+      for (const [view, f] of [['front', Math.PI], ['34', Math.PI * 0.72], ['side', Math.PI * 0.5]]) {
+        await page.evaluate(([sets, f]) => {
+          const C = window.__C3; C.clear();
+          sets.forEach((set, k) => {
+            const acc = set.split('+').sort().join(',');
+            const look = { race: 'human', fem: k === 3, frame: 'athletic', seed: 3 + k, idle: 'rest', hair: 'crop', hairColor: '#2b1d14', skin: '#e8b98f', topStyle: k % 2 ? 'tank' : 'open', top: ['#2f6b3a', '#b23a3a', '#3b5ba5', '#c28a2e'][k], bottomStyle: 'slim', bottom: '#2b2b33', muscle: 0.6, sleeves: 'none', acc };
+            if (acc.includes('red_sash')) { look.waist = 'sash'; look.waistCol = '#b3261e'; }
+            C.spawn({ name: set, id: 'acc-' + k, showName: false, look }, 2.0, (k - 1.5) * 0.62, f);
+          });
+          C.view(0, 0.02);
+          for (const a of C.npcs) { const v = window.OP.game.view3d.actorViews.get(a); if (v) { v.lookAt = () => 0; v.headYaw = 0; } }
+        }, [SETS, f]);
+        await settle(page, 5);
+        await snap(`acc-${view}`);
+      }
+    },
+  },
   // first person with each kind of weapon drawn: walking, sprinting, a combo
   // and a heavy blow, looking ahead and looking down at yourself
   //   --wpns=rusty_katana,wado_ichimonji+shusui+sandai_kitetsu,flintlock,bo_staff,woodsman_axe  --mode=first|third

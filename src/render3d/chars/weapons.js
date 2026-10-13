@@ -6,6 +6,7 @@
 import { Builder, Prim, M, between, THREE } from './geom.js';
 import { weaponMaterial, sharedOutline, glowMaterial } from './mats.js';
 import { swordGeo, swordLook, bladeSpan } from './swords.js';
+import { generatedGeo } from './generated.js';
 
 const SLOT = { main: 0, second: 1, mouth: 2 };
 
@@ -48,6 +49,8 @@ const AXES = {
 };
 /** An axe by item id (the woodsman's when it has none). */
 export function axeGeo(id) {
+  const gen = generatedGeo(id);
+  if (gen) return gen;
   const A = AXES[id] || AXES.woodsman_axe;
   return geo('axe:' + (AXES[id] ? id : 'woodsman_axe'), (b) => {
     const [h0, h1] = A.haft, wood = A.wood;
@@ -91,6 +94,8 @@ const STAFFS = {
 };
 /** A staff by item id: a bo of banded wood, or a Clima-Tact's three blue rods with their ball joints. */
 export function staffGeo(id) {
+  const gen = generatedGeo(id);
+  if (gen) return gen;
   const S = STAFFS[id] || STAFFS.bo_staff;
   return geo('staff:' + (STAFFS[id] ? id : 'bo_staff'), (b) => {
     const x0 = -0.34, x1 = 0.76, r = 0.016;
@@ -116,6 +121,8 @@ export function staffGeo(id) {
 }
 /** A gun by item id (else by its kind: 'sling' or a pistol). */
 export function gunGeo(kind, id) {
+  const gen = generatedGeo(id);
+  if (gen) return gen;
   const key = id && GUNS[id] ? id : kind === 'sling' ? 'slingshot' : 'flintlock';
   return geo('gun:' + key, (b) => GUNS[key](b));
 }

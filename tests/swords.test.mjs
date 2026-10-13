@@ -10,6 +10,7 @@ import { weaponOf } from '../src/render3d/chars/pose.js';
 import { weaponFromChar } from '../src/game/lineage.js';
 import { npcWeapon } from '../src/game/npcs.js';
 import { lin } from '../src/render3d/chars/geom.js';
+import { GENERATED_IDS } from '../src/render3d/chars/generated.js';
 
 // (the content packs' own swords, on top of the base items)
 const SWORDS = [...Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'sword'), 'wano_katana', 'nb_shibireru', 'p2_funkfreed'];
@@ -23,13 +24,22 @@ test('every sword has its own look, and builds', () => {
     // (from the pommel to the point: the hilt behind the grip, the blade before it)
     assert.ok(bb.max.x > L.len && bb.max.x < L.len + 0.32, `${id}: the point ${bb.max.x.toFixed(2)} m out for a ${L.len} m blade`);
     assert.ok(bb.min.x < -0.08 && bb.min.x > -0.4, `${id}: the pommel ${bb.min.x.toFixed(2)} m behind the grip`);
-    assert.ok(g.attributes.position.count < 3000, `${id}: ${g.attributes.position.count} vertices`);
+    // (a model generated from concept art is unindexed: three vertices a face)
+    assert.ok(g.attributes.position.count < (GENERATED_IDS.includes(id) ? 13500 : 3000), `${id}: ${g.attributes.position.count} vertices`);
   }
 });
 
 test('a katana\'s edge is toward -Y (a cut from overhead leads with it), its back toward +Y', () => {
   for (const id of ['fine_katana', 'wado_ichimonji', 'sandai_kitetsu', 'cutlass']) {
     const L = swordLook(id), g = swordGeo(id), P = g.attributes.position, C = g.attributes.color;
+    if (GENERATED_IDS.includes(id)) {
+      // (a generated curved blade bows toward its back: the point stands higher than mid-blade, so the edge is below)
+      g.computeBoundingBox();
+      const mx = g.boundingBox.max.x;
+      const midY = (a, b) => { let t = 0, n = 0; for (let i = 0; i < P.count; i++) { const x = P.getX(i); if (x > a && x < b) { t += P.getY(i); n++; } } return t / n; };
+      assert.ok(midY(mx * 0.9, mx) > midY(mx * 0.35, mx * 0.5) + 0.01, `${id}: the blade curves up toward the point (edge toward -Y)`);
+      continue;
+    }
     const edge = lin(L.edge), back = lin(L.back);
     let ye = 0, ne = 0, yb = 0, nb = 0;
     for (let i = 0; i < P.count; i++) {
