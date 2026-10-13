@@ -51,10 +51,28 @@ const jitterYaw = (o, amt = 0.25) => (hash(o.x, o.y, 5) - 0.5) * amt;
 const WOOD = '#8d6e4a', DARK_WOOD = '#5d4037', IRON = '#2d3436';
 
 const barrel = () => model('barrel', (k) => {
-  const P = [[0.25, 0], [0.29, 0.1], [0.32, 0.25], [0.33, 0.4], [0.32, 0.55], [0.29, 0.7], [0.25, 0.8]];
-  k.add(lathe(P, 12), { split: true, color: (p, n, i) => (Math.floor(i / 36) % 2 ? '#8d5b33' : '#9d6a3e'), tint: 1, outline: 0.02 });
-  for (const y of [0.12, 0.64]) k.add(cyl(0.328, 0.328, 0.06, 12, true), { at: [0, y, 0], color: '#4a4a4a' });
-  k.add(new THREE.CircleGeometry(0.25, 12), { at: [0, 0.8, 0], rot: [-Math.PI / 2, 0, 0], color: '#6d4526', tint: 1 });
+  // a cask: 16 staves bellied out to the middle (each its own shade of oak),
+  // their ends standing proud of the lid as the chime, two pairs of riveted
+  // iron hoops, a planked lid with its bung
+  const P = [[0.255, 0], [0.29, 0.09], [0.318, 0.22], [0.33, 0.4], [0.318, 0.58], [0.29, 0.71], [0.255, 0.8]];
+  const OAK = ['#8d5b33', '#9d6a3e', '#94613a', '#a2703f', '#885733', '#99673c'];
+  k.add(lathe(P, 16), { split: true, color: (p, n, i) => OAK[(Math.floor(i / (P.length - 1) / 6) * 7) % OAK.length], tint: 1, outline: 0.02 });
+  // (the chime: the staves' ends a lip above and below the heads)
+  for (const [y, r] of [[0.8, 0.255], [0, 0.255]]) k.add(cyl(r, r, 0.03, 16, true), { at: [0, y - 0.015, 0], color: '#6d4526', tint: 1 });
+  // hoops: a pair near each end, rivets round them
+  for (const [y, r] of [[0.075, 0.287], [0.135, 0.302], [0.665, 0.302], [0.725, 0.287]]) {
+    k.add(cyl(r + 0.008, r + 0.008, 0.035, 16, true), { at: [0, y, 0], color: '#3d3d42' });
+    for (let a = 0; a < 6; a++) {
+      const t = (a / 6) * Math.PI * 2 + y * 9;
+      k.add(box(0.016, 0.016, 0.016), { at: [Math.cos(t) * (r + 0.012), y + 0.009, Math.sin(t) * (r + 0.012)], color: '#5b5b63' });
+    }
+  }
+  // the head, sunk a little inside the chime: three planks and the bung
+  for (const [x, w] of [[-0.15, 0.13], [0, 0.17], [0.15, 0.13]]) {
+    const d = Math.sqrt(Math.max(0, 0.245 ** 2 - x * x)) * 2 - 0.02;
+    k.add(box(w - 0.006, 0.02, d), { at: [x, 0.775, 0], color: x ? '#7a4d2b' : '#6d4526', tint: 1 });
+  }
+  k.add(cyl(0.03, 0.03, 0.03, 8), { at: [0.07, 0.785, 0.05], color: '#4a2e18' });
 });
 
 const crate = () => model('crate', (k) => {
