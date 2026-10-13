@@ -64261,7 +64261,12 @@ void main() {
       // grading (linear light): saturation, contrast, cool shadows / warm highlights
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
       c.rgb = mix(vec3(l), c.rgb, uSat);
-      c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, 0.0);
+      // (contrast about mid-grey \u2014 but never pushing a dark colour down past
+      // two-thirds of itself: at night everything's below that grey, and a
+      // dark hull or a black coat would be crushed to pure black while the
+      // pale things round it kept their shape. The dark is the light's doing,
+      // the same on everything, not the grading's)
+      c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, c.rgb * 0.68);
       c.rgb *= mix(vec3(0.95, 0.98, 1.05), vec3(1.05, 1.01, 0.95), smoothstep(0.03, 0.5, l));
       // a soft shoulder on the highlights: white sand, pale stone and sunlit
       // walls under a tropical noon roll off gently instead of glaring out
@@ -67787,7 +67792,7 @@ ${GLSL}
       this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
       this.hemi.intensity = 1 + ov * 0.35 * day + (zone === 3 ? -0.3 : zone === 1 ? -0.22 : 0);
       this.grade.sat = 1 - ov * 0.14 - storm * 0.08 + heat * 0.06 - dust2 * 0.05;
-      this.grade.contrast = 1 - ov * 0.05 + storm * 0.04;
+      this.grade.contrast = 1 - ov * 0.05 + storm * 0.04 - (1 - (env2.daylight ?? 1)) * 0.1;
       let far = this.maxFar || (sailing ? 900 : 620);
       const rain = wx ? env2.rain || 0 : 0, snow2 = wx ? env2.snow || 0 : 0;
       far *= (1 - (env2.fog || 0) * 0.72) * (1 - storm * 0.35) * (1 - rain * 0.15) * (1 - snow2 * 0.3) * (1 - dust2 * 0.45);
@@ -92963,7 +92968,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     }
     const r4 = look.race;
     const muscle = look.muscle ?? (fem ? 0.25 : r4 === "buccaneer" || r4 === "giant" ? 0.95 : r4 === "fishman" ? 0.8 : 0.3 + seed % 5 * 0.12);
-    const tucked = look.tucked ?? (waist !== "none" || top === "jacket" || top === "kimono" || top === "crop" || top === "bikini" || top === "bare");
+    const tucked = look.tucked ?? (waist !== "none" || !!look.coat || top === "coat" || top === "jacket" || top === "kimono" || top === "crop" || top === "bikini" || top === "bare");
     const F4 = frameOf2(look);
     const bustK = { curvy: 1.28, heavy: 1.3, petite: 0.85, athletic: 0.95, slim: 0.95 }[frameId(look)] || 1;
     return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp5(look.muscle ?? F4.mus ?? muscle, 0, 1.2), bust: (look.bust ?? (fem ? 1.18 : 1)) * bustK, tucked, skirt };
@@ -93629,7 +93634,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       feet(add7, o, pal, d, q2, Ft, part10);
     }
     let coatInfo = null;
-    if (look.coat && TOP2 !== "coat" || TOP2 === "coat" && !look.top2 && look.coat) coatInfo = coat(add7, sh, look.coat, TR, U4, cloth, d, q2);
+    if (look.coat && TOP2 !== "coat" || TOP2 === "coat" && !look.top2 && look.coat) coatInfo = coat(add7, sh, look.coat, TR, U4, cloth, d, q2, (look.vest ? 0.022 : 0) + (o.waist === "haramaki" || o.waist === "obi" ? 0.012 : 0));
     else if (TOP2 === "coat") coatInfo = coatTail(add7, sh, look.coat || pal.top, U4, cloth, d, 0.03);
     if (look.hat === "hood") mantle(add7, sh, look.hatColor || "#6a5643", U4, cloth, d);
     return { ...o, skirtInfo, rubTA, coatInfo };
@@ -93705,12 +93710,12 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     if (!boot2) add7(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col6, Ft, part10);
     else add7(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col6, Ft, part10);
   }
-  function coat(add7, sh, c, TR, U4, cloth, d, q2) {
+  function coat(add7, sh, c, TR, U4, cloth, d, q2, under = 0) {
     const lining2 = shade(c, -0.3);
-    const off = (s) => 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
+    const off = (s) => under + 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
     const rows = cut2(TR, -0.1, 0.99);
     const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
-    const pt = (k) => (s, a) => outerPt(torsoPt(sh, s, a, off(s) - k, 0), sh, a, 0.03 - k);
+    const pt = (k) => (s, a) => outerPt(torsoPt(sh, s, a, off(s) - k, 0), sh, a, under + 0.034 - k);
     add7(band2(pt(0), rows, open, (s) => TAU17 - open(s), U4), M(), c, B.chest);
     if (cloth) add7(band2(pt(6e-3), rows, open, (s) => TAU17 - open(s), U4, true), M(), lining2, B.chest);
     const cr = cloth ? [1.1, 1.04, 0.98] : [1.1, 0.98];
@@ -93724,16 +93729,16 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const p = col6(s, a);
       return [p[0] * 0.95, p[1], p[2] * 0.95];
     }, cr, 1.25, TAU17 - 1.25, Math.max(4, U4 / 2), true), M(), lining2, B.chest);
-    return coatTail(add7, sh, c, U4, cloth, d, off(-0.1));
+    return coatTail(add7, sh, c, U4, cloth, d, off(-0.1), under);
   }
-  function coatTail(add7, sh, c, U4, cloth, d, off0) {
+  function coatTail(add7, sh, c, U4, cloth, d, off0, under = 0) {
     const lining2 = shade(c, -0.3);
-    const C3 = coatShape(d), L3 = C3.L, hK = C3.hK;
+    const C3 = { ...coatShape(d), under }, L3 = C3.L, hK = C3.hK;
     const tr = cloth ? [0.02, -0.1, -hK * 0.55, -hK + 0.05, -hK - 0.05, -(hK + (L3 - hK) * 0.5), -L3] : [0.02, -hK, -L3];
     const tp = (inset) => (y, a) => {
       const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
       const k = 1 + clamp5(-y / L3, 0, 1) * C3.flare;
-      const r4 = outerPt([p[0] * k - 8e-3, y, p[2] * k], sh, a, 0.03 - inset);
+      const r4 = outerPt([p[0] * k - 8e-3, y, p[2] * k], sh, a, (C3.under || 0) + 0.034 - inset);
       return r4;
     };
     const openT = C3.open, span2 = TAU17 - 2 * openT;
@@ -108414,10 +108419,12 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (!world.isLiquid(x, y)) world.setTile(x, y, f.tile ?? T2.POND, 0);
       });
     }
+    const riverW = 1.6 * Math.sqrt(def._grow || 1);
     for (const f of def.rivers || []) {
       const pts = f.points.map(([px2, py2]) => [cx + rel2(px2, hw), cy + rel2(py2, hh)]);
-      carvePath(world, pts, f.width ?? 3, f.tile ?? T2.RIVER, noise, f.meander ?? 1, { elev: 0 });
+      carvePath(world, pts, (f.width ?? 3) * riverW, f.tile ?? T2.RIVER, noise, f.meander ?? 1, { elev: 0 });
     }
+    if (def.rivers?.length) valleyRivers(world, rec.landBox, def.rivers.map((f) => f.tile ?? T2.RIVER));
     for (const p of def.paint || []) {
       paintOp(world, p, cx, cy, hw, hh, noise);
       const bx = p.tile === T2.BRIDGE || IS_LIQUID[p.tile] ? null : opBox(p, cx, cy, hw, hh);
@@ -108881,6 +108888,48 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           }
         }
       }
+    }
+  }
+  var VALLEY = 22;
+  function valleyRivers(world, box2, tiles) {
+    if (!box2) return;
+    const x0 = Math.floor(box2.x0), y0 = Math.floor(box2.y0), W4 = Math.ceil(box2.x1) - x0 + 1, H5 = Math.ceil(box2.y1) - y0 + 1;
+    if (W4 <= 0 || H5 <= 0 || W4 * H5 > 6e6) return;
+    const isR = new Set(tiles);
+    const dist = new Float32Array(W4 * H5).fill(1e9);
+    let q2 = [];
+    for (let j = 0; j < H5; j++) for (let i = 0; i < W4; i++) {
+      if (isR.has(world.type(world.wx(x0 + i), y0 + j))) {
+        dist[j * W4 + i] = 0;
+        q2.push(j * W4 + i);
+      }
+    }
+    if (!q2.length) return;
+    for (let d = 1; d <= VALLEY && q2.length; d++) {
+      const nq = [];
+      for (const k of q2) {
+        const i = k % W4, j = k / W4 | 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          const ii = i + di, jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= W4 || jj >= H5) continue;
+          const n = jj * W4 + ii, nd = dist[k] + (di && dj ? 1.414 : 1);
+          if (nd < dist[n] && nd <= VALLEY) {
+            dist[n] = nd;
+            nq.push(n);
+          }
+        }
+      }
+      q2 = nq;
+    }
+    for (let j = 0; j < H5; j++) for (let i = 0; i < W4; i++) {
+      const d = dist[j * W4 + i];
+      if (!(d > 0 && d <= VALLEY)) continue;
+      const x = world.wx(x0 + i), y = y0 + j;
+      if (world.isLiquid(x, y)) continue;
+      const e = world.elev(x, y);
+      const t = d / VALLEY, k = 0.12 + 0.88 * t * t * (3 - 2 * t);
+      const ne = Math.round(e * k);
+      if (ne < e) world.setElev(x, y, ne);
     }
   }
   function opBox(p, cx, cy, hw, hh) {
@@ -125754,15 +125803,31 @@ button:disabled { cursor: not-allowed; }
   var ROWS = TEX_H;
   var RL_MARGIN = 30;
   function featuresOf(world) {
-    const out = [];
+    let out = [];
     for (const isl of world.islands || []) {
       const B5 = isl.landBox;
       if (!B5) continue;
-      out.push({ c: (B5.x0 + B5.x1) / 2, h: (B5.x1 - B5.x0) / 2 + 30, y0: B5.y0 - 30, y1: B5.y1 + 30 });
+      out.push({ x0: B5.x0 - 30, x1: B5.x1 + 30, y0: B5.y0 - 30, y1: B5.y1 + 30 });
     }
+    for (let merged = true; merged; ) {
+      merged = false;
+      for (let i = 0; i < out.length && !merged; i++) {
+        for (let j = i + 1; j < out.length; j++) {
+          const a = out[i], b = out[j];
+          if (a.y1 < b.y0 || b.y1 < a.y0) continue;
+          const bx0 = a.x0 + wrapDx(a.x0, b.x0), bx1 = bx0 + (b.x1 - b.x0);
+          if (bx1 < a.x0 || bx0 > a.x1) continue;
+          out[i] = { x0: Math.min(a.x0, bx0), x1: Math.max(a.x1, bx1), y0: Math.min(a.y0, b.y0), y1: Math.max(a.y1, b.y1) };
+          out.splice(j, 1);
+          merged = true;
+          break;
+        }
+      }
+    }
+    out = out.map((f) => ({ c: (f.x0 + f.x1) / 2, h: (f.x1 - f.x0) / 2, y0: f.y0, y1: f.y1, kFix: Infinity }));
     return out;
   }
-  function rowMap(feats, y) {
+  function rowMap(feats, y, fix = true) {
     const s = shrink(y), K = 1 / s;
     const HALF = W / 2;
     const rl = [{ c: MG_X, h: RL_HALF + RL_MARGIN }, { c: RM_X, h: RL_HALF + RL_MARGIN }];
@@ -125778,7 +125843,7 @@ button:disabled { cursor: not-allowed; }
           onRL = true;
         }
       }
-      if (!onRL) isl.push({ c, h: f.h });
+      if (!onRL) isl.push({ c, h: f.h, src: f });
     }
     for (const R5 of rl) R5.k = y < POLAR || y > H - POLAR ? 0.25 * W / R5.h : Math.max(1, Math.min(K, 0.2 * W / R5.h));
     const xs = [], Xs = [];
@@ -125815,6 +125880,10 @@ button:disabled { cursor: not-allowed; }
         const gl = f.M - (left ? left.M : S6.A), gr = (right ? right.M : S6.B) - f.M;
         k = Math.min(k, 0.94 * gl * (left ? hw / (hw + left.h) : 1) / hw, 0.94 * gr * (right ? hw / (hw + right.h) : 1) / hw);
         f.k = Math.max(0.05, k);
+        if (f.src) {
+          if (fix) f.k = Math.min(f.k, f.src.kFix);
+          else f.src.kFix = Math.min(f.src.kFix, f.k);
+        }
       }
       for (const f of m) {
         const L0 = Math.max(S6.A, f.M - (f.c - f.lo) * f.k), L1 = Math.min(S6.B, f.M + (f.hi - f.c) * f.k);
@@ -125849,6 +125918,7 @@ button:disabled { cursor: not-allowed; }
   }
   function anchorsOf(world) {
     const feats = featuresOf(world), rows = new Array(ROWS);
+    for (let j = 0; j < ROWS; j++) rowMap(feats, (j + 0.5) * H / ROWS, false);
     for (let j = 0; j < ROWS; j++) rows[j] = rowMap(feats, (j + 0.5) * H / ROWS);
     return {
       rows,
@@ -133435,9 +133505,21 @@ Trains by: ${TRAINS_BY[k]}` },
       for (let d = near; d <= far; d += 1.5) {
         for (const da of [0, 0.25, -0.25, 0.5, -0.5]) {
           const a = h2 + da, cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d;
-          for (const hh of [h2, h2 + Math.PI / 2, h2 - Math.PI / 2]) {
-            if (probe.fits(w, cx, cy, hh) && !probe.shipIn(game, cx, cy, hh)) return { x: cx, y: cy, heading: hh };
+          let best = null, bestSea = -1;
+          for (const hh of [h2, h2 + Math.PI / 2, h2 - Math.PI / 2, h2 + Math.PI]) {
+            if (!probe.fits(w, cx, cy, hh) || probe.shipIn(game, cx, cy, hh)) continue;
+            let sea = 0;
+            for (let k = 1; k <= 8; k++) {
+              const r4 = L3 * 0.5 + k * L3 * 0.25;
+              if (w.isLiquid(Math.floor(w.wx(cx + Math.cos(hh) * r4)), Math.floor(cy + Math.sin(hh) * r4))) sea++;
+            }
+            const score = sea + (hh === h2 ? 0.5 : 0);
+            if (score > bestSea) {
+              bestSea = score;
+              best = { x: cx, y: cy, heading: hh };
+            }
           }
+          if (best) return best;
         }
       }
     } finally {
@@ -173284,7 +173366,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         chain3(v, 0, 0.3, 5, 0.6);
       }
     },
-    bell: { prio: 6, cd: 1, max: 1, send: 0.5, play: (v) => v.ring(0, 196, 3.2, 0.2, [0.5, 1, 1.2, 1.5, 2, 2.6, 3]) },
+    // (a great bell struck: the clang of the striker, then the bell itself ringing out loud and long, a deep hum under it)
+    bell: { prio: 7, cd: 1, max: 1, send: 0.5, play: (v) => {
+      v.thump(0, { f0: 240, f1: 120, dur: 0.08, gain: 0.35 });
+      v.ring(0, 196, 4.6, 0.6, [0.5, 1, 1.2, 1.5, 2, 2.6, 3]);
+      v.ring(0.01, 98, 5.5, 0.28, [1, 2.01]);
+    } },
     /** Eating: a few bites and chews, and a gulp. */
     eat: {
       prio: 5,

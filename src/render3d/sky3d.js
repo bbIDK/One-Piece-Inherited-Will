@@ -619,7 +619,8 @@ export class Sky {
     this.hemi.intensity = 1.0 + ov * 0.35 * day + (zone === 3 ? -0.3 : zone === 1 ? -0.22 : 0);
     // the picture's grading: flatter and cooler under cloud, richer in the heat
     this.grade.sat = 1 - ov * 0.14 - storm * 0.08 + heat * 0.06 - dust * 0.05;
-    this.grade.contrast = 1 - ov * 0.05 + storm * 0.04;
+    // (and softer at night: the dark reads as dark, not as shapes cut out in black)
+    this.grade.contrast = 1 - ov * 0.05 + storm * 0.04 - (1 - (env.daylight ?? 1)) * 0.1;
 
     // Fog (see fog.js): a thin sea haze on a clear day that thickens in storms,
     // snow and fog banks. On a clear day it closes in over the last 40% of the

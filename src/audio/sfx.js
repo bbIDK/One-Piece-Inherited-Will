@@ -1044,7 +1044,8 @@ export const SFX = {
       M.chain(v, 0, 0.3, 5, 0.6);
     },
   },
-  bell: { prio: 6, cd: 1, max: 1, send: 0.5, play: (v) => v.ring(0, 196, 3.2, 0.2, [0.5, 1, 1.2, 1.5, 2, 2.6, 3.0]) },
+  // (a great bell struck: the clang of the striker, then the bell itself ringing out loud and long, a deep hum under it)
+  bell: { prio: 7, cd: 1, max: 1, send: 0.5, play: (v) => { v.thump(0, { f0: 240, f1: 120, dur: 0.08, gain: 0.35 }); v.ring(0, 196, 4.6, 0.6, [0.5, 1, 1.2, 1.5, 2, 2.6, 3.0]); v.ring(0.01, 98, 5.5, 0.28, [1, 2.01]); } },
   /** Eating: a few bites and chews, and a gulp. */
   eat: {
     prio: 5, cd: 0.3, max: 1,

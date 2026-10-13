@@ -85,7 +85,12 @@ const InkGradeShader = {
       // grading (linear light): saturation, contrast, cool shadows / warm highlights
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
       c.rgb = mix(vec3(l), c.rgb, uSat);
-      c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, 0.0);
+      // (contrast about mid-grey — but never pushing a dark colour down past
+      // two-thirds of itself: at night everything's below that grey, and a
+      // dark hull or a black coat would be crushed to pure black while the
+      // pale things round it kept their shape. The dark is the light's doing,
+      // the same on everything, not the grading's)
+      c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, c.rgb * 0.68);
       c.rgb *= mix(vec3(0.95, 0.98, 1.05), vec3(1.05, 1.01, 0.95), smoothstep(0.03, 0.5, l));
       // a soft shoulder on the highlights: white sand, pale stone and sunlit
       // walls under a tropical noon roll off gently instead of glaring out

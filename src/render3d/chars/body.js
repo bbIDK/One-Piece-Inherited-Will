@@ -59,7 +59,8 @@ export function outfitOf(look) {
   const r = look.race;
   const muscle = look.muscle ?? (fem ? 0.25 : r === 'buccaneer' || r === 'giant' ? 0.95 : r === 'fishman' ? 0.8 : 0.3 + (seed % 5) * 0.12);
   // a shirt hangs loose unless something is worn at the waist over it
-  const tucked = look.tucked ?? (waist !== 'none' || top === 'jacket' || top === 'kimono' || top === 'crop' || top === 'bikini' || top === 'bare');
+  // (or under a coat: the coat's the outer layer, and a hem flaring out over the hips would come through it)
+  const tucked = look.tucked ?? (waist !== 'none' || !!look.coat || top === 'coat' || top === 'jacket' || top === 'kimono' || top === 'crop' || top === 'bikini' || top === 'bare');
   const F = frameOf(look);
   const bustK = { curvy: 1.28, heavy: 1.3, petite: 0.85, athletic: 0.95, slim: 0.95 }[frameId(look)] || 1;
   return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp(look.muscle ?? F.mus ?? muscle, 0, 1.2), bust: (look.bust ?? (fem ? 1.18 : 1)) * bustK, tucked, skirt };
@@ -804,7 +805,7 @@ export function buildFigure(add0, look, d, pal, q) {
 
   // ---- a coat over the shoulders (coat colour), the tail swings from the waist
   let coatInfo = null;
-  if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coatInfo = coat(add, sh, look.coat, TR, U, cloth, d, q);
+  if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coatInfo = coat(add, sh, look.coat, TR, U, cloth, d, q, (look.vest ? 0.022 : 0) + (o.waist === 'haramaki' || o.waist === 'obi' ? 0.012 : 0));
   else if (TOP === 'coat') coatInfo = coatTail(add, sh, look.coat || pal.top, U, cloth, d, 0.03);
   // ---- a hood's mantle over the shoulders (its cowl is on the head: build.js HATS.hood)
   if (look.hat === 'hood') mantle(add, sh, look.hatColor || '#6a5643', U, cloth, d);
@@ -902,13 +903,14 @@ function feet(add, o, pal, d, q, Ft, part) {
 }
 
 /** A coat worn over the shoulders: open at the front, a stand-up collar, the long tail on its own bone. */
-function coat(add, sh, c, TR, U, cloth, d, q) {
+function coat(add, sh, c, TR, U, cloth, d, q, under = 0) {
   const lining = shade(c, -0.3);
-  const off = (s) => 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
+  // (layered: a clear margin outside whatever's worn under it — a vest's shell, a haramaki)
+  const off = (s) => under + 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
   const rows = cut(TR, -0.1, 0.99);
   const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
   // (clear of the hips and a belt or sash, too)
-  const pt = (k) => (s, a) => outerPt(torsoPt(sh, s, a, off(s) - k, 0), sh, a, 0.03 - k);
+  const pt = (k) => (s, a) => outerPt(torsoPt(sh, s, a, off(s) - k, 0), sh, a, under + 0.034 - k);
   add(band(pt(0), rows, open, (s) => TAU - open(s), U), M(), c, B.chest);
   if (cloth) add(band(pt(0.006), rows, open, (s) => TAU - open(s), U, true), M(), lining, B.chest);
   // stand-up collar behind the neck
@@ -920,7 +922,7 @@ function coat(add, sh, c, TR, U, cloth, d, q) {
   };
   add(band(col, cr, 1.25, TAU - 1.25, Math.max(4, U / 2)), M(), c, B.chest);
   if (cloth) add(band((s, a) => { const p = col(s, a); return [p[0] * 0.95, p[1], p[2] * 0.95]; }, cr, 1.25, TAU - 1.25, Math.max(4, U / 2), true), M(), lining, B.chest);
-  return coatTail(add, sh, c, U, cloth, d, off(-0.1));
+  return coatTail(add, sh, c, U, cloth, d, off(-0.1), under);
 }
 
 /**
@@ -930,16 +932,16 @@ function coat(add, sh, c, TR, U, cloth, d, q) {
  * which model.js coatPanels swings as cloth, clear of the legs. Returns how
  * it hangs, for that.
  */
-function coatTail(add, sh, c, U, cloth, d, off0) {
+function coatTail(add, sh, c, U, cloth, d, off0, under = 0) {
   const lining = shade(c, -0.3);
-  const C = coatShape(d), L = C.L, hK = C.hK;
+  const C = { ...coatShape(d), under }, L = C.L, hK = C.hK;
   // (rows through the bend, so the cloth folds there; far off, just the bend)
   const tr = cloth ? [0.02, -0.1, -hK * 0.55, -hK + 0.05, -hK - 0.05, -(hK + (L - hK) * 0.5), -L] : [0.02, -hK, -L];
   const tp = (inset) => (y, a) => {
     const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
     const k = 1 + clamp(-y / L, 0, 1) * C.flare;
     // (never in through the hips and seat: the pelvis is broader than the waist)
-    const r = outerPt([p[0] * k - 0.008, y, p[2] * k], sh, a, 0.03 - inset);
+    const r = outerPt([p[0] * k - 0.008, y, p[2] * k], sh, a, (C.under || 0) + 0.034 - inset);
     return r;
   };
   const openT = C.open, span = TAU - 2 * openT;

@@ -695,6 +695,8 @@ export const scenarios = {
       const WEAR = {
         coat: { topStyle: 'coat', coat: '#1b5e20' },
         cape: { topStyle: 'tank', top: '#333333', coat: '#1b5e20' },
+        // (a loose shirt and a sash under a long coat: nothing of them through it)
+        layers: { topStyle: 'shirt', top: '#e8a33a', waist: 'sash', waistCol: '#e8c33a', coat: '#1f2a44' },
       };
       const SETS = {
         m: ['average', 'lean', 'athletic', 'slim', 'brawny', 'heavy', 'lanky', 'stocky'].map((f) => ({ fem: false, frame: f, muscle: 1 })),

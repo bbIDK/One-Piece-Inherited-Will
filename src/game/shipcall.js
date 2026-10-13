@@ -46,10 +46,21 @@ export function berthAhead(game, type, x, y, h, upgrades = []) {
       // (straight ahead first, then a little to either side)
       for (const da of [0, 0.25, -0.25, 0.5, -0.5]) {
         const a = h + da, cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d;
-        // (bow on, the way you're looking: you walk down to her stern... or, alongside, turned across)
-        for (const hh of [h, h + Math.PI / 2, h - Math.PI / 2]) {
-          if (probe.fits(w, cx, cy, hh) && !probe.shipIn(game, cx, cy, hh)) return { x: cx, y: cy, heading: hh };
+        // (bow on, the way you're looking: you walk down to her stern... or, alongside, turned across —
+        // of the ways she fits, the one with her bow to open water, never nosed in at the shore)
+        let best = null, bestSea = -1;
+        for (const hh of [h, h + Math.PI / 2, h - Math.PI / 2, h + Math.PI]) {
+          if (!probe.fits(w, cx, cy, hh) || probe.shipIn(game, cx, cy, hh)) continue;
+          let sea = 0;
+          for (let k = 1; k <= 8; k++) {
+            const r = L * 0.5 + k * L * 0.25;
+            if (w.isLiquid(Math.floor(w.wx(cx + Math.cos(hh) * r)), Math.floor(cy + Math.sin(hh) * r))) sea++;
+          }
+          // (a little for the way you're looking, all else equal)
+          const score = sea + (hh === h ? 0.5 : 0);
+          if (score > bestSea) { bestSea = score; best = { x: cx, y: cy, heading: hh }; }
         }
+        if (best) return best;
       }
     }
   } finally { probe.strict = false; }

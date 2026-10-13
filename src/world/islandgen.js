@@ -202,10 +202,15 @@ export function generateIsland(world, def, noise, rng) {
     });
   }
 
+  // rivers: as wide as the island's grown (a river of a big island is a big
+  // river), each down a valley of its own — its banks sloping gently down to
+  // the water, never sheer walls cut through the hills (valleyRivers)
+  const riverW = 1.6 * Math.sqrt(def._grow || 1);
   for (const f of def.rivers || []) {
     const pts = f.points.map(([px, py]) => [cx + rel(px, hw), cy + rel(py, hh)]);
-    carvePath(world, pts, f.width ?? 3, f.tile ?? T.RIVER, noise, f.meander ?? 1, { elev: 0 });
+    carvePath(world, pts, (f.width ?? 3) * riverW, f.tile ?? T.RIVER, noise, f.meander ?? 1, { elev: 0 });
   }
+  if (def.rivers?.length) valleyRivers(world, rec.landBox, def.rivers.map((f) => f.tile ?? T.RIVER));
 
   for (const p of def.paint || []) {
     paintOp(world, p, cx, cy, hw, hh, noise);
@@ -718,6 +723,52 @@ export function carvePath(world, pts, width, tile, noise, meander = 1, { elev, o
         }
       }
     }
+  }
+}
+
+/**
+ * The land either side of an island's rivers brought down toward them: a
+ * valley, its sides sloping to the water over VALLEY tiles (further where the
+ * land stands higher), rather than the hills running right up to the bank —
+ * there the terrain rises from the water's edge in a few metres, a gorge with
+ * sheer walls the trees stand out from.
+ */
+const VALLEY = 22;
+function valleyRivers(world, box, tiles) {
+  if (!box) return;
+  const x0 = Math.floor(box.x0), y0 = Math.floor(box.y0), W = Math.ceil(box.x1) - x0 + 1, H = Math.ceil(box.y1) - y0 + 1;
+  if (W <= 0 || H <= 0 || W * H > 6e6) return;
+  const isR = new Set(tiles);
+  const dist = new Float32Array(W * H).fill(1e9);
+  let q = [];
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    if (isR.has(world.type(world.wx(x0 + i), y0 + j))) { dist[j * W + i] = 0; q.push(j * W + i); }
+  }
+  if (!q.length) return;
+  // (distance out from the water, near enough: a few sweeps of a breadth-first fill)
+  for (let d = 1; d <= VALLEY && q.length; d++) {
+    const nq = [];
+    for (const k of q) {
+      const i = k % W, j = (k / W) | 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = i + di, jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= W || jj >= H) continue;
+        const n = jj * W + ii, nd = dist[k] + (di && dj ? 1.414 : 1);
+        if (nd < dist[n] && nd <= VALLEY) { dist[n] = nd; nq.push(n); }
+      }
+    }
+    q = nq;
+  }
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const d = dist[j * W + i];
+    if (!(d > 0 && d <= VALLEY)) continue;
+    const x = world.wx(x0 + i), y = y0 + j;
+    if (world.isLiquid(x, y)) continue;
+    const e = world.elev(x, y);
+    // (down near the water, rising to the land's own height at the valley's edge)
+    const t = d / VALLEY, k = 0.12 + 0.88 * t * t * (3 - 2 * t);
+    const ne = Math.round(e * k);
+    if (ne < e) world.setElev(x, y, ne);
   }
 }
 

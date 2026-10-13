@@ -56,12 +56,31 @@ const RL_MARGIN = 30;
 
 /** The features on the chart: the islands (their land and a little sea round it), and the Red Line's two arcs. */
 function featuresOf(world) {
-  const out = [];
+  let out = [];
   for (const isl of world.islands || []) {
     const B = isl.landBox;
     if (!B) continue;
-    out.push({ c: (B.x0 + B.x1) / 2, h: (B.x1 - B.x0) / 2 + 30, y0: B.y0 - 30, y1: B.y1 + 30 });
+    out.push({ x0: B.x0 - 30, x1: B.x1 + 30, y0: B.y0 - 30, y1: B.y1 + 30 });
   }
+  // (islands whose boxes overlap are laid as one: merged on some rows and not
+  // on others, the rows of each would be laid at different widths and the
+  // island torn into strips)
+  for (let merged = true; merged;) {
+    merged = false;
+    for (let i = 0; i < out.length && !merged; i++) {
+      for (let j = i + 1; j < out.length; j++) {
+        const a = out[i], b = out[j];
+        if (a.y1 < b.y0 || b.y1 < a.y0) continue;
+        const bx0 = a.x0 + wrapDx(a.x0, b.x0), bx1 = bx0 + (b.x1 - b.x0);
+        if (bx1 < a.x0 || bx0 > a.x1) continue;
+        out[i] = { x0: Math.min(a.x0, bx0), x1: Math.max(a.x1, bx1), y0: Math.min(a.y0, b.y0), y1: Math.max(a.y1, b.y1) };
+        out.splice(j, 1);
+        merged = true;
+        break;
+      }
+    }
+  }
+  out = out.map((f) => ({ c: (f.x0 + f.x1) / 2, h: (f.x1 - f.x0) / 2, y0: f.y0, y1: f.y1, kFix: Infinity }));
   return out;
 }
 
@@ -75,7 +94,7 @@ function featuresOf(world) {
  * each island widened about its middle to its true width — as far as its
  * neighbours leave it room.
  */
-function rowMap(feats, y) {
+function rowMap(feats, y, fix = true) {
   const s = shrink(y), K = 1 / s;
   const HALF = W / 2;
   // (the Red Line's arcs, each grown to take in whatever stands on it: Mary Geoise, Reverse Mountain)
@@ -89,7 +108,7 @@ function rowMap(feats, y) {
       const d = Math.abs(wrapDx(R.c, c));
       if (d - f.h < R.h) { R.h = Math.max(R.h, d + f.h); onRL = true; }
     }
-    if (!onRL) isl.push({ c, h: f.h });
+    if (!onRL) isl.push({ c, h: f.h, src: f });
   }
   // (most of the way round near the poles; over the pole's own ice, all of it: the ring crosses the pole)
   for (const R of rl) R.k = y < POLAR || y > H - POLAR ? 0.25 * W / R.h : Math.max(1, Math.min(K, 0.2 * W / R.h));
@@ -123,6 +142,8 @@ function rowMap(feats, y) {
       const gl = f.M - (left ? left.M : S.A), gr = (right ? right.M : S.B) - f.M;
       k = Math.min(k, 0.94 * gl * (left ? hw / (hw + left.h) : 1) / hw, 0.94 * gr * (right ? hw / (hw + right.h) : 1) / hw);
       f.k = Math.max(0.05, k);
+      // (the same width on every row it's on: the narrowest any row allows it — see anchorsOf)
+      if (f.src) { if (fix) f.k = Math.min(f.k, f.src.kFix); else f.src.kFix = Math.min(f.src.kFix, f.k); }
     }
     for (const f of m) {
       const L0 = Math.max(S.A, f.M - (f.c - f.lo) * f.k), L1 = Math.min(S.B, f.M + (f.hi - f.c) * f.k);
@@ -149,6 +170,8 @@ function along(a, b, v) {
 /** The whole chart's row maps (one per row of the globe's picture). */
 export function anchorsOf(world) {
   const feats = featuresOf(world), rows = new Array(ROWS);
+  // (first how wide each may be on each of its rows, then every row with each at the narrowest of those)
+  for (let j = 0; j < ROWS; j++) rowMap(feats, (j + 0.5) * H / ROWS, false);
   for (let j = 0; j < ROWS; j++) rows[j] = rowMap(feats, (j + 0.5) * H / ROWS);
   return {
     rows,
