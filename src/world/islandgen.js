@@ -519,11 +519,11 @@ const RAISED_GROUND = new Set([T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== u
  * towns, the shore, the island's own landmarks and the other sites.
  */
 const COUNTRY = [
-  { name: 'Farmstead', parts: [['windmill', 0, 0], ['haystack', 7, 3], ['haystack', 8.5, -2.5], ['sacks', -4, 4], ['barrel', -4.5, 5.6]], field: [10, 6, 16, 11] },
-  { name: 'Camp', parts: [['tent', 0, 0], ['campfire', 4, 2.5], ['crate', -3.5, 2.5], ['barrel', -3.2, 4.1], ['sacks', 2.5, -3]] },
-  { name: 'Old Ruins', parts: [['ruins', 0, 0], ['pillar', 5.5, 2], ['pillar', -5, -1.5], ['ruins', -2, 6, { s: 0.6 }]] },
+  { name: 'Farmstead', folk: 'farmer', parts: [['windmill', 0, 0], ['haystack', 7, 3], ['haystack', 8.5, -2.5], ['sacks', -4, 4], ['barrel', -4.5, 5.6]], field: [10, 6, 16, 11] },
+  { name: 'Camp', folk: 'bandits', parts: [['tent', 0, 0], ['campfire', 4, 2.5], ['crate', -3.5, 2.5], ['barrel', -3.2, 4.1], ['sacks', 2.5, -3], ['chest', -1.5, -3.2, { treasure: true }]] },
+  { name: 'Old Ruins', parts: [['ruins', 0, 0], ['pillar', 5.5, 2], ['pillar', -5, -1.5], ['ruins', -2, 6, { s: 0.6 }], ['chest', 3, -4, { treasure: true, tier: 1.5 }]] },
   { name: 'Graveyard', parts: [['grave', -2.4, 0], ['grave', 0, 0], ['grave', 2.4, 0], ['grave', -1.2, 2.8], ['grave', 1.2, 2.8], ['lantern', 4.5, -1]] },
-  { name: 'Woodcutters\' Camp', parts: [['tent', 0, 0, { v: 1 }], ['campfire', 3.5, 3], ['crate', -3, 3], ['crate', -4.2, 3.6]] },
+  { name: 'Woodcutters\' Camp', folk: 'woodcutters', parts: [['tent', 0, 0, { v: 1 }], ['campfire', 3.5, 3], ['crate', -3, 3], ['crate', -4.2, 3.6]] },
 ];
 function placeCountry(world, rec, def, rng, ground) {
   const b = rec.landBox;
@@ -576,6 +576,7 @@ function placeCountry(world, rec, def, rng, ground) {
     for (const [kind, dx, dy, opt] of S.parts) {
       const p = at(dx, dy);
       const o = { kind, x: p.x, y: p.y, yaw: yaw + (kind === 'tent' ? Math.PI : 0), block: true, country: S.name, ...opt };
+      if (kind === 'chest') o.key = `country_${def.id}_${i}`;
       settleLandmark(world, rec, o, ground);
       placeObject(world, o);
       rec.landmarks.push(o);
@@ -585,7 +586,7 @@ function placeCountry(world, rec, def, rng, ground) {
     const gate = at(0, 9);
     if (town) connectRoad(world, gate.x, gate.y, town.plaza.x, town.plaza.y, T.DIRT);
     rec.clearings.push({ x: c.x, y: c.y, r: 14 });
-    rec.country.push({ name: S.name, x: c.x, y: c.y });
+    rec.country.push({ name: S.name, folk: S.folk || null, x: c.x, y: c.y });
   });
 }
 

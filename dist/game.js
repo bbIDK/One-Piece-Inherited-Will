@@ -108651,11 +108651,11 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   var RAISED_GROUND = new Set([T2.ROCK, T2.FOREST, T2.JUNGLE].filter((t) => t !== void 0));
   var COUNTRY = [
-    { name: "Farmstead", parts: [["windmill", 0, 0], ["haystack", 7, 3], ["haystack", 8.5, -2.5], ["sacks", -4, 4], ["barrel", -4.5, 5.6]], field: [10, 6, 16, 11] },
-    { name: "Camp", parts: [["tent", 0, 0], ["campfire", 4, 2.5], ["crate", -3.5, 2.5], ["barrel", -3.2, 4.1], ["sacks", 2.5, -3]] },
-    { name: "Old Ruins", parts: [["ruins", 0, 0], ["pillar", 5.5, 2], ["pillar", -5, -1.5], ["ruins", -2, 6, { s: 0.6 }]] },
+    { name: "Farmstead", folk: "farmer", parts: [["windmill", 0, 0], ["haystack", 7, 3], ["haystack", 8.5, -2.5], ["sacks", -4, 4], ["barrel", -4.5, 5.6]], field: [10, 6, 16, 11] },
+    { name: "Camp", folk: "bandits", parts: [["tent", 0, 0], ["campfire", 4, 2.5], ["crate", -3.5, 2.5], ["barrel", -3.2, 4.1], ["sacks", 2.5, -3], ["chest", -1.5, -3.2, { treasure: true }]] },
+    { name: "Old Ruins", parts: [["ruins", 0, 0], ["pillar", 5.5, 2], ["pillar", -5, -1.5], ["ruins", -2, 6, { s: 0.6 }], ["chest", 3, -4, { treasure: true, tier: 1.5 }]] },
     { name: "Graveyard", parts: [["grave", -2.4, 0], ["grave", 0, 0], ["grave", 2.4, 0], ["grave", -1.2, 2.8], ["grave", 1.2, 2.8], ["lantern", 4.5, -1]] },
-    { name: "Woodcutters' Camp", parts: [["tent", 0, 0, { v: 1 }], ["campfire", 3.5, 3], ["crate", -3, 3], ["crate", -4.2, 3.6]] }
+    { name: "Woodcutters' Camp", folk: "woodcutters", parts: [["tent", 0, 0, { v: 1 }], ["campfire", 3.5, 3], ["crate", -3, 3], ["crate", -4.2, 3.6]] }
   ];
   function placeCountry(world, rec, def, rng4, ground) {
     const b = rec.landBox;
@@ -108704,6 +108704,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       for (const [kind, dx, dy, opt] of S6.parts) {
         const p = at4(dx, dy);
         const o = { kind, x: p.x, y: p.y, yaw: yaw + (kind === "tent" ? Math.PI : 0), block: true, country: S6.name, ...opt };
+        if (kind === "chest") o.key = `country_${def.id}_${i}`;
         settleLandmark(world, rec, o, ground);
         placeObject(world, o);
         rec.landmarks.push(o);
@@ -108712,7 +108713,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const gate = at4(0, 9);
       if (town) connectRoad(world, gate.x, gate.y, town.plaza.x, town.plaza.y, T2.DIRT);
       rec.clearings.push({ x: c.x, y: c.y, r: 14 });
-      rec.country.push({ name: S6.name, x: c.x, y: c.y });
+      rec.country.push({ name: S6.name, folk: S6.folk || null, x: c.x, y: c.y });
     });
   }
   function coarseField(fn, x0, y0, w, h2) {
@@ -138562,6 +138563,53 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       persist(g);
     }
   };
+
+  // src/game/country.js
+  var WORK = {
+    farmer: { n: [1, 2], outfit: "village", label: "farm" },
+    woodcutters: { n: [2, 3], outfit: "village", label: "woodcutters' camp" }
+  };
+  function countryBuilder(ctx) {
+    const { island, game, spawner, list, rng: rng4 } = ctx;
+    if (!island.country?.length || !game.state?.char) return;
+    const danger = island.def?.danger || 1;
+    const races = island.def?.population || townRaces(island);
+    for (const site of island.country) {
+      if (site.folk === "bandits") {
+        const n = rng4.int(2, 2 + Math.min(2, danger));
+        for (let i = 0; i < n; i++) {
+          const p = spawner.findFree(site.x, site.y, 7, rng4);
+          if (!p) continue;
+          const a = makeEnemy("bandit", 2 + danger * 3 + rng4.int(0, 2), p.x, p.y, { seed: rng4.int(1, 1e9) });
+          a.game = game;
+          if (a.controller) a.controller.leash = 22;
+          game.addActor(a);
+          list.push(a);
+        }
+        continue;
+      }
+      const W4 = WORK[site.folk];
+      if (!W4) continue;
+      for (let i = rng4.int(W4.n[0], W4.n[1]); i > 0; i--) {
+        const p = spawner.findFree(site.x, site.y, 8, rng4);
+        if (!p) continue;
+        const race = rng4.weighted(races);
+        const a = spawner.spawn({
+          x: p.x,
+          y: p.y,
+          name: randomName(rng4, race),
+          look: makeLook(race, rng4.int(1, 1e9), civilianOutfit(W4.outfit, rng4)),
+          race,
+          faction: "civilian",
+          attrs: { str: 4, agi: 3, end: 4, vit: 4, wil: 3 },
+          ai: { kind: "wander" }
+        }, list);
+        a.talk = { kind: "townsfolk", town: `the ${W4.label}`, island: island.name, seed: rng4.int(0, 1e6) };
+        a.showName = false;
+        a.wanderRadius = 6;
+      }
+    }
+  }
 
   // src/game/kraken.js
   var TAU28 = Math.PI * 2;
@@ -178163,6 +178211,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     new Services(game);
     game.interactions = new Interactions(game);
     game.spawner.addBuilder(npcBuilder);
+    game.spawner.addBuilder(countryBuilder);
     game.spawner.addBuilder(shipwrightBuilder);
     installMap(game);
     installSea(game);

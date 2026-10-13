@@ -51,6 +51,7 @@ import { Progression } from './game/progression.js';
 import { Dialogue } from './game/dialogue.js';
 import { Quests, allQuests } from './game/quests.js';
 import { Services } from './game/services.js';
+import { countryBuilder } from './game/country.js';
 import { Interactions, npcBuilder, npcDef, makeNPC, allNpcDefs, standingHeight } from './game/npcs.js';
 import { board } from './game/interact.js';
 import { installMap } from './ui/mapUI.js';
@@ -275,6 +276,7 @@ async function start() {
   new Services(game);
   game.interactions = new Interactions(game);
   game.spawner.addBuilder(npcBuilder);
+  game.spawner.addBuilder(countryBuilder);
   // a shipwright on every pier (see game/shipwrights.js)
   game.spawner.addBuilder(shipwrightBuilder);
   installMap(game);
