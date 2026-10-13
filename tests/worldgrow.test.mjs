@@ -1,4 +1,4 @@
-// The East Blue's islands grew (data/islands GROW): a save made before is
+// The Blues' islands grew (data/islands GROW): a save made before is
 // moved out with its island (lineage.js migrateWorld v3 → v4), so whoever
 // stood a little east of the centre stands proportionally further east; a
 // ship far out at sea stays where it was.
@@ -9,9 +9,9 @@ import { migrateWorld, WORLD_VERSION } from '../src/game/lineage.js';
 
 const world = { dx: (a, b) => b - a, wx: (x) => x, walkable: () => true, swimmable: () => true };
 
-test('East Blue islands are grown; others are not', () => {
+test('the Blues\' islands are grown; the Grand Line\'s are not', () => {
   assert.equal(ISLAND_BY_ID.dawn_island._grow, GROW.east_blue);
-  const other = Object.values(ISLAND_BY_ID).find((d) => d.sea !== 'east_blue');
+  const other = Object.values(ISLAND_BY_ID).find((d) => !GROW[d.sea]);
   assert.equal(other._grow, 1);
 });
 

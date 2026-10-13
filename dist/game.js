@@ -109408,6 +109408,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   function populateVegetation(world, rng4, x0, y0, LW3, LH, L3, li, kinds, density, def) {
     const forestTypes = /* @__PURE__ */ new Set([T2.FOREST, T2.JUNGLE]);
+    const thin = 1 / (def._grow || 1);
     for (let j = 0; j < LH; j++) {
       for (let i = 0; i < LW3; i++) {
         if (!L3[li(i, j)]) continue;
@@ -109434,7 +109435,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           p = 0.02;
           kindList = ["rock"];
         }
-        if (rng4.next() > p) continue;
+        if (rng4.next() > p * thin) continue;
         if (world.elev(x, y) > 200) continue;
         if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
         if (kind0Clear(world, x, y)) continue;
@@ -117228,7 +117229,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   };
 
   // src/data/islands/index.js
-  var GROW = { east_blue: 1.75 };
+  var GROW = { east_blue: 1.75, north_blue: 1.75, west_blue: 1.75, south_blue: 1.75 };
   function toWorld(d) {
     if (d._scale) return d;
     const g = GROW[d.sea] || 1;
