@@ -76,29 +76,53 @@ const barrel = () => model('barrel', (k) => {
 });
 
 const crate = () => model('crate', (k) => {
-  const s = 0.74, h = 0.74, e = 0.07, dark = '#7a5a30';
-  k.add(box(s - 0.02, h - 0.02, s - 0.02), { at: [0, 0.01, 0], color: '#b08850', tint: 1, outline: 0.02 });
-  for (const x of [-1, 1]) for (const z of [-1, 1]) k.add(box(e, h, e), { at: [x * (s / 2 - e / 2), 0, z * (s / 2 - e / 2)], color: dark });
-  for (const y of [0, h - e]) {
-    for (const z of [-1, 1]) k.add(box(s, e, e), { at: [0, y, z * (s / 2 - e / 2)], color: dark });
-    for (const x of [-1, 1]) k.add(box(e, e, s), { at: [x * (s / 2 - e / 2), y, 0], color: dark });
-  }
-  const diag = Math.hypot(s, h) - 0.12, ang = Math.atan2(s, h);
-  for (const [fx, fz, ry] of [[0, 1, 0], [0, -1, 0], [1, 0, Math.PI / 2], [-1, 0, Math.PI / 2]]) {
-    k.save(); k.translate(fx * s / 2, h / 2, fz * s / 2); k.rotateY(ry); k.rotateZ(ang);
-    k.add(cbox(0.06, diag, 0.025), { color: dark });
+  // a slatted shipping crate: three planks a side between a corner frame, a
+  // diagonal brace on each face, nail heads, planked lid
+  const s = 0.74, h = 0.74, e = 0.075, dark = '#6e4f2a', PL = ['#b8894f', '#a97c46', '#c2945a'];
+  k.add(box(s - 0.06, h - 0.06, s - 0.06), { at: [0, 0.03, 0], color: '#5a3f22' });
+  const ph = (h - 2 * e) / 3;
+  for (const [fx, fz, ry] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]]) {
+    k.save(); k.translate(fx * (s / 2 - 0.02), 0, fz * (s / 2 - 0.02)); k.rotateY(ry);
+    for (let i = 0; i < 3; i++) k.add(box(s - 2 * e, ph - 0.012, 0.03), { at: [0, e + i * ph + 0.006, 0], color: PL[(i + (fx ? 1 : 0)) % 3], tint: 1, outline: 0.012 });
     k.restore();
   }
+  for (const x of [-1, 1]) for (const z of [-1, 1]) k.add(box(e, h, e), { at: [x * (s / 2 - e / 2), 0, z * (s / 2 - e / 2)], color: dark, outline: 0.012 });
+  for (const y of [0, h - e]) {
+    for (const z of [-1, 1]) k.add(box(s - 2 * e, e, e), { at: [0, y, z * (s / 2 - e / 2)], color: dark });
+    for (const x of [-1, 1]) k.add(box(e, e, s - 2 * e), { at: [x * (s / 2 - e / 2), y, 0], color: dark });
+  }
+  const iw = s - 2 * e, ih = h - 2 * e, diag = Math.hypot(iw, ih), ang = Math.atan2(iw, ih);
+  for (const [fx, fz, ry] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]]) {
+    k.save(); k.translate(fx * (s / 2 + 0.005), h / 2, fz * (s / 2 + 0.005)); k.rotateY(ry);
+    k.save(); k.rotateZ(ang); k.add(cbox(0.07, diag, 0.03), { color: dark, outline: 0.01 }); k.restore();
+    for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(cbox(0.018, 0.018, 0.012), { at: [x * (s / 2 - e / 2), y * (h / 2 - e / 2), 0.04], color: '#3a3a3e' });
+    k.restore();
+  }
+  for (let i = 0; i < 4; i++) k.add(box(iw / 4 - 0.01, 0.025, iw), { at: [-iw / 2 + (i + 0.5) * iw / 4, h - 0.05, 0], color: PL[i % 3], tint: 1 });
 });
 
 const haystack = () => model('haystack', (k) => {
-  k.add(lathe([[0.68, 0], [0.7, 0.2], [0.63, 0.48], [0.46, 0.74], [0.22, 0.9], [0.02, 0.94]], 14), { split: true, color: (p, n, i) => (Math.floor(i / 30) % 2 ? '#d4ac0d' : '#c49a18'), outline: 0.03 });
-  const R = rng(3);
-  for (let i = 0; i < 9; i++) {
-    const a = R() * Math.PI * 2;
-    k.add(cone(0.05, 0.4, 3), { at: [Math.cos(a) * 0.35, 0.72, Math.sin(a) * 0.35], rot: [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9], color: '#e0bf3a' });
+  // a shaggy rick of hay: three overlapping thatch skirts with ragged hems,
+  // a twisted rope band, a topknot, loose wisps round the foot
+  const R = rng(3), HAY = ['#d8b13a', '#c99f22', '#e2c055', '#bf9420'];
+  const skirt = (rT, rB, y, hh, seed) => {
+    const g = cyl(rT, rB, hh, 22, true, 2), p = g.attributes.position, r2 = rng(seed);
+    for (let i = 0; i < p.count; i++) {
+      const y0 = p.getY(i);
+      if (y0 < 0.001) { const f = 1 + (i % 2 ? 0.07 : -0.02) + (r2() - 0.5) * 0.05; p.setX(i, p.getX(i) * f); p.setZ(i, p.getZ(i) * f); p.setY(i, (i % 2 ? -0.07 : 0) - r2() * 0.04); }
+    }
+    g.computeVertexNormals();
+    k.add(g, { at: [0, y, 0], split: true, color: (pp, n, i) => HAY[Math.floor(i / 3) % 4], double: true, backShade: 0.55, outline: 0.025 });
+  };
+  k.add(lathe([[0.62, 0], [0.64, 0.25], [0.54, 0.5], [0.36, 0.76], [0.13, 0.98], [0.02, 1.02]], 14), { color: '#8f6f18' });
+  skirt(0.56, 0.76, 0.06, 0.4, 1); skirt(0.4, 0.68, 0.4, 0.36, 2); skirt(0.14, 0.5, 0.7, 0.32, 3);
+  k.add(torus(0.5, 0.03, 4, 18), { at: [0, 0.5, 0], rot: [Math.PI / 2, 0, 0], color: '#8a6a3c' });
+  k.add(cone(0.12, 0.28, 6), { at: [0, 0.98, 0], color: '#e2c055', outline: 0.015 });
+  k.add(torus(0.09, 0.02, 4, 8), { at: [0, 1.04, 0], rot: [Math.PI / 2, 0, 0], color: '#8a6a3c' });
+  for (let i = 0; i < 14; i++) {
+    const a = R() * Math.PI * 2, rr = 0.66 + R() * 0.12;
+    k.add(cbox(0.012, 0.3 + R() * 0.15, 0.02), { at: [Math.cos(a) * rr, 0.08, Math.sin(a) * rr], rot: [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2], color: HAY[i % 4] });
   }
-  k.add(torus(0.6, 0.035, 4, 16), { at: [0, 0.35, 0], rot: [Math.PI / 2, 0, 0], color: '#8d6e4a' });
 });
 
 const bench = () => model('bench', (k) => {
@@ -269,13 +293,28 @@ const totem = () => model('totem', (k) => {
 });
 
 const dummy = () => model('dummy', (k) => {
-  k.add(box(0.1, 1.8, 0.1), { color: '#6d4c33', outline: 0.012 });
-  k.add(box(1.05, 0.09, 0.09), { at: [0, 1.32, 0], color: '#6d4c33', outline: 0.012 });
-  k.add(new THREE.SphereGeometry(0.3, 9, 7), { at: [0, 1.05, 0], scale: [1, 1.45, 0.85], color: '#d4ac0d', outline: 0.02 });
-  for (const y of [0.8, 1.3]) k.add(torus(0.27, 0.025, 4, 10), { at: [0, y, 0], rot: [Math.PI / 2, 0, 0], scale: [1, 0.85, 1], color: '#8d6e4a' });
-  k.add(new THREE.SphereGeometry(0.21, 9, 7), { at: [0, 1.8, 0], color: '#e8d5b5', outline: 0.015 });
-  k.add(torus(0.08, 0.02, 4, 10), { at: [0, 1.8, 0.2], color: '#c0392b' });
-  k.add(torus(0.14, 0.018, 4, 12), { at: [0, 1.05, 0.26], color: '#c0392b' });
+  // a straw training dummy: post and crossbar, rope-bound arms of straw,
+  // a stuffed burlap body with a painted target, a sack head with stitched eyes
+  const POST = '#6d4c33', SACK = '#c9b083', STRAW = '#d8b13a', ROPE = '#7d5f3a', RED = '#b8352a';
+  k.add(cyl(0.06, 0.07, 1.95, 7), { color: POST, outline: 0.012 });
+  k.add(cyl(0.18, 0.22, 0.14, 8), { color: POST, outline: 0.012 });
+  k.save(); k.translate(0, 1.36, 0); k.rotateZ(Math.PI / 2);
+  k.add(cyl(0.045, 0.045, 1.1, 6), { at: [0, -0.55, 0], color: POST, outline: 0.01 });
+  for (const s of [-1, 1]) {
+    k.add(cyl(0.075, 0.09, 0.32, 8), { at: [0, s > 0 ? 0.2 : -0.52, 0], color: STRAW, outline: 0.012 });
+    for (const t of [0.24, 0.42]) k.add(torus(0.085, 0.016, 4, 8), { at: [0, s > 0 ? t : -t, 0], rot: [Math.PI / 2, 0, 0], color: ROPE });
+    for (let i = 0; i < 5; i++) k.add(cbox(0.01, 0.12, 0.012), { at: [Math.cos(i) * 0.05, s * 0.6, Math.sin(i) * 0.05], rot: [Math.sin(i) * 0.5, 0, Math.cos(i) * 0.5], color: STRAW });
+  }
+  k.restore();
+  k.add(lathe([[0.16, 0], [0.27, 0.08], [0.31, 0.3], [0.3, 0.52], [0.25, 0.66], [0.12, 0.72]], 12), { at: [0, 0.78, 0], scale: [1, 1, 0.8], color: SACK, outline: 0.02 });
+  for (const y of [0.83, 1.47]) k.add(torus(y < 1 ? 0.2 : 0.17, 0.022, 4, 12), { at: [0, y, 0], rot: [Math.PI / 2, 0, 0], scale: [1, 0.8, 1], color: ROPE });
+  for (const [r, c] of [[0.17, '#f2ead8'], [0.12, RED], [0.065, '#f2ead8'], [0.03, RED]]) k.add(new THREE.CircleGeometry(r, 14), { at: [0, 1.1, 0.25 + (0.17 - r) * 0.04], color: c });
+  k.add(new THREE.SphereGeometry(0.2, 10, 8), { at: [0, 1.72, 0], scale: [1, 1.08, 0.92], color: SACK, outline: 0.018 });
+  k.add(lathe([[0.07, 0], [0.1, 0.06], [0.06, 0.12], [0.001, 0.13]], 7), { at: [0, 1.9, 0], color: SACK });
+  k.add(torus(0.07, 0.016, 4, 8), { at: [0, 1.91, 0], rot: [Math.PI / 2, 0, 0], color: ROPE });
+  for (const s of [-1, 1]) for (const r of [0.6, -0.6]) k.add(cbox(0.07, 0.014, 0.01), { at: [s * 0.075, 1.75, 0.185], rot: [0, 0, r], color: '#2b1d14' });
+  for (let i = -2; i <= 2; i++) k.add(cbox(0.012, 0.04, 0.01), { at: [i * 0.03, 1.64, 0.18], color: '#2b1d14' });
+  k.add(cbox(0.14, 0.01, 0.01), { at: [0, 1.64, 0.182], color: '#2b1d14' });
 });
 
 const stall = () => model('stall', (k) => {
@@ -360,13 +399,25 @@ const sign = () => model('sign', (k) => {
 });
 
 const skull = () => model('skull', (k) => {
-  const W = '#ecf0f1', D = '#2d3436';
-  k.add(new THREE.SphereGeometry(0.85, 14, 10), { at: [0, 0.8, 0], scale: [1, 0.92, 1.05], color: W, outline: 0.035 });
-  k.add(box(0.95, 0.42, 0.7), { at: [0, 0.05, 0.28], color: W, outline: 0.025 });
-  for (const s of [-1, 1]) k.add(new THREE.SphereGeometry(0.22, 8, 6), { at: [s * 0.32, 0.9, 0.72], scale: [1, 1.15, 0.45], color: D });
-  k.add(slab([[-0.1, 0], [0.1, 0], [0, 0.2]], 0.1), { at: [0, 0.52, 0.82], color: D });
-  for (let i = -3; i <= 3; i++) k.add(box(0.1, 0.16, 0.06), { at: [i * 0.12, 0.26, 0.64], color: '#dfe6e9' });
-  k.add(box(0.9, 0.05, 0.05), { at: [0, 0.24, 0.62], color: D });
+  // a big bleached skull: domed cranium, heavy brow, sunk sockets, cheekbones,
+  // an inverted-heart nose hole, a row of teeth over a dropped jaw
+  const W = '#ece6d6', S = '#d6ceb8', D = '#231c18';
+  k.add(new THREE.SphereGeometry(0.82, 16, 12), { at: [0, 0.95, -0.08], scale: [0.95, 0.9, 1.05], color: W, outline: 0.035 });
+  k.add(new THREE.SphereGeometry(0.6, 12, 8), { at: [0, 0.55, 0.28], scale: [1.02, 0.75, 0.85], color: W, outline: 0.03 });
+  k.add(new THREE.SphereGeometry(0.5, 12, 6), { at: [0, 0.98, 0.5], scale: [1.05, 0.26, 0.6], color: S, outline: 0.02 });
+  for (const s of [-1, 1]) {
+    k.add(new THREE.SphereGeometry(0.24, 10, 8), { at: [s * 0.3, 0.74, 0.74], scale: [1, 0.95, 0.4], color: D });
+    k.add(new THREE.SphereGeometry(0.2, 8, 6), { at: [s * 0.52, 0.5, 0.48], scale: [0.7, 0.55, 1], color: S, outline: 0.015 });
+  }
+  k.add(slab([[-0.11, 0.18], [0, 0], [0.11, 0.18], [0.06, 0.24], [0, 0.2], [-0.06, 0.24]], 0.06), { at: [0, 0.38, 0.87], color: D });
+  k.add(box(0.72, 0.18, 0.42), { at: [0, 0.18, 0.42], color: W, outline: 0.02 });
+  for (let i = -3; i <= 3; i++) k.add(box(0.085, 0.14, 0.05), { at: [i * 0.095, 0.16, 0.64 - Math.abs(i) * 0.012], color: i % 2 ? '#f6f1e3' : '#efe8d6', outline: 0.006 });
+  k.add(box(0.68, 0.03, 0.04), { at: [0, 0.15, 0.62], color: D });
+  k.save(); k.translate(0, 0.1, 0.18); k.rotateX(0.18);
+  k.add(box(0.66, 0.14, 0.52), { at: [0, -0.12, 0.08], color: S, outline: 0.02 });
+  for (let i = -3; i <= 3; i++) k.add(box(0.08, 0.1, 0.045), { at: [i * 0.09, 0.0, 0.33 - Math.abs(i) * 0.012], color: '#efe8d6' });
+  k.restore();
+  for (const [x, y, z, r] of [[0.2, 1.42, 0.35, 0.3], [-0.35, 1.25, 0.5, 0.2]]) k.add(cbox(0.012, r, 0.015), { at: [x, y, z], rot: [0.6, 0.4, 0.5], color: '#9c9480' });
 });
 
 // a wooden flower box under a front window: soil, leaves and blooms
@@ -384,14 +435,18 @@ const planter = () => model('planter', (k) => {
 
 // a heap of grain sacks, tied at the neck
 const sacks = () => model('sacks', (k) => {
-  const S = '#c8b48a', T = '#8d6e4a';
-  const one = (x, y, z, ry, lie) => {
-    k.save(); k.translate(x, y, z); k.rotateY(ry); if (lie) k.rotateZ(Math.PI / 2 - 0.15);
-    k.add(lathe([[0.2, 0], [0.26, 0.08], [0.27, 0.3], [0.22, 0.48], [0.1, 0.56], [0.06, 0.62], [0.09, 0.68]], 9), { color: S, tint: 1, outline: 0.015 });
-    k.add(torus(0.07, 0.02, 4, 8), { at: [0, 0.58, 0], rot: [Math.PI / 2, 0, 0], color: T });
+  // a heap of burlap grain sacks: fat, slumped bags with a gathered, tied
+  // neck and a flared tuft, a stencilled band; one lies across the others
+  const S = ['#c8b48a', '#bba67b', '#d2c096'], T = '#6d4c33';
+  const one = (x, y, z, ry, lie, c) => {
+    k.save(); k.translate(x, y, z); k.rotateY(ry); if (lie) { k.rotateZ(Math.PI / 2 - 0.08); k.translate(0, -0.3, 0); }
+    k.add(lathe([[0.001, 0], [0.24, 0.01], [0.31, 0.08], [0.33, 0.22], [0.31, 0.36], [0.25, 0.46], [0.14, 0.53], [0.075, 0.57], [0.07, 0.6]], 12), { scale: [1, 1, 0.78], color: S[c], tint: 1, outline: 0.018 });
+    k.add(lathe([[0.065, 0.6], [0.1, 0.66], [0.13, 0.7], [0.1, 0.715], [0.001, 0.72]], 8), { split: true, color: (p, n, i) => (i % 2 ? S[c] : shade(S[c], -0.12)) });
+    k.add(torus(0.075, 0.022, 4, 10), { at: [0, 0.595, 0], rot: [Math.PI / 2, 0, 0], color: T });
+    k.add(cyl(0.327, 0.327, 0.07, 12, true), { at: [0, 0.2, 0], scale: [1.005, 1, 0.79], color: '#8a3b2b', double: true });
     k.restore();
   };
-  one(-0.22, 0, 0.05, 0.3, false); one(0.25, 0, -0.05, -0.5, false); one(0.0, 0.3, 0.32, 1.2, true);
+  one(-0.27, 0, 0.02, 0.3, false, 0); one(0.3, 0, -0.06, -0.5, false, 1); one(0.0, 0.42, 0.26, 1.35, true, 2);
 });
 
 // a rack of weapons outside an armoury: spears and swords in a frame
@@ -476,3 +531,10 @@ reg('stall', (o, ctx) => {
 });
 
 export { barrel, crate, lamp, sign as signModel, local };
+
+/** Every model above by name, for tools/propsheet.mjs. */
+export const STREET_MODELS = {
+  barrel, crate, haystack, bench, fence, mooring, grave, bones, anchor, cannon, mushroom, crystal,
+  pillar: () => pillar(0), pillarBroken: () => pillar(1), ruins: () => ruins(0), tent, totem, dummy, stall, well,
+  lamp, lantern, sign, skull, planter, sacks, weaponRack, signboard,
+};
