@@ -799,6 +799,22 @@ D.topHat = (I, o = {}) => {
   if (o.cross !== false) { tube(I, 'M26.5 20 L37.5 31', '#ffffff', 3.4, { ol: I.ol * 0.8, flat: true }); tube(I, 'M37.5 20 L26.5 31', '#ffffff', 3.4, { ol: I.ol * 0.8, flat: true }); }
   part(I, ellipse(32, 12.4, 13.4, 3), lt(col, 0.18), { sd: 0.8, hd: 0.6 });
 };
+D.hood = (I, o = {}) => {
+  // (as the 3D one: a loose cowl drawn up to a soft peak, the face deep in its
+  // shadow behind a rolled hem, the mantle over the shoulders)
+  const col = o.color || '#6a5643';
+  const mantle = 'M5 59 C7 47 15 41 23 39 L41 39 C49 41 57 47 59 59 C46 62.5 18 62.5 5 59 Z';
+  part(I, mantle, dk(col, 0.08), { sd: 2.2, hd: 1.6 });
+  const cowl = 'M14 47 C10.5 31 16 14 29 6.5 C31 5.4 33 5.4 35 6.5 C48 14 53.5 31 50 47 C43 51.5 21 51.5 14 47 Z';
+  part(I, cowl, col, { sd: 2.8, hd: 2 });
+  const open = 'M21.5 45.5 C19.5 33 23 21.5 32 18 C41 21.5 44.5 33 42.5 45.5 C37.5 48.5 26.5 48.5 21.5 45.5 Z';
+  part(I, open, dk(col, 0.74), { sd: 0, hd: 0, ol: I.ol * 0.8 });
+  ln(I, open, lt(col, 0.18), 2.4);
+  if (!I.small) {
+    for (const d of ['M17 42 C15.5 31 19 21 26 13.5', 'M47 42 C48.5 31 45 21 38 13.5', 'M14 56 C17 50 21 47 25 46', 'M50 56 C47 50 43 47 39 46']) ln(I, d, dk(col, 0.28), 1.1, { a: 0.6 });
+    fl(I, ellipse(27.5, 33, 2.2, 1.4), '#f4f1ea', { a: 0.35 }); fl(I, ellipse(36.5, 33, 2.2, 1.4), '#f4f1ea', { a: 0.35 });
+  }
+};
 D.goggles = (I, o = {}) => {
   const lens = o.lens || '#f0a53a', frame = o.frame || '#c9a04a', strap = o.strap || '#6b4a32';
   tube(I, 'M5 40 C3 25 17 18 32 18 C47 18 61 25 59 40', strap, 5.5);
@@ -2154,6 +2170,7 @@ const ITEM_MAP = {
   p2_shipwright_mallet: ['mallet'],
   // hats & coats
   straw_hat: ['strawHat'], bandana: ['bandana'], tricorne: ['tricorne'], captain_hat: ['captainHat'], cowboy_hat: ['cowboyHat'],
+  traveller_hood: ['hood', { color: '#6a5643' }], black_hood: ['hood', { color: '#26262b' }],
   marine_cap: ['marineCap'], pink_hat: ['topHat'], goggles: ['goggles'], headband: ['headband'], horned_helm: ['hornHelm', { horns: true }],
   elbaf_helm: ['hornHelm', { horns: true, metal: '#c9b27a', trim: '#7a4a2a' }], p2_carnival_mask: ['mask', { eye: true, color: '#8e24aa' }],
   marine_coat: ['marineCoat'], captain_coat: ['coat', { color: '#1f3566' }], red_cloak: ['cloak', { color: '#b71c1c' }],
@@ -2261,7 +2278,7 @@ const NAME_RULES = [
   [/herb|\bleaf|leaves|moss|\broot|grass|seaweed/, 'herbs'], [/powder|dust/, 'jar', { color: '#f3c6d6' }],
 ];
 
-const HAT_LOOK = { straw: 'strawHat', bandana: 'bandana', tricorne: 'tricorne', captain: 'captainHat', cowboy: 'cowboyHat', marine: 'marineCap', pinkhat: 'topHat', goggles: 'goggles', headband: 'headband', horns: 'hornHelm', beanie: 'beanie', crown: 'crownHat', halo: 'halo', bubble: 'bubbleHelm', chef: 'chefHat' };
+const HAT_LOOK = { hood: 'hood', straw: 'strawHat', bandana: 'bandana', tricorne: 'tricorne', captain: 'captainHat', cowboy: 'cowboyHat', marine: 'marineCap', pinkhat: 'topHat', goggles: 'goggles', headband: 'headband', horns: 'hornHelm', beanie: 'beanie', crown: 'crownHat', halo: 'halo', bubble: 'bubbleHelm', chef: 'chefHat' };
 const KIND_DEFAULT = { sword: 'katana', gun: 'flintlock', staff: 'staff', axe: 'axe' };
 const DIAL_FX = [[/impact/, 'impact'], [/reject/, 'reject'], [/flame|fire|heat/, 'flame'], [/breath|wind|air|jet/, 'breath'], [/flash|lamp|light/, 'flash'], [/water|aqua/, 'water']];
 const DIAL_COLORS = [

@@ -162,9 +162,13 @@ export function restOffsets(d) {
  * front edges at ±open), and how far round each panel's reach goes.
  */
 export function coatShape(d) {
-  const [Dp, Wp] = skirtWaist(d), L = 0.62 * d.Lg, open = 0.85;
+  const [Dp, Wp] = skirtWaist(d), L = 0.62 * d.Lg, open = 0.5; // (the front flaps come forward over the thighs: open only a hand's width down the middle)
   const a = Array.from({ length: COAT_N }, (_, i) => open + (Math.PI * 2 - 2 * open) * (i / (COAT_N - 1)));
-  return { L, hK: L * 0.52, flare: 0.42, Dp: Dp * 1.12, Wp: Wp * 1.1, open, a, reach: (Math.PI * 2 - 2 * open) / (COAT_N - 1) };
+  // (which way each panel swings out: round the back, straight out from the
+  // waist; the front flaps forward, over the thighs, as cloth lifted by a knee
+  // rides over it rather than being shoved aside)
+  const sw = a.map((x) => { const w = Math.atan2(Math.sin(x), Math.cos(x)); return Math.abs(w) < Math.PI / 2 - 0.2 ? w * 0.35 : x; });
+  return { L, hK: L * 0.52, flare: 0.42, Dp: Dp * 1.12, Wp: Wp * 1.1, open, a, sw, reach: (Math.PI * 2 - 2 * open) / (COAT_N - 1) };
 }
 /** Where a skirt's panels hang from: the waist's half depth and half width. */
 export function skirtWaist(d) { const Wp = d.hipOut * 0.92; return [Wp * 0.78, Wp]; }

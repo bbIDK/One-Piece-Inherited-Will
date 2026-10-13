@@ -56,11 +56,11 @@ const _srad = new Float32Array(SKIRT_T.length * 2), _sleg = new Uint8Array(SKIRT
  * `psi` round the waist: panels further round it than their neighbours
  * care less, and not at all beyond).
  */
-function panelNeed(u, h, r, len, psi, a, reach = SKIRT_REACH) {
+function panelNeed(u, h, r, len, psi, a, reach = SKIRT_REACH, fadeW = SKIRT_FADE) {
   let da = Math.abs(psi - a) % TAU;
   if (da > Math.PI) da = TAU - da;
-  if (da > reach + SKIRT_FADE || h < -0.05 || h > len + 0.05) return -1;
-  const fade = da <= reach ? 1 : 1 - (da - reach) / SKIRT_FADE;
+  if (da > reach + fadeW || h < -0.05 || h > len + 0.05) return -1;
+  const fade = da <= reach ? 1 : 1 - (da - reach) / fadeW;
   const R = Math.hypot(u, h);
   // (u·cos φ − h·sin φ ≤ −r: the point at least r inside the panel's line)
   const phi = R <= r ? 1.75 : Math.acos(Math.max(-1, -r / R)) - Math.atan2(h, u);
@@ -182,6 +182,12 @@ function soleLift(body, d) {
   const ankle = d.hip0 - 0.07 - d.T1 - d.T2;
   body.soleLift = Number.isFinite(min) ? Math.max(-0.03, Math.min(0.06, ankle - min - d.hA)) : 0;
   return body.soleLift;
+}
+
+/** Coat panel i's swing: the way it swings out (ca, sa), how far its top is out from the middle that way (rp), and how it hangs at rest (phi0). */
+function coatDir(C, i) {
+  const a = C.a[i], w = C.sw ? C.sw[i] : a, r = Math.hypot(Math.cos(a) * C.Dp, Math.sin(a) * C.Wp);
+  return { ca: Math.cos(w), sa: Math.sin(w), rp: r * Math.cos(a - w), phi0: Math.atan2(r * C.flare, C.L) };
 }
 
 export class CharacterModel {
@@ -662,6 +668,9 @@ export class CharacterModel {
       const L = _sv.length() || 1;
       seat += Math.min(1, Math.max(0, (0.75 - Math.abs(_sv.y) / L) / 0.45)) * 0.5;
     }
+    // (sitting, a thigh lifts only the cloth right over it: the panels round
+    // to either side drape down from it to the seat, not out level with it)
+    const reachS = SKIRT_REACH * (1 - seat * 0.55), fadeS = SKIRT_FADE * (1 - seat * 0.5);
     for (let i = 0; i < N; i++) {
       const a = (i / N) * TAU, ca = Math.cos(a), sa = Math.sin(a);
       const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S.Dh, sa * S.Wh);
@@ -671,7 +680,7 @@ export class CharacterModel {
       for (let k = 0; k < n; k++) {
         if (two && _sleg[k] === 1) continue;
         const P = _spts[k];
-        const v = panelNeed(P.x * ca + P.z * sa - rp, -P.y, _srad[k], hHem, Math.atan2(P.z, P.x), a);
+        const v = panelNeed(P.x * ca + P.z * sa - rp, -P.y, _srad[k], hHem, Math.atan2(P.z, P.x), a, reachS, fadeS);
         if (v > need) need = v;
       }
       K.need[i] = Math.min(1.75, need) - phi0;
@@ -769,12 +778,16 @@ export class CharacterModel {
         om[i] += al * h;
         th[i] += om[i] * h;
         // (never inside the legs; never flung up past what cloth does)
-        if (th[i] < K.need[i]) { th[i] = K.need[i]; if (om[i] < 0) om[i] = 0; }
-        if (th[i] > Math.max(F.max, K.need[i])) { th[i] = Math.max(F.max, K.need[i]); if (om[i] > 0) om[i] = 0; }
+        // (held out by a leg or at its limit it isn't swinging: its pull on the
+        // lower panel is its real motion, not the fall it's held from — or a
+        // thigh under a seated skirt flings the cloth below it out flat)
+        let alU = al;
+        if (th[i] < K.need[i]) { th[i] = K.need[i]; if (om[i] < 0) om[i] = 0; alU = 0; }
+        if (th[i] > Math.max(F.max, K.need[i])) { th[i] = Math.max(F.max, K.need[i]); if (om[i] > 0) om[i] = 0; alU = 0; }
         if (!two) continue;
         const j = N + i, t1 = th[j];
         const linkL = F.link * (th[N + ip] + th[N + inx] - 2 * t1);
-        const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * S.hK) * Math.cos(t1)) / lL - F.damp2 * om[j] + linkL;
+        const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - alU * S.hK) * Math.cos(t1)) / lL - F.damp2 * om[j] + linkL;
         om[j] += alL * h;
         th[j] += om[j] * h;
         const lo = this.skirtLowNeed(i, th[i]);
@@ -831,8 +844,7 @@ export class CharacterModel {
     S.n = n;
     // the upper panels: as far out as they must go to clear the thighs and knees
     for (let i = 0; i < N; i++) {
-      const a = C.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C.Dp, sa * C.Wp);
-      const phi0 = Math.atan2(rp * C.flare, C.L);
+      const a = C.a[i], { ca, sa, rp, phi0 } = coatDir(C, i);
       let need = phi0;
       for (let k = 0; k < n; k++) {
         if (_cleg[k] === 1) continue;
@@ -859,8 +871,7 @@ export class CharacterModel {
   /** How far out (from its rest) lower panel i must swing to clear the shins, its upper panel `up` out from its rest. */
   coatLowNeed(i, up) {
     const C = this.body.coat, S = this.coatS;
-    const a = C.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C.Dp, sa * C.Wp);
-    const phi0 = Math.atan2(rp * C.flare, C.L), Lb = C.hK / Math.cos(phi0), ang = phi0 + up;
+    const a = C.a[i], { ca, sa, rp, phi0 } = coatDir(C, i), Lb = C.hK / Math.cos(phi0), ang = phi0 + up;
     // (the bend: out from the axis, down from the waist)
     const ku = rp + Math.sin(ang) * Lb, kh = Math.cos(ang) * Lb;
     let need = phi0;
@@ -913,7 +924,7 @@ export class CharacterModel {
     const steps = Math.min(4, Math.ceil(dt / (1 / 60))), h = dt / steps;
     for (let st = 0; st < steps; st++) {
       for (let i = 0; i < N; i++) {
-        const a = C.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C.Dp, sa * C.Wp);
+        const { ca, sa, rp } = coatDir(C, i);
         // the air on its face (a run streams the back of it out behind), the
         // lag of its own weight as the body speeds up, slows or turns
         const wind = -(v.x * ca + v.z * sa) * K.wind;
@@ -923,12 +934,13 @@ export class CharacterModel {
         const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - K.damp * om[i] + link;
         om[i] += al * h;
         th[i] += om[i] * h;
-        if (th[i] < S.need[i]) { th[i] = S.need[i]; if (om[i] < 0) om[i] = 0; }
-        if (th[i] > K.max) { th[i] = K.max; if (om[i] > 0) om[i] = 0; }
+        let alU = al;
+        if (th[i] < S.need[i]) { th[i] = S.need[i]; if (om[i] < 0) om[i] = 0; alU = 0; }
+        if (th[i] > K.max) { th[i] = K.max; if (om[i] > 0) om[i] = 0; alU = 0; }
         // the lower panel, hung from where the upper one bends: pushed the same way, and by the upper's swing
         const j = N + i, t1 = th[j];
         const linkL = K.link * ((i > 0 ? th[j - 1] : t1) + (i < N - 1 ? th[j + 1] : t1) - 2 * t1);
-        const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * C.hK) * Math.cos(t1)) / lL - K.damp2 * om[j] + linkL;
+        const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - alU * C.hK) * Math.cos(t1)) / lL - K.damp2 * om[j] + linkL;
         om[j] += alL * h;
         th[j] += om[j] * h;
         const lo = this.coatLowNeed(i, th[i]);
@@ -943,7 +955,7 @@ export class CharacterModel {
   coatApply() {
     const S = this.coatS, C = this.body.coat, bones = this.bones;
     for (let i = 0; i < COAT_N; i++) {
-      const a = C.a[i];
+      const a = C.sw ? C.sw[i] : C.a[i];
       _cax.set(-Math.sin(a), 0, Math.cos(a));
       bones[B['coat' + i]].quaternion.setFromAxisAngle(_cax, S.th[i]);
       bones[B['coatK' + i]].quaternion.setFromAxisAngle(_cax, S.th[COAT_N + i] - S.th[i]);

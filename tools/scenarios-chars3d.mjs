@@ -434,6 +434,31 @@ export const scenarios = {
       }
     },
   },
+  // hats close up, four at a time, front / three-quarter / back (to hold beside their item icons)
+  //   --hats=captain,tricorne,...
+  c3hatclose: {
+    async run(page, snap, args) {
+      await boot(page);
+      const hats = String(args.hats || HATS.map(([h]) => h).concat('hood').join(',')).split(',');
+      const colOf = Object.fromEntries(HATS.map(([h, c]) => [h, c]));
+      for (let g0 = 0; g0 < hats.length; g0 += 4) {
+        const group = hats.slice(g0, g0 + 4);
+        await page.evaluate(([group, cols]) => {
+          const C = window.__C3; C.clear();
+          group.forEach((h, i) => C.spawn({ name: h, id: 'hk' + h + i, showName: false, look: { hat: h, hatColor: cols[h] || null, hair: 'short', hairColor: '#3b2a1a', skin: '#f1c9a0', top: '#5d6d7e', coat: h === 'hood' ? '#6a5643' : null } }, 1.6, (i - (group.length - 1) / 2) * 0.7, Math.PI));
+          C.view(0, 0.04);
+        }, [group, colOf]);
+        await settle(page, 6);
+        await snap(`${group.join('-')}-front`);
+        await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = Math.PI * 0.7; });
+        await settle(page, 3);
+        await snap(`${group.join('-')}-side`);
+        await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = 0; });
+        await settle(page, 3);
+        await snap(`${group.join('-')}-back`);
+      }
+    },
+  },
   // food in the hand, in first and third person: held, then eating (mid-bite)
   //   --items=apple,meat,...  --modes=first,third  --move=5 (metres east, into the open)
   c3held: {

@@ -68005,9 +68005,13 @@ ${GLSL}
     return R5;
   }
   function coatShape(d) {
-    const [Dp, Wp] = skirtWaist(d), L3 = 0.62 * d.Lg, open = 0.85;
+    const [Dp, Wp] = skirtWaist(d), L3 = 0.62 * d.Lg, open = 0.5;
     const a = Array.from({ length: COAT_N }, (_, i) => open + (Math.PI * 2 - 2 * open) * (i / (COAT_N - 1)));
-    return { L: L3, hK: L3 * 0.52, flare: 0.42, Dp: Dp * 1.12, Wp: Wp * 1.1, open, a, reach: (Math.PI * 2 - 2 * open) / (COAT_N - 1) };
+    const sw2 = a.map((x) => {
+      const w = Math.atan2(Math.sin(x), Math.cos(x));
+      return Math.abs(w) < Math.PI / 2 - 0.2 ? w * 0.35 : x;
+    });
+    return { L: L3, hK: L3 * 0.52, flare: 0.42, Dp: Dp * 1.12, Wp: Wp * 1.1, open, a, sw: sw2, reach: (Math.PI * 2 - 2 * open) / (COAT_N - 1) };
   }
   function skirtWaist(d) {
     const Wp = d.hipOut * 0.92;
@@ -74737,6 +74741,21 @@ vec3 paneView(vec3 dir, float night) {
     }
     part3(I2, ellipse(32, 12.4, 13.4, 3), lt(col6, 0.18), { sd: 0.8, hd: 0.6 });
   };
+  D.hood = (I2, o = {}) => {
+    const col6 = o.color || "#6a5643";
+    const mantle2 = "M5 59 C7 47 15 41 23 39 L41 39 C49 41 57 47 59 59 C46 62.5 18 62.5 5 59 Z";
+    part3(I2, mantle2, dk2(col6, 0.08), { sd: 2.2, hd: 1.6 });
+    const cowl = "M14 47 C10.5 31 16 14 29 6.5 C31 5.4 33 5.4 35 6.5 C48 14 53.5 31 50 47 C43 51.5 21 51.5 14 47 Z";
+    part3(I2, cowl, col6, { sd: 2.8, hd: 2 });
+    const open = "M21.5 45.5 C19.5 33 23 21.5 32 18 C41 21.5 44.5 33 42.5 45.5 C37.5 48.5 26.5 48.5 21.5 45.5 Z";
+    part3(I2, open, dk2(col6, 0.74), { sd: 0, hd: 0, ol: I2.ol * 0.8 });
+    ln(I2, open, lt(col6, 0.18), 2.4);
+    if (!I2.small) {
+      for (const d of ["M17 42 C15.5 31 19 21 26 13.5", "M47 42 C48.5 31 45 21 38 13.5", "M14 56 C17 50 21 47 25 46", "M50 56 C47 50 43 47 39 46"]) ln(I2, d, dk2(col6, 0.28), 1.1, { a: 0.6 });
+      fl(I2, ellipse(27.5, 33, 2.2, 1.4), "#f4f1ea", { a: 0.35 });
+      fl(I2, ellipse(36.5, 33, 2.2, 1.4), "#f4f1ea", { a: 0.35 });
+    }
+  };
   D.goggles = (I2, o = {}) => {
     const lens = o.lens || "#f0a53a", frame3 = o.frame || "#c9a04a", strap = o.strap || "#6b4a32";
     tube2(I2, "M5 40 C3 25 17 18 32 18 C47 18 61 25 59 40", strap, 5.5);
@@ -76372,6 +76391,8 @@ vec3 paneView(vec3 dir, float night) {
     tricorne: ["tricorne"],
     captain_hat: ["captainHat"],
     cowboy_hat: ["cowboyHat"],
+    traveller_hood: ["hood", { color: "#6a5643" }],
+    black_hood: ["hood", { color: "#26262b" }],
     marine_cap: ["marineCap"],
     pink_hat: ["topHat"],
     goggles: ["goggles"],
@@ -76561,7 +76582,7 @@ vec3 paneView(vec3 dir, float night) {
     [/herb|\bleaf|leaves|moss|\broot|grass|seaweed/, "herbs"],
     [/powder|dust/, "jar", { color: "#f3c6d6" }]
   ];
-  var HAT_LOOK = { straw: "strawHat", bandana: "bandana", tricorne: "tricorne", captain: "captainHat", cowboy: "cowboyHat", marine: "marineCap", pinkhat: "topHat", goggles: "goggles", headband: "headband", horns: "hornHelm", beanie: "beanie", crown: "crownHat", halo: "halo", bubble: "bubbleHelm", chef: "chefHat" };
+  var HAT_LOOK = { hood: "hood", straw: "strawHat", bandana: "bandana", tricorne: "tricorne", captain: "captainHat", cowboy: "cowboyHat", marine: "marineCap", pinkhat: "topHat", goggles: "goggles", headband: "headband", horns: "hornHelm", beanie: "beanie", crown: "crownHat", halo: "halo", bubble: "bubbleHelm", chef: "chefHat" };
   var KIND_DEFAULT = { sword: "katana", gun: "flintlock", staff: "staff", axe: "axe" };
   var DIAL_FX = [[/impact/, "impact"], [/reject/, "reject"], [/flame|fire|heat/, "flame"], [/breath|wind|air|jet/, "breath"], [/flash|lamp|light/, "flash"], [/water|aqua/, "water"]];
   var DIAL_COLORS = [
@@ -95429,6 +95450,62 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var disc = (h2, y, r4, t, col6, rx = 0, rz = 0, sx = 1) => h2.addC(Prim.cyl(h2.q.hat), mul(M(0, y, 0, rx, 0, rz), M(0, 0, 0, 0, 0, 0, [r4 * sx, t, r4])), col6, h2.bone);
   var dome = (h2, y, r4, col6, rz = 0) => h2.addC(Prim.sphere(h2.q.hatS[0], h2.q.hatS[1]), M(0, y, 0, 0, 0, rz, r4), col6, h2.bone);
   var ring = (h2, y, r4, t, col6, rz = 0) => h2.addC(Prim.cyl(h2.q.hat, true), M(0, y, 0, 0, 0, rz, [r4[0], t, r4[1] ?? r4[0]]), col6, h2.bone);
+  function outward(g, o = [0, 0, 0]) {
+    const P6 = g.attributes.position.array, I2 = g.index.array;
+    let vol = 0;
+    for (let i = 0; i < I2.length; i += 3) {
+      const a = I2[i] * 3, b = I2[i + 1] * 3, c = I2[i + 2] * 3;
+      const ax = P6[a] - o[0], ay = P6[a + 1] - o[1], az = P6[a + 2] - o[2];
+      const bx = P6[b] - o[0], by = P6[b + 1] - o[1], bz = P6[b + 2] - o[2];
+      const cx = P6[c] - o[0], cy = P6[c + 1] - o[1], cz = P6[c + 2] - o[2];
+      vol += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
+    }
+    if (vol < 0) {
+      for (let i = 0; i < I2.length; i += 3) {
+        const t = I2[i + 1];
+        I2[i + 1] = I2[i + 2];
+        I2[i + 2] = t;
+      }
+      g.computeVertexNormals();
+    }
+    return g;
+  }
+  function brimGeo(rIn, rOut, lift, t, U4, n = 4) {
+    const V5 = 2 * n + 2;
+    return outward(grid((u, v) => {
+      const ph = u * TAU19, j = Math.round(v * V5);
+      const top = j <= n || j === V5, s = j <= n ? j / n : j <= 2 * n + 1 ? (2 * n + 1 - j) / n : 0;
+      const R5 = rIn + (rOut(ph) - rIn) * s, y = lift(ph) * s * s + (top ? t / 2 : -t / 2);
+      return [Math.cos(ph) * R5, y, Math.sin(ph) * R5];
+    }, U4, V5), [0, 0, 0]);
+  }
+  function edgeCord(rOut, lift, r4, U4) {
+    return outward(grid((u, v) => {
+      const ph = u * TAU19, w = v * TAU19, R5 = rOut(ph) + Math.cos(w) * r4;
+      return [Math.cos(ph) * R5, lift(ph) + Math.sin(w) * r4, Math.sin(ph) * R5];
+    }, U4, 5), [0, lift(0), 0]);
+  }
+  var crownGeo = (prof2, U4) => outward(lathe2(prof2, U4), [0, prof2[0][1], 0]);
+  function featherGeo(a, c, b, w, up, U4 = 10, envF = (s) => Math.pow(Math.sin(Math.PI * Math.min(1, s * 1.08)), 0.7), thick = 0.14) {
+    const pt = (s) => [0, 1, 2].map((k) => (1 - s) * (1 - s) * a[k] + 2 * (1 - s) * s * c[k] + s * s * b[k]);
+    return outward(grid((u, v) => {
+      const s = u, p = pt(s), q2 = pt(Math.min(1, s + 0.02)), r4 = pt(Math.max(0, s - 0.02));
+      const tg = norm([q2[0] - r4[0], q2[1] - r4[1], q2[2] - r4[2]]);
+      const side = norm(cross32(tg, up)), flat3 = norm(cross32(side, tg));
+      const env2 = envF(s);
+      const ang = v * TAU19, cw = Math.cos(ang) * w * env2, cf = Math.sin(ang) * w * thick * env2;
+      const curl = Math.abs(Math.cos(ang)) * w * 0.12 * env2;
+      return [p[0] + side[0] * cw + flat3[0] * (cf - curl), p[1] + side[1] * cw + flat3[1] * (cf - curl), p[2] + side[2] * cw + flat3[2] * (cf - curl)];
+    }, U4, 6), pt(0.5));
+  }
+  var cross32 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  function skullBadge(h2, x, y, k, tilt = 0) {
+    const bone = "#f4f1ea", ink3 = "#1d1a20";
+    for (const s of [-1, 1]) h2.addC(Prim.rbox(0.5, h2.q.rboxS[0], h2.q.rboxS[1]), M(x - 0.02, y - 0.03 * k, 0, s * 0.75, 0, tilt, [0.05 * k, 0.5 * k, 0.07 * k]), bone, h2.bone);
+    h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(x + 0.03 * k, y + 0.04 * k, 0, 0, 0, tilt, [0.06 * k, 0.16 * k, 0.17 * k]), bone, h2.bone);
+    h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(x + 0.02 * k, y - 0.1 * k, 0, 0, 0, tilt, [0.05 * k, 0.07 * k, 0.11 * k]), bone, h2.bone);
+    for (const s of [-1, 1]) h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(x + 0.085 * k, y + 0.03 * k, s * 0.065 * k, 0, 0, tilt, [0.02 * k, 0.045 * k, 0.045 * k]), ink3, h2.bone);
+  }
   var HATS2 = {
     straw(h2) {
       disc(h2, 0.52, 1.72, 0.07, STRAW2, 0, 0.08);
@@ -95441,32 +95518,51 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       dome(h2, 1.62, [1.12, 0.62, 1.12], c);
     },
     captain(h2, col6) {
-      const c = col6 || "#2c2831";
-      h2.addC(Prim.frustum(0.84, h2.q.hat), M(0, 0.98, 0, 0, 0, 0, [1.02, 0.9, 1.02]), c, h2.bone);
-      dome(h2, 1.42, [0.86, 0.3, 0.86], c);
-      disc(h2, 0.56, 1.5, 0.08, shade(c, -0.12), 0, 0, 1.1);
-      h2.addC(Prim.torus(0.06, 3, 16), mul(M(0, 0.57, 0), M(0, 0, 0, Math.PI / 2, 0, 0, [1.66, 1.5, 1])), GOLD4, h2.bone);
-      spike({ ...h2, col: lin("#c8372d") }, [-0.35, 1.3, 0.55], [-1.2, 1.9, 1.1], 0.34, 0.1, 5);
-      h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(0.95, 1.05, 0, 0, 0, 0, [0.08, 0.2, 0.2]), "#f4f1ea", h2.bone);
+      const c = col6 || "#2c2831", U4 = h2.q.hat + 6;
+      h2.addC(crownGeo([[0.99, 0.5], [1.03, 0.85], [1.02, 1.15], [0.94, 1.42], [0.76, 1.64], [0.46, 1.78], [0, 1.82]], U4), M(-0.04, 0, 0), c, h2.bone);
+      ring(h2, 0.66, [1.035], 0.22, shade(c, -0.35));
+      const rOut = (ph) => 1.62 + 0.12 * Math.cos(ph) ** 2, lift = (ph) => 0.5 * Math.sin(ph) ** 2 - 0.05 * Math.cos(ph) ** 2;
+      h2.addC(brimGeo(0.98, rOut, lift, 0.08, U4 + 6), M(-0.04, 0.55, 0), shade(c, -0.06), h2.bone);
+      h2.addC(edgeCord(rOut, lift, 0.06, U4 + 6), M(-0.04, 0.55, 0), GOLD4, h2.bone);
+      skullBadge(h2, 1, 1.08, 1.25, -0.08);
+      const red = "#c8372d";
+      h2.addC(featherGeo([-0.55, 1.1, 0.62], [-1, 1.95, 1], [-1.85, 2.15, 1.25], 0.34, [0.3, 0.2, -1], 12), M(), red, h2.bone);
+      h2.addC(featherGeo([-0.6, 1, 0.5], [-1.2, 1.6, 0.95], [-1.9, 1.55, 1.15], 0.24, [0.2, 0.4, -1], 10), M(), shade(red, -0.15), h2.bone);
     },
     tricorne(h2, col6) {
-      const c = col6 || "#302b35";
-      h2.addC(Prim.frustum(0.8, h2.q.hat), M(0, 0.86, 0, 0, 0, 0, [1, 0.62, 1]), c, h2.bone);
-      dome(h2, 1.16, [0.8, 0.26, 0.8], c);
-      for (let i = 0; i < 3; i++) {
-        const a = i / 3 * TAU19 + Math.PI / 3;
-        const x = Math.cos(a), z = Math.sin(a);
-        h2.addC(Prim.rbox(0.3, h2.q.rboxS[0], h2.q.rboxS[1]), mul(M(x * 1.02, 0.78, z * 1.02, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.36, 0.06, 1])), c, h2.bone);
-        h2.addC(Prim.box(), mul(M(x * 1.14, 0.92, z * 1.14, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.06, 0.04, 0.9])), GOLD4, h2.bone);
-      }
-      disc(h2, 0.62, 1.16, 0.06, c);
+      const c = col6 || "#302b35", U4 = h2.q.hat * 2 + 6;
+      h2.addC(crownGeo([[0.99, 0.5], [1.01, 0.8], [0.92, 1.08], [0.66, 1.26], [0, 1.32]], h2.q.hat + 4), M(), c, h2.bone);
+      const p = (ph) => Math.cos(3 * ph);
+      const rOut = (ph) => 1.32 + 0.38 * Math.max(0, p(ph)) ** 1.5, lift = (ph) => 0.5 * (1 - p(ph)) ** 1.25 + 0.04;
+      h2.addC(brimGeo(0.97, rOut, lift, 0.07, U4, 5), M(0, 0.58, 0), shade(c, -0.05), h2.bone);
+      h2.addC(edgeCord(rOut, lift, 0.055, U4), M(0, 0.58, 0), GOLD4, h2.bone);
+      h2.addC(Prim.cyl(h2.q.hat), mul(M(1.12, 0.92, -0.42, 0, 0.36, 0), M(0, 0, 0, 0, 0, Math.PI / 2, [0.2, 0.04, 0.2])), "#1d1a20", h2.bone);
+      h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(1.15, 0.92, -0.43, 0, 0, 0, 0.07), GOLD4, h2.bone);
     },
     cowboy(h2, col6) {
-      const c = col6 || "#9a6a3f";
-      dome(h2, 0.8, [0.9, 0.72, 0.84], c);
-      ring(h2, 0.66, [0.93, 0.88], 0.2, shade(c, -0.5));
-      disc(h2, 0.56, 1.82, 0.07, shade(c, -0.1), 0, 0.06);
-      for (const s of [-1, 1]) h2.addC(Prim.rbox(0.4, h2.q.rboxS[0], h2.q.rboxS[1]), M(0, 0.66, s * 1.55, s * 0.55, 0, 0, [1.2, 0.05, 0.42]), shade(c, -0.1), h2.bone);
+      const c = col6 || "#9a6a3f", U4 = h2.q.hat + 8, V5 = 8;
+      const r0 = 0.97;
+      h2.addC(outward(grid((u, v) => {
+        const ph = u * TAU19, cp = Math.cos(ph), sp = Math.sin(ph);
+        let r4, y;
+        if (v <= 0.7) {
+          const t = v / 0.7;
+          r4 = r0 * (1 - 0.08 * t);
+          const d = Math.min(Math.abs(ph - 0.55), Math.abs(ph - (TAU19 - 0.55)));
+          r4 *= 1 - 0.2 * t * t * Math.exp(-((d / 0.32) ** 2));
+          y = 0.55 + t * 0.85 - 0.24 * (1 - Math.abs(sp)) * t ** 3;
+        } else {
+          const t = (v - 0.7) / 0.3;
+          r4 = r0 * 0.92 * (1 - t);
+          const d = Math.min(Math.abs(ph - 0.55), Math.abs(ph - (TAU19 - 0.55)));
+          r4 *= 1 - 0.2 * (1 - t) * Math.exp(-((d / 0.32) ** 2));
+          y = 1.4 + 0.07 * Math.sin(Math.PI * t) - 0.24 * (t + (1 - t) * (1 - Math.abs(sp)));
+        }
+        return [cp * r4, y, sp * r4];
+      }, U4, V5), [0, 0.55, 0]), M(), c, h2.bone);
+      ring(h2, 0.7, [0.98, 0.98], 0.22, shade(c, -0.5));
+      const rOut = (ph) => 1.86 - 0.1 * Math.sin(ph) ** 2, lift = (ph) => 0.62 * Math.sin(ph) ** 4 - 0.06 * Math.cos(ph) ** 2;
+      h2.addC(brimGeo(0.95, rOut, lift, 0.07, U4 + 8, 5), M(0, 0.56, 0), shade(c, -0.08), h2.bone);
     },
     marine(h2) {
       const white = "#f6f5f0";
@@ -95560,13 +95656,41 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
     },
     hood(h2, col6) {
-      const c = col6 || "#6a5643";
-      const U4 = h2.q.cap[0] + 4, V5 = h2.q.cap[1] + 2;
-      h2.add(capGeo(1.25, 60, 134, 160, null, U4, V5), M(0.07, 0.03, 0, 0, 0, 0, [1.08, 1.02, 1.05]), c, h2.bone);
-      h2.add(capGeo(1.21, 60, 134, 160, null, U4, V5), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1, -1.03]), shade(c, -0.7), h2.bone);
-      const k = surf(12, 180, 1.28);
-      h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(k[0] - 0.12, k[1] + 0.02, 0, 0, 0, 0.5, [0.34, 0.2, 0.3]), shade(c, -0.06), h2.bone);
-      h2.add(lathe2([[1, -0.8], [1.12, -1.12]], 14), M(), shade(c, -0.06), h2.bone);
+      const c = col6 || "#6a5643", U4 = h2.q.cap[0] + 8, V5 = h2.q.cap[1] + 4;
+      const sst3 = (a, b, x) => {
+        const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+        return t * t * (3 - 2 * t);
+      };
+      const pt = (inset) => (u, v) => {
+        const ph = Math.PI + u * TAU19, cp = Math.cos(ph);
+        const th = 128 + (58 - 128) * Math.max(0, cp) ** 1.4 + (162 - 128) * Math.max(0, -cp) ** 1.4;
+        const t = v * th * DEG2;
+        const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph), true);
+        const k = 1.27 + 0.09 * (1 - Math.max(0, cp)) * Math.sin(t) - inset;
+        const fwd2 = sst3(0.68, 1, v) * Math.max(0, cp) ** 2 * 0.22;
+        const pk = Math.max(0, -cp) ** 3 * Math.exp(-(((t / DEG2 - 48) / 30) ** 2)) * 0.26;
+        return [p[0] * k * 1.06 + 0.07 + fwd2 - pk, p[1] * k * 1.02 + 0.03 + pk * 0.45 - fwd2 * 0.15, p[2] * k * 1.04];
+      };
+      h2.add(outward(grid(pt(0), U4, V5)), M(), c, h2.bone);
+      const inner = outward(grid(pt(0.05), U4, V5)), I2 = inner.index.array;
+      for (let i = 0; i < I2.length; i += 3) {
+        const t = I2[i + 1];
+        I2[i + 1] = I2[i + 2];
+        I2[i + 2] = t;
+      }
+      inner.computeVertexNormals();
+      h2.add(inner, M(), shade(c, -0.7), h2.bone);
+      const E = pt(0), R5 = 0.065;
+      h2.add(outward(grid((u, w) => {
+        const e = E(u, 1), a = E(u + 0.01, 1), b = E(u - 0.01, 1);
+        const tg = norm([a[0] - b[0], a[1] - b[1], a[2] - b[2]]), o = norm([e[0] - 0.07, e[1] * 0.6, e[2]]);
+        const n2 = norm(cross32(tg, o)), n1 = cross32(n2, tg), ang = w * TAU19;
+        return [e[0] + (n1[0] * Math.cos(ang) + n2[0] * Math.sin(ang)) * R5, e[1] + (n1[1] * Math.cos(ang) + n2[1] * Math.sin(ang)) * R5, e[2] + (n1[2] * Math.cos(ang) + n2[2] * Math.sin(ang)) * R5];
+      }, U4, 5)), M(), shade(c, -0.1), h2.bone);
+      h2.add(lathe2([[1.02, -0.78], [1.16, -1.14]], 14), M(), shade(c, -0.06), h2.bone);
+      const peak = featherGeo([-0.95, 0.95, 0], [-1.62, 0.35, 0], [-1.5, -0.62, 0], 0.62, [1, 0, 0], 10, (s) => Math.pow(1 - s, 0.85) * Math.min(1, 0.35 + s * 4), 0.3);
+      if (h2.tail) h2.tail(peak, M(), shade(c, -0.03));
+      else h2.add(peak, M(), shade(c, -0.03), h2.bone);
     },
     cap(h2, col6) {
       const c = col6 || "#5d6d7e";
@@ -95739,6 +95863,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const hh = { ...h2 };
       hh.addC = (g, m, col6, bone) => b.add(g, HM(mul(M(0, 0.45 + lift, 0, 0, 0, 0, k), mul(M(0, -0.45, 0), m))), col6, bone ?? hb, 0);
       hh.add = (g, m, col6, bone) => hh.addC(g, m, col6, bone);
+      hh.tail = (g, m, col6) => b.add(g, mul(M(0, 0, 0, 0, 0, 0, R5), mul(M(0, 0.45 + lift, 0, 0, 0, 0, k), mul(M(0, -0.45, 0), m))), col6, B.hairTail, 0);
       hh.bone = hb;
       HATS2[kind](hh, look.hatColor, look, meta.top);
     }
@@ -96574,11 +96699,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
   var _srad = new Float32Array(SKIRT_T.length * 2);
   var _sleg = new Uint8Array(SKIRT_T.length * 2);
-  function panelNeed(u, h2, r4, len, psi, a, reach3 = SKIRT_REACH) {
+  function panelNeed(u, h2, r4, len, psi, a, reach3 = SKIRT_REACH, fadeW = SKIRT_FADE) {
     let da = Math.abs(psi - a) % TAU20;
     if (da > Math.PI) da = TAU20 - da;
-    if (da > reach3 + SKIRT_FADE || h2 < -0.05 || h2 > len + 0.05) return -1;
-    const fade2 = da <= reach3 ? 1 : 1 - (da - reach3) / SKIRT_FADE;
+    if (da > reach3 + fadeW || h2 < -0.05 || h2 > len + 0.05) return -1;
+    const fade2 = da <= reach3 ? 1 : 1 - (da - reach3) / fadeW;
     const R5 = Math.hypot(u, h2);
     const phi = R5 <= r4 ? 1.75 : Math.acos(Math.max(-1, -r4 / R5)) - Math.atan2(h2, u);
     return phi * fade2;
@@ -96697,6 +96822,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const ankle = d.hip0 - 0.07 - d.T1 - d.T2;
     body.soleLift = Number.isFinite(min2) ? Math.max(-0.03, Math.min(0.06, ankle - min2 - d.hA)) : 0;
     return body.soleLift;
+  }
+  function coatDir(C3, i) {
+    const a = C3.a[i], w = C3.sw ? C3.sw[i] : a, r4 = Math.hypot(Math.cos(a) * C3.Dp, Math.sin(a) * C3.Wp);
+    return { ca: Math.cos(w), sa: Math.sin(w), rp: r4 * Math.cos(a - w), phi0: Math.atan2(r4 * C3.flare, C3.L) };
   }
   var CharacterModel = class {
     /**
@@ -97160,6 +97289,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const L3 = _sv4.length() || 1;
         seat += Math.min(1, Math.max(0, (0.75 - Math.abs(_sv4.y) / L3) / 0.45)) * 0.5;
       }
+      const reachS = SKIRT_REACH * (1 - seat * 0.55), fadeS = SKIRT_FADE * (1 - seat * 0.5);
       for (let i = 0; i < N8; i++) {
         const a = i / N8 * TAU20, ca = Math.cos(a), sa = Math.sin(a);
         const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S6.Dh, sa * S6.Wh);
@@ -97168,7 +97298,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         for (let k = 0; k < n; k++) {
           if (two && _sleg[k] === 1) continue;
           const P6 = _spts[k];
-          const v = panelNeed(P6.x * ca + P6.z * sa - rp, -P6.y, _srad[k], hHem, Math.atan2(P6.z, P6.x), a);
+          const v = panelNeed(P6.x * ca + P6.z * sa - rp, -P6.y, _srad[k], hHem, Math.atan2(P6.z, P6.x), a, reachS, fadeS);
           if (v > need) need = v;
         }
         K.need[i] = Math.min(1.75, need) - phi0;
@@ -97265,18 +97395,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - F4.damp * om[i] + link;
           om[i] += al * h2;
           th[i] += om[i] * h2;
+          let alU = al;
           if (th[i] < K.need[i]) {
             th[i] = K.need[i];
             if (om[i] < 0) om[i] = 0;
+            alU = 0;
           }
           if (th[i] > Math.max(F4.max, K.need[i])) {
             th[i] = Math.max(F4.max, K.need[i]);
             if (om[i] > 0) om[i] = 0;
+            alU = 0;
           }
           if (!two) continue;
           const j = N8 + i, t1 = th[j];
           const linkL = F4.link * (th[N8 + ip] + th[N8 + inx] - 2 * t1);
-          const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * S6.hK) * Math.cos(t1)) / lL - F4.damp2 * om[j] + linkL;
+          const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - alU * S6.hK) * Math.cos(t1)) / lL - F4.damp2 * om[j] + linkL;
           om[j] += alL * h2;
           th[j] += om[j] * h2;
           const lo = this.skirtLowNeed(i, th[i]);
@@ -97334,8 +97467,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       S6.n = n;
       for (let i = 0; i < N8; i++) {
-        const a = C3.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C3.Dp, sa * C3.Wp);
-        const phi0 = Math.atan2(rp * C3.flare, C3.L);
+        const a = C3.a[i], { ca, sa, rp, phi0 } = coatDir(C3, i);
         let need = phi0;
         for (let k = 0; k < n; k++) {
           if (_cleg[k] === 1) continue;
@@ -97361,8 +97493,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     /** How far out (from its rest) lower panel i must swing to clear the shins, its upper panel `up` out from its rest. */
     coatLowNeed(i, up) {
       const C3 = this.body.coat, S6 = this.coatS;
-      const a = C3.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C3.Dp, sa * C3.Wp);
-      const phi0 = Math.atan2(rp * C3.flare, C3.L), Lb = C3.hK / Math.cos(phi0), ang = phi0 + up;
+      const a = C3.a[i], { ca, sa, rp, phi0 } = coatDir(C3, i), Lb = C3.hK / Math.cos(phi0), ang = phi0 + up;
       const ku = rp + Math.sin(ang) * Lb, kh = Math.cos(ang) * Lb;
       let need = phi0;
       for (let k = 0; k < S6.n; k++) {
@@ -97413,7 +97544,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const steps = Math.min(4, Math.ceil(dt / (1 / 60))), h2 = dt / steps;
       for (let st = 0; st < steps; st++) {
         for (let i = 0; i < N8; i++) {
-          const a = C3.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C3.Dp, sa * C3.Wp);
+          const { ca, sa, rp } = coatDir(C3, i);
           const wind = -(v.x * ca + v.z * sa) * K.wind;
           const push = -(acc.x * ca + acc.z * sa) + w2 * rp;
           const t0 = th[i];
@@ -97421,17 +97552,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - K.damp * om[i] + link;
           om[i] += al * h2;
           th[i] += om[i] * h2;
+          let alU = al;
           if (th[i] < S6.need[i]) {
             th[i] = S6.need[i];
             if (om[i] < 0) om[i] = 0;
+            alU = 0;
           }
           if (th[i] > K.max) {
             th[i] = K.max;
             if (om[i] > 0) om[i] = 0;
+            alU = 0;
           }
           const j = N8 + i, t1 = th[j];
           const linkL = K.link * ((i > 0 ? th[j - 1] : t1) + (i < N8 - 1 ? th[j + 1] : t1) - 2 * t1);
-          const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * C3.hK) * Math.cos(t1)) / lL - K.damp2 * om[j] + linkL;
+          const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - alU * C3.hK) * Math.cos(t1)) / lL - K.damp2 * om[j] + linkL;
           om[j] += alL * h2;
           th[j] += om[j] * h2;
           const lo = this.coatLowNeed(i, th[i]);
@@ -97451,7 +97585,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     coatApply() {
       const S6 = this.coatS, C3 = this.body.coat, bones2 = this.bones;
       for (let i = 0; i < COAT_N; i++) {
-        const a = C3.a[i];
+        const a = C3.sw ? C3.sw[i] : C3.a[i];
         _cax.set(-Math.sin(a), 0, Math.cos(a));
         bones2[B["coat" + i]].quaternion.setFromAxisAngle(_cax, S6.th[i]);
         bones2[B["coatK" + i]].quaternion.setFromAxisAngle(_cax, S6.th[COAT_N + i] - S6.th[i]);

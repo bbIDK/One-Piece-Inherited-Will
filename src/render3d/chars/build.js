@@ -668,6 +668,67 @@ function hatKind(hat, look) {
 const disc = (h, y, r, t, col, rx = 0, rz = 0, sx = 1) => h.addC(Prim.cyl(h.q.hat), mul(M(0, y, 0, rx, 0, rz), M(0, 0, 0, 0, 0, 0, [r * sx, t, r])), col, h.bone);
 const dome = (h, y, r, col, rz = 0) => h.addC(Prim.sphere(h.q.hatS[0], h.q.hatS[1]), M(0, y, 0, 0, 0, rz, r), col, h.bone);
 const ring = (h, y, r, t, col, rz = 0) => h.addC(Prim.cyl(h.q.hat, true), M(0, y, 0, 0, 0, rz, [r[0], t, r[1] ?? r[0]]), col, h.bone);
+/** A surface's triangles turned to face out from `o` (a grid's winding depends on how its parameters run). */
+function outward(g, o = [0, 0, 0]) {
+  const P = g.attributes.position.array, I = g.index.array;
+  let vol = 0;
+  for (let i = 0; i < I.length; i += 3) {
+    const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3;
+    const ax = P[a] - o[0], ay = P[a + 1] - o[1], az = P[a + 2] - o[2];
+    const bx = P[b] - o[0], by = P[b + 1] - o[1], bz = P[b + 2] - o[2];
+    const cx = P[c] - o[0], cy = P[c + 1] - o[1], cz = P[c + 2] - o[2];
+    vol += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
+  }
+  if (vol < 0) { for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t; } g.computeVertexNormals(); }
+  return g;
+}
+/**
+ * A brim as solid cloth round the band (y = 0 here): from rIn out to
+ * rOut(ph), its outer part curled up by lift(ph) (down, if that's negative),
+ * t thick. ph = 0 is forward, π/2 the right.
+ */
+function brimGeo(rIn, rOut, lift, t, U, n = 4) {
+  const V = 2 * n + 2;
+  return outward(grid((u, v) => {
+    const ph = u * TAU, j = Math.round(v * V);
+    // (the section: along the top from the band out, round the edge, back along the underside)
+    const top = j <= n || j === V, s = j <= n ? j / n : j <= 2 * n + 1 ? (2 * n + 1 - j) / n : 0;
+    const R = rIn + (rOut(ph) - rIn) * s, y = lift(ph) * s * s + (top ? t / 2 : -t / 2);
+    return [Math.cos(ph) * R, y, Math.sin(ph) * R];
+  }, U, V), [0, 0, 0]);
+}
+/** A round cord along a brim's edge (the gold braid of a captain's or a tricorne's). */
+function edgeCord(rOut, lift, r, U) {
+  return outward(grid((u, v) => {
+    const ph = u * TAU, w = v * TAU, R = rOut(ph) + Math.cos(w) * r;
+    return [Math.cos(ph) * R, lift(ph) + Math.sin(w) * r, Math.sin(ph) * R];
+  }, U, 5), [0, lift(0), 0]);
+}
+/** A crown turned on a profile ([r, y] from the band up), closed at the top. */
+const crownGeo = (prof, U) => outward(lathe(prof, U), [0, prof[0][1], 0]);
+/** A feather: a flattened blade along a curve (a → c → b, bulging toward c), w wide and its vane flat in the plane of `up`. */
+function featherGeo(a, c, b, w, up, U = 10, envF = (s) => Math.pow(Math.sin(Math.PI * Math.min(1, s * 1.08)), 0.7), thick = 0.14) {
+  const pt = (s) => [0, 1, 2].map((k) => (1 - s) * (1 - s) * a[k] + 2 * (1 - s) * s * c[k] + s * s * b[k]);
+  return outward(grid((u, v) => {
+    const s = u, p = pt(s), q = pt(Math.min(1, s + 0.02)), r = pt(Math.max(0, s - 0.02));
+    const tg = norm([q[0] - r[0], q[1] - r[1], q[2] - r[2]]);
+    const side = norm(cross3(tg, up)), flat = norm(cross3(side, tg));
+    const env = envF(s);
+    const ang = v * TAU, cw = Math.cos(ang) * w * env, cf = Math.sin(ang) * w * thick * env;
+    // (the vane curls a little either side of the quill)
+    const curl = Math.abs(Math.cos(ang)) * w * 0.12 * env;
+    return [p[0] + side[0] * cw + flat[0] * (cf - curl), p[1] + side[1] * cw + flat[1] * (cf - curl), p[2] + side[2] * cw + flat[2] * (cf - curl)];
+  }, U, 6), pt(0.5));
+}
+const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+/** A skull and crossbones badge on the front of a crown (at x, y, facing forward). */
+function skullBadge(h, x, y, k, tilt = 0) {
+  const bone = '#f4f1ea', ink = '#1d1a20';
+  for (const s of [-1, 1]) h.addC(Prim.rbox(0.5, h.q.rboxS[0], h.q.rboxS[1]), M(x - 0.02, y - 0.03 * k, 0, s * 0.75, 0, tilt, [0.05 * k, 0.5 * k, 0.07 * k]), bone, h.bone);
+  h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(x + 0.03 * k, y + 0.04 * k, 0, 0, 0, tilt, [0.06 * k, 0.16 * k, 0.17 * k]), bone, h.bone);
+  h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(x + 0.02 * k, y - 0.1 * k, 0, 0, 0, tilt, [0.05 * k, 0.07 * k, 0.11 * k]), bone, h.bone);
+  for (const s of [-1, 1]) h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(x + 0.085 * k, y + 0.03 * k, s * 0.065 * k, 0, 0, tilt, [0.02 * k, 0.045 * k, 0.045 * k]), ink, h.bone);
+}
 const HATS = {
   straw(h) {
     disc(h, 0.52, 1.72, 0.07, STRAW, 0, 0.08);
@@ -680,32 +741,59 @@ const HATS = {
     dome(h, 1.62, [1.12, 0.62, 1.12], c);
   },
   captain(h, col) {
-    const c = col || '#2c2831';
-    h.addC(Prim.frustum(0.84, h.q.hat), M(0, 0.98, 0, 0, 0, 0, [1.02, 0.9, 1.02]), c, h.bone);
-    dome(h, 1.42, [0.86, 0.3, 0.86], c);
-    disc(h, 0.56, 1.5, 0.08, shade(c, -0.12), 0, 0, 1.1);
-    h.addC(Prim.torus(0.06, 3, 16), mul(M(0, 0.57, 0), M(0, 0, 0, Math.PI / 2, 0, 0, [1.66, 1.5, 1])), GOLD, h.bone);
-    spike({ ...h, col: lin('#c8372d') }, [-0.35, 1.3, 0.55], [-1.2, 1.9, 1.1], 0.34, 0.1, 5);
-    h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(0.95, 1.05, 0, 0, 0, 0, [0.08, 0.2, 0.2]), '#f4f1ea', h.bone);
+    // (the item icon: a tall rounded crown with a skull and crossbones on it,
+    // a wide brim swept up at the sides and bound in gold, a red plume behind)
+    const c = col || '#2c2831', U = h.q.hat + 6;
+    h.addC(crownGeo([[0.99, 0.5], [1.03, 0.85], [1.02, 1.15], [0.94, 1.42], [0.76, 1.64], [0.46, 1.78], [0, 1.82]], U), M(-0.04, 0, 0), c, h.bone);
+    ring(h, 0.66, [1.035], 0.22, shade(c, -0.35));
+    const rOut = (ph) => 1.62 + 0.12 * Math.cos(ph) ** 2, lift = (ph) => 0.5 * Math.sin(ph) ** 2 - 0.05 * Math.cos(ph) ** 2;
+    h.addC(brimGeo(0.98, rOut, lift, 0.08, U + 6), M(-0.04, 0.55, 0), shade(c, -0.06), h.bone);
+    h.addC(edgeCord(rOut, lift, 0.06, U + 6), M(-0.04, 0.55, 0), GOLD, h.bone);
+    skullBadge(h, 1.0, 1.08, 1.25, -0.08);
+    const red = '#c8372d';
+    h.addC(featherGeo([-0.55, 1.1, 0.62], [-1.0, 1.95, 1.0], [-1.85, 2.15, 1.25], 0.34, [0.3, 0.2, -1], 12), M(), red, h.bone);
+    h.addC(featherGeo([-0.6, 1.0, 0.5], [-1.2, 1.6, 0.95], [-1.9, 1.55, 1.15], 0.24, [0.2, 0.4, -1], 10), M(), shade(red, -0.15), h.bone);
   },
   tricorne(h, col) {
-    const c = col || '#302b35';
-    h.addC(Prim.frustum(0.8, h.q.hat), M(0, 0.86, 0, 0, 0, 0, [1.0, 0.62, 1.0]), c, h.bone);
-    dome(h, 1.16, [0.8, 0.26, 0.8], c);
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * TAU + Math.PI / 3;
-      const x = Math.cos(a), z = Math.sin(a);
-      h.addC(Prim.rbox(0.3, h.q.rboxS[0], h.q.rboxS[1]), mul(M(x * 1.02, 0.78, z * 1.02, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.36, 0.06, 1.0])), c, h.bone);
-      h.addC(Prim.box(), mul(M(x * 1.14, 0.92, z * 1.14, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.06, 0.04, 0.9])), GOLD, h.bone);
-    }
-    disc(h, 0.62, 1.16, 0.06, c);
+    // (the icon: a low crown, the brim cocked up into three points — one to the
+    // front — its edge bound in gold, a gold cockade at the front)
+    const c = col || '#302b35', U = h.q.hat * 2 + 6;
+    h.addC(crownGeo([[0.99, 0.5], [1.01, 0.8], [0.92, 1.08], [0.66, 1.26], [0, 1.32]], h.q.hat + 4), M(), c, h.bone);
+    const p = (ph) => Math.cos(3 * ph);
+    const rOut = (ph) => 1.32 + 0.38 * Math.max(0, p(ph)) ** 1.5, lift = (ph) => 0.5 * (1 - p(ph)) ** 1.25 + 0.04;
+    h.addC(brimGeo(0.97, rOut, lift, 0.07, U, 5), M(0, 0.58, 0), shade(c, -0.05), h.bone);
+    h.addC(edgeCord(rOut, lift, 0.055, U), M(0, 0.58, 0), GOLD, h.bone);
+    // the cockade on the left of the front point: a black ribbon rosette, a gold button
+    h.addC(Prim.cyl(h.q.hat), mul(M(1.12, 0.92, -0.42, 0, 0.36, 0), M(0, 0, 0, 0, 0, Math.PI / 2, [0.2, 0.04, 0.2])), '#1d1a20', h.bone);
+    h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(1.15, 0.92, -0.43, 0, 0, 0, 0.07), GOLD, h.bone);
   },
   cowboy(h, col) {
-    const c = col || '#9a6a3f';
-    dome(h, 0.8, [0.9, 0.72, 0.84], c);
-    ring(h, 0.66, [0.93, 0.88], 0.2, shade(c, -0.5));
-    disc(h, 0.56, 1.82, 0.07, shade(c, -0.1), 0, 0.06);
-    for (const s of [-1, 1]) h.addC(Prim.rbox(0.4, h.q.rboxS[0], h.q.rboxS[1]), M(0, 0.66, s * 1.55, s * 0.55, 0, 0, [1.2, 0.05, 0.42]), shade(c, -0.1), h.bone);
+    // (the icon: a tall crown pinched at the front with a crease down the top, a dark band, the brim's sides rolled up)
+    const c = col || '#9a6a3f', U = h.q.hat + 8, V = 8;
+    const r0 = 0.97;
+    h.addC(outward(grid((u, v) => {
+      const ph = u * TAU, cp = Math.cos(ph), sp = Math.sin(ph);
+      let r, y;
+      if (v <= 0.7) {
+        const t = v / 0.7;
+        r = r0 * (1 - 0.08 * t);
+        // (the pinch: two dents either side of the front, high on the crown)
+        const d = Math.min(Math.abs(ph - 0.55), Math.abs(ph - (TAU - 0.55)));
+        r *= 1 - 0.2 * t * t * Math.exp(-((d / 0.32) ** 2));
+        y = 0.55 + t * 0.85 - 0.24 * (1 - Math.abs(sp)) * t ** 3;
+      } else {
+        const t = (v - 0.7) / 0.3;
+        r = r0 * 0.92 * (1 - t);
+        const d = Math.min(Math.abs(ph - 0.55), Math.abs(ph - (TAU - 0.55)));
+        r *= 1 - 0.2 * (1 - t) * Math.exp(-((d / 0.32) ** 2));
+        // (the crease front to back down the middle)
+        y = 1.4 + 0.07 * Math.sin(Math.PI * t) - 0.24 * (t + (1 - t) * (1 - Math.abs(sp)));
+      }
+      return [cp * r, y, sp * r];
+    }, U, V), [0, 0.55, 0]), M(), c, h.bone);
+    ring(h, 0.7, [0.98, 0.98], 0.22, shade(c, -0.5));
+    const rOut = (ph) => 1.86 - 0.1 * Math.sin(ph) ** 2, lift = (ph) => 0.62 * Math.sin(ph) ** 4 - 0.06 * Math.cos(ph) ** 2;
+    h.addC(brimGeo(0.95, rOut, lift, 0.07, U + 8, 5), M(0, 0.56, 0), shade(c, -0.08), h.bone);
   },
   marine(h) {
     const white = '#f6f5f0';
@@ -795,17 +883,44 @@ const HATS = {
     }
   },
   hood(h, col) {
-    const c = col || '#6a5643';
-    const U = h.q.cap[0] + 4, V = h.q.cap[1] + 2;
-    // a deep cowl over the crown, down the sides and the back, framing the face
-    h.add(capGeo(1.25, 60, 134, 160, null, U, V), M(0.07, 0.03, 0, 0, 0, 0, [1.08, 1.02, 1.05]), c, h.bone);
+    // (loose cloth, not a cap: standing off the head, its edge forward of the
+    // brow so the face sits in its shadow, a rolled hem round the opening, and
+    // the peak at the back hanging free — on the swinging bone long hair
+    // hangs from, so it falls with its weight, lags as you set off and turn,
+    // and streams back on the air when you run; its mantle over the
+    // shoulders is on the body: body.js mantle)
+    const c = col || '#6a5643', U = h.q.cap[0] + 8, V = h.q.cap[1] + 4;
+    const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const pt = (inset) => (u, v) => {
+      const ph = Math.PI + u * TAU, cp = Math.cos(ph);
+      const th = 128 + (58 - 128) * Math.max(0, cp) ** 1.4 + (162 - 128) * Math.max(0, -cp) ** 1.4;
+      const t = v * th * DEG;
+      const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph), true);
+      const k = 1.27 + 0.09 * (1 - Math.max(0, cp)) * Math.sin(t) - inset;
+      const fwd = sst(0.68, 1, v) * Math.max(0, cp) ** 2 * 0.22;
+      const pk = Math.max(0, -cp) ** 3 * Math.exp(-(((t / DEG - 48) / 30) ** 2)) * 0.26;
+      return [p[0] * k * 1.06 + 0.07 + fwd - pk, p[1] * k * 1.02 + 0.03 + pk * 0.45 - fwd * 0.15, p[2] * k * 1.04];
+    };
+    h.add(outward(grid(pt(0), U, V)), M(), c, h.bone);
     // its shadowed inside, seen through the face opening
-    h.add(capGeo(1.21, 60, 134, 160, null, U, V), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1.0, -1.03]), shade(c, -0.7), h.bone);
-    // the peak's soft fold, and a skirt of it round the neck (its mantle over
-    // the shoulders is on the body, not the head: body.js mantle)
-    const k = surf(12, 180, 1.28);
-    h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(k[0] - 0.12, k[1] + 0.02, 0, 0, 0, 0.5, [0.34, 0.2, 0.3]), shade(c, -0.06), h.bone);
-    h.add(lathe([[1.0, -0.8], [1.12, -1.12]], 14), M(), shade(c, -0.06), h.bone);
+    const inner = outward(grid(pt(0.05), U, V)), I = inner.index.array;
+    for (let i = 0; i < I.length; i += 3) { const t = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = t; }
+    inner.computeVertexNormals();
+    h.add(inner, M(), shade(c, -0.7), h.bone);
+    // the hem: a rolled edge all round the opening
+    const E = pt(0), R = 0.065;
+    h.add(outward(grid((u, w) => {
+      const e = E(u, 1), a = E(u + 0.01, 1), b = E(u - 0.01, 1);
+      const tg = norm([a[0] - b[0], a[1] - b[1], a[2] - b[2]]), o = norm([e[0] - 0.07, e[1] * 0.6, e[2]]);
+      const n2 = norm(cross3(tg, o)), n1 = cross3(n2, tg), ang = w * TAU;
+      return [e[0] + (n1[0] * Math.cos(ang) + n2[0] * Math.sin(ang)) * R, e[1] + (n1[1] * Math.cos(ang) + n2[1] * Math.sin(ang)) * R, e[2] + (n1[2] * Math.cos(ang) + n2[2] * Math.sin(ang)) * R];
+    }, U, 5)), M(), shade(c, -0.1), h.bone);
+    // a soft fold where it gathers round the neck
+    h.add(lathe([[1.02, -0.78], [1.16, -1.14]], 14), M(), shade(c, -0.06), h.bone);
+    // the peak, hanging down the back of the head
+    const peak = featherGeo([-0.95, 0.95, 0], [-1.62, 0.35, 0], [-1.5, -0.62, 0], 0.62, [1, 0, 0], 10, (s) => Math.pow(1 - s, 0.85) * Math.min(1, 0.35 + s * 4), 0.3);
+    if (h.tail) h.tail(peak, M(), shade(c, -0.03));
+    else h.add(peak, M(), shade(c, -0.03), h.bone);
   },
   cap(h, col) {
     const c = col || '#5d6d7e';
@@ -931,6 +1046,8 @@ function buildBody0(look, wpn, lod, articulated) {
     const hh = { ...h };
     hh.addC = (g, m, col, bone) => b.add(g, HM(mul(M(0, 0.45 + lift, 0, 0, 0, 0, k), mul(M(0, -0.45, 0), m))), col, bone ?? hb, 0);
     hh.add = (g, m, col, bone) => hh.addC(g, m, col, bone);
+    // (cloth that hangs free of the hat — a hood's peak — swings on the long hair's bone)
+    hh.tail = (g, m, col) => b.add(g, mul(M(0, 0, 0, 0, 0, 0, R), mul(M(0, 0.45 + lift, 0, 0, 0, 0, k), mul(M(0, -0.45, 0), m))), col, B.hairTail, 0);
     hh.bone = hb;
     HATS[kind](hh, look.hatColor, look, meta.top);
   }
