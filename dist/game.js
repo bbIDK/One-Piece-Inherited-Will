@@ -129629,6 +129629,7 @@ button:disabled { cursor: not-allowed; }
       if (k) L3.skin = k.skin;
     }
   }
+  var DEV_PICK = true;
   var SEA_NAMES = { east_blue: "East Blue", north_blue: "North Blue", west_blue: "West Blue", south_blue: "South Blue" };
   var pct = (x) => `${Math.round(x * 1e3) / 10}%`;
   function portrait(look, w = 96, hgt = 110, bg = null) {
@@ -129813,12 +129814,35 @@ button:disabled { cursor: not-allowed; }
           stepRoll(true);
         } } }, `Flip Fate's Coin (${rerolls} left)`) : null
       );
+      const devPick = DEV_PICK ? (() => {
+        const set = (patch4) => {
+          birth = { ...birth, ...patch4 };
+          keep();
+          stepRoll(false);
+        };
+        const sel = (opts, value, on) => h(
+          "select.name-pick",
+          { on: { change: (e) => on(e.target.value) } },
+          ...opts.map(([v, label]) => h("option", { value: v, ...v === value ? { selected: true } : {} }, label))
+        );
+        const raceOpts = Object.entries(RACES).map(([id, r4]) => [id, `${r4.name} (${RARITY[r4.rarity]?.label || r4.rarity})`]);
+        const fruitOpts = [["", "\u2014 No Devil Fruit \u2014"], ...Object.entries(FRUITS).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([id, f]) => [id, `${f.name} \xB7 ${f.en} (${f.type})`])];
+        const dBox = h("input", { type: "checkbox", ...hasD() ? { checked: true } : {}, on: { change: (e) => set({ traits: e.target.checked ? [...birth.traits.filter((t) => t !== "will_of_d"), "will_of_d"] : birth.traits.filter((t) => t !== "will_of_d") }) } });
+        return h(
+          "div.dev-pick",
+          { style: { display: "flex", flexWrap: "wrap", gap: "8px 14px", justifyContent: "center", alignItems: "center", margin: "8px auto 4px", padding: "8px 10px", border: "1px dashed #c9a24d", borderRadius: "6px", maxWidth: "640px" } },
+          h("span.muted", "DEV PICK"),
+          h("label", "Race ", sel(raceOpts, birth.race, (v) => set({ race: v }))),
+          h("label", "Devil Fruit ", sel(fruitOpts, birth.fruit || "", (v) => set({ fruit: v || null }))),
+          h("label", dBox, " Will of D.")
+        );
+      })() : null;
       const willLine = h("div.will-line", uiImg("reputation", 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` \xB7 generation ${legacy.generation}` : ""));
-      const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), nameEl, rarEl, dEl, fEl, info, btns, willLine);
+      const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), devPick, nameEl, rarEl, dEl, fEl, info, btns, willLine);
       root4.appendChild(panel);
       const ids = Object.keys(RACES);
       const t0 = performance.now();
-      const dur = spin ? 1800 : 0;
+      const dur = spin && !DEV_PICK ? 1800 : 0;
       let lastI = -1;
       const reveal = () => {
         nameEl.textContent = race.name;
@@ -129837,7 +129861,7 @@ button:disabled { cursor: not-allowed; }
             h("p.muted", `${fr.en} \u2014 ${fr.type}. You ate it as a child: its first powers are yours from the start, and you can never swim. (`, pct(fruitBirthChance(birth.traits)), " of births)")
           );
           fEl.classList.add("hit");
-          later(spin ? 1500 : 0, () => {
+          later(dur ? 1500 : 0, () => {
             fEl.classList.add("show");
             ui.game?.audio?.sfx("fanfare");
           });
@@ -129854,7 +129878,7 @@ button:disabled { cursor: not-allowed; }
           );
           dEl.classList.remove("miss");
           dEl.classList.add("hit");
-          later(spin ? 900 : 0, () => {
+          later(dur ? 900 : 0, () => {
             dEl.classList.add("show");
             ui.game?.audio?.sfx("fanfare");
             btns.style.opacity = 1;

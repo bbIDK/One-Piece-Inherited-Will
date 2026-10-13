@@ -37,6 +37,10 @@ function applyLook(L, race) {
   if (race === 'fishman') { const k = FISHMAN_KINDS.find((m) => m.name === L.kind); if (k) L.skin = k.skin; }
 }
 
+// (in development: pick your race, Devil Fruit and the D. on the birth screen
+// instead of rolling for them — set false to go back to the roll of fate)
+export const DEV_PICK = true;
+
 const SEA_NAMES = { east_blue: 'East Blue', north_blue: 'North Blue', west_blue: 'West Blue', south_blue: 'South Blue' };
 const pct = (x) => `${Math.round(x * 1000) / 10}%`;
 
@@ -170,12 +174,26 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       // (the very first of a line: roll again as often as you like — after that, only Fate's Coin)
       legacy.generation <= 1 ? h('button.btn', { on: { click: () => { birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits()); keep(); stepRoll(true); } } }, 'Reroll') : null,
       rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits()); keep(); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null);
+    // (dev: choose instead of roll — each change re-shows the birth at once)
+    const devPick = DEV_PICK ? (() => {
+      const set = (patch) => { birth = { ...birth, ...patch }; keep(); stepRoll(false); };
+      const sel = (opts, value, on) => h('select.name-pick', { on: { change: (e) => on(e.target.value) } },
+        ...opts.map(([v, label]) => h('option', { value: v, ...(v === value ? { selected: true } : {}) }, label)));
+      const raceOpts = Object.entries(RACES).map(([id, r]) => [id, `${r.name} (${RARITY[r.rarity]?.label || r.rarity})`]);
+      const fruitOpts = [['', '— No Devil Fruit —'], ...Object.entries(FRUITS).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([id, f]) => [id, `${f.name} · ${f.en} (${f.type})`])];
+      const dBox = h('input', { type: 'checkbox', ...(hasD() ? { checked: true } : {}), on: { change: (e) => set({ traits: e.target.checked ? [...birth.traits.filter((t) => t !== 'will_of_d'), 'will_of_d'] : birth.traits.filter((t) => t !== 'will_of_d') }) } });
+      return h('div.dev-pick', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px 14px', justifyContent: 'center', alignItems: 'center', margin: '8px auto 4px', padding: '8px 10px', border: '1px dashed #c9a24d', borderRadius: '6px', maxWidth: '640px' } },
+        h('span.muted', 'DEV PICK'),
+        h('label', 'Race ', sel(raceOpts, birth.race, (v) => set({ race: v }))),
+        h('label', 'Devil Fruit ', sel(fruitOpts, birth.fruit || '', (v) => set({ fruit: v || null }))),
+        h('label', dBox, ' Will of D.'));
+    })() : null;
     const willLine = h('div.will-line', uiImg('reputation', 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` · generation ${legacy.generation}` : ''));
-    const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, dEl, fEl, info, btns, willLine);
+    const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), devPick, nameEl, rarEl, dEl, fEl, info, btns, willLine);
     root.appendChild(panel);
     const ids = Object.keys(RACES);
     const t0 = performance.now();
-    const dur = spin ? 1800 : 0;
+    const dur = spin && !DEV_PICK ? 1800 : 0;
     let lastI = -1;
     const reveal = () => {
       nameEl.textContent = race.name;
@@ -193,7 +211,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         fEl.append(h('div.f-title', { style: { color: fr.color } }, 'BORN WITH A DEVIL FRUIT'),
           h('div.f-name', fr.name), h('p.muted', `${fr.en} — ${fr.type}. You ate it as a child: its first powers are yours from the start, and you can never swim. (`, pct(fruitBirthChance(birth.traits)), ' of births)'));
         fEl.classList.add('hit');
-        later(spin ? 1500 : 0, () => { fEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); });
+        later(dur ? 1500 : 0, () => { fEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); });
       } else {
         fEl.append(h('p.muted', `No Devil Fruit this time — ${pct(fruitBirthChance(birth.traits))} of children have eaten one.`));
         fEl.classList.add('miss', 'show');
@@ -204,7 +222,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
           h('p.muted', 'Once each life a finishing blow misses you · +3 Willpower · far likelier to have Conqueror\'s Haki · every child of your line will carry the D. and your family name.'));
         dEl.classList.remove('miss');
         dEl.classList.add('hit');
-        later(spin ? 900 : 0, () => { dEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); btns.style.opacity = 1; });
+        later(dur ? 900 : 0, () => { dEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); btns.style.opacity = 1; });
       } else {
         dEl.append(h('p.muted', `No "D." in your name this time — only ${pct(chance)} of births carry the Will of D.`));
         dEl.classList.add('miss', 'show');
