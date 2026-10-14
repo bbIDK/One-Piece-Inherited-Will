@@ -30,6 +30,13 @@ import kuro_kabuto from '../../assets/models/kuro_kabuto.js';
 import wano_katana from '../../assets/models/wano_katana.js';
 import nb_shibireru from '../../assets/models/nb_shibireru.js';
 import p2_funkfreed from '../../assets/models/p2_funkfreed.js';
+import hat_straw from '../../assets/models/hat_straw.js';
+import hat_tricorne from '../../assets/models/hat_tricorne.js';
+import hat_captain from '../../assets/models/hat_captain.js';
+import hat_cowboy from '../../assets/models/hat_cowboy.js';
+import hat_pinkhat from '../../assets/models/hat_pinkhat.js';
+import hat_marine from '../../assets/models/hat_marine.js';
+import hat_helm from '../../assets/models/hat_helm.js';
 
 const GEN = {
   cutlass: [cutlass, 0.0348], marine_saber: [marine_saber, 0.0295], fine_katana: [fine_katana, -0.0036], yoru: [yoru, 0.0426],
@@ -37,6 +44,8 @@ const GEN = {
   kabuto: [kabuto, -0.0009], sandai_kitetsu: [sandai_kitetsu, 0.0017], shusui: [shusui, 0.002], enma: [enma, 0.0039], kikoku: [kikoku, 0.0887], clima_tact: [clima_tact, -0.0015],
   shigure: [shigure, -0.0022], yubashiri: [yubashiri, -0.0014], rusty_katana: [rusty_katana, 0.0002], wooden_sword: [wooden_sword, 0.0038], bo_staff: [bo_staff, -0.0007], marine_rifle: [marine_rifle, 0.0768], slingshot: [slingshot, 0.0055],
   morgan_axe: [morgan_axe, 0.0976], sorcery_clima_tact: [sorcery_clima_tact, -0.0015], kuro_kabuto: [kuro_kabuto, -0.0004], wano_katana: [wano_katana, 0.0064], nb_shibireru: [nb_shibireru, 0.0019], p2_funkfreed: [p2_funkfreed, 0.014],
+  // hats (centred, standing on y = 0, 1 tall: fitted to the head in chars/build.js)
+  hat_straw: [hat_straw, 0], hat_tricorne: [hat_tricorne, 0], hat_captain: [hat_captain, 0], hat_cowboy: [hat_cowboy, 0], hat_pinkhat: [hat_pinkhat, 0], hat_marine: [hat_marine, 0], hat_helm: [hat_helm, 0],
 };
 const CACHE = new Map();
 const dec = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
@@ -69,5 +78,24 @@ export function generatedGeo(id) {
   g.userData.shared = true;
   CACHE.set(id, g);
   return g;
+}
+/** A generated model's main colour (the one most of its faces share, 0–1 RGB): what a recolour shifts. */
+const MAIN = new Map();
+export function mainColour(id) {
+  if (MAIN.has(id)) return MAIN.get(id);
+  const g = generatedGeo(id);
+  if (!g) return null;
+  const C = g.attributes.color.array, bins = new Map();
+  for (let i = 0; i < C.length; i += 9) {
+    const k = ((C[i] * 7.99) | 0) * 64 + ((C[i + 1] * 7.99) | 0) * 8 + ((C[i + 2] * 7.99) | 0);
+    const b = bins.get(k) || [0, 0, 0, 0];
+    b[0] += C[i]; b[1] += C[i + 1]; b[2] += C[i + 2]; b[3]++;
+    bins.set(k, b);
+  }
+  let best = null;
+  for (const b of bins.values()) if (!best || b[3] > best[3]) best = b;
+  const m = [best[0] / best[3], best[1] / best[3], best[2] / best[3]];
+  MAIN.set(id, m);
+  return m;
 }
 export const GENERATED_IDS = Object.keys(GEN);

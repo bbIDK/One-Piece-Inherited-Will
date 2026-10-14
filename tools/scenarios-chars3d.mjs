@@ -527,7 +527,7 @@ export const scenarios = {
   // weapons worn on the body, drawn from the hotbar and put away again: the real
   // hotbar keys, snapped part way through the draw
   //   --wpns=fine_katana,flintlock,bo_staff,wado_ichimonji+shusui+sandai_kitetsu  --modes=third,first
-  //   --at=0.15,0.3,0.45,0.6  (seconds into the draw)  --camyaw=0.72 (camera round from the facing, in half-turns)
+  //   --at=0.15,0.3,0.45,0.6  (seconds into the draw)  --camyaw=0.72 (camera round from the facing, in half-turns)  --dist=2.4
   c3draw: {
     async run(page, snap, args) {
       await boot(page);
@@ -539,14 +539,14 @@ export const scenarios = {
       for (const set of sets) {
         const ids = set.split('+');
         for (const mode of String(args.modes || 'third,first').split(',')) {
-          await page.evaluate(([ids, mode]) => {
+          await page.evaluate(([ids, mode, dist]) => {
             const g = window.OP.game, p = g.player, c = g.state.char;
             window.OP.hold = false;
             c.equipped.weapons = []; p.weapon = null; p.drawn = false; p.held = null;
             ids.forEach((id, i) => { window.OP.debug.addItem(g, id, 1, { silent: true }); p.hotbar[i] = 'item:' + id; });
-            window.__C3.view(0, -0.05, mode, 2.4);
+            window.__C3.view(0, -0.05, mode, dist);
             g.view3d.rig.setShiftLock?.(false);
-          }, [ids, mode]);
+          }, [ids, mode, Number(args.dist ?? 2.4)]);
           // put them on (each key the first time: on and drawn), then back in the sheath
           for (let i = 0; i < ids.length; i++) await press(String(i + 1));
           await settle(page, 2);

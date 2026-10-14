@@ -16,6 +16,7 @@ import { FACE_TOP, FACE_BOTTOM } from './face.js';
 import { shade, mixHex } from '../../core/math.js';
 import { swordLook, swordGeo, addBuilt } from './swords.js';
 import { axeGeo, staffGeo } from './weapons.js';
+import { generatedGeo, mainColour } from './generated.js';
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
@@ -660,6 +661,39 @@ const HAIR = {
 // ------------------------------------------------------------------ hats
 // Hats sit on the head at their band; `k` scales them for big hair.
 const STRAW = '#f0cd62', STRAW_D = '#e9c150', BAND_RED = '#c8372d', GOLD = '#e0b24a';
+/**
+ * The hats modelled from concept art (render3d/chars/generated.js, 'hat_' + kind):
+ * [scale, x, y, z, yaw] setting each (centred, standing on y = 0, 1 tall) on the
+ * head as its built hat sits — matched to the built one's brim and band.
+ */
+const HAT_GEN = {
+  straw: [1.5, 1.35, -0.02, 0.3, -0.02],
+  tricorne: [1.654, 1.5, 0.185, 0.5, 0],
+  captain: [2.578, 1.95, -0.07, 0.44, 0],
+  cowboy: [1.573, 1.25, 0, 0.47, 0],
+  pinkhat: [2.136, 1.8, 0, 0.63, 0],
+  marine: [3.4, 2.1, 0.2, -0.75, 0],
+  helm: [1.793, 1.793, -0.025, -0.12, 0],
+};
+const _hc = new THREE.Color();
+/**
+ * A generated hat on the head: [width scale, height scale, x, y, z] (see HAT_GEN).
+ * In another colour (`col`, a hex), the faces of its main material shift to it,
+ * keeping their shading; the trims (bands, braid, badges) stay as modelled.
+ */
+function genHat(hh, kind, g, col) {
+  const [s, sy, x, y, z] = HAT_GEN[kind], C = g.attributes.color.array;
+  const main = col && mainColour('hat_' + kind);
+  const want = col && [1, 3, 5].map((i) => parseInt(col.slice(i, i + 2), 16) / 255);
+  let n = 0;
+  hh.addC(g, M(x, y, z, 0, 0, 0, [s, sy, s]), () => {
+    const i = (n++) * 3, r = C[i], gr = C[i + 1], b = C[i + 2];
+    if (main && Math.abs(r - main[0]) + Math.abs(gr - main[1]) + Math.abs(b - main[2]) < 0.3) {
+      return _hc.setRGB(Math.min(1, Math.max(0, want[0] + r - main[0])), Math.min(1, Math.max(0, want[1] + gr - main[1])), Math.min(1, Math.max(0, want[2] + b - main[2])));
+    }
+    return _hc.setRGB(r, gr, b);
+  });
+}
 const HAT_COVER = { hood: 1, chef: 1, straw: 1, captain: 1, tricorne: 1, cowboy: 1, marine: 1, pinkhat: 1, tophat: 1, topHat: 1, beanie: 1, bandana: 1, cap: 1, helm: 1 };
 function hatKind(hat, look) {
   if (!hat) return null;
@@ -1067,7 +1101,10 @@ function buildBody0(look, wpn, lod, articulated) {
     // (cloth that hangs free of the hat — a hood's peak — swings on the long hair's bone)
     hh.tail = (g, m, col) => b.add(g, mul(M(0, 0, 0, 0, 0, 0, R), mul(M(0, 0.45 + lift, 0, 0, 0, 0, k), mul(M(0, -0.45, 0), m))), col, B.hairTail, 0);
     hh.bone = hb;
-    HATS[kind](hh, look.hatColor, look, meta.top);
+    // (a hat modelled from concept art, close up and in its own colours; far off, the built one)
+    const gen = HAT_GEN[kind] && lod !== 1 && generatedGeo('hat_' + kind);
+    if (gen) genHat(hh, kind, gen, look.hatColor);
+    else HATS[kind](hh, look.hatColor, look, meta.top);
   }
 
   // ---- hands
