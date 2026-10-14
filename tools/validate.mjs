@@ -29,4 +29,5 @@ const res = await mod.run({ noWorld: !!args.fast, pack: args.pack || null, sourc
 for (const w of res.warns) console.log(`warn: ${w}`);
 for (const e of res.errors) console.log(`ERROR: ${e}`);
 console.log(`\n${res.islands} islands, ${res.npcs} NPCs, ${res.quests} quests — ${res.errors.length} error(s), ${res.warns.length} warning(s)`);
-process.exit(res.errors.length ? 1 : 0);
+// (exit once stdout has drained: a plain exit can cut off the summary when piped)
+process.stdout.write('', () => process.exit(res.errors.length ? 1 : 0));
