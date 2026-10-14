@@ -37,6 +37,13 @@ import hat_cowboy from '../../assets/models/hat_cowboy.js';
 import hat_pinkhat from '../../assets/models/hat_pinkhat.js';
 import hat_marine from '../../assets/models/hat_marine.js';
 import hat_helm from '../../assets/models/hat_helm.js';
+import prop_cannon from '../../assets/models/prop_cannon.js';
+import prop_bench from '../../assets/models/prop_bench.js';
+import prop_well from '../../assets/models/prop_well.js';
+import prop_grave from '../../assets/models/prop_grave.js';
+import prop_weaponRack from '../../assets/models/prop_weaponRack.js';
+import prop_mooring from '../../assets/models/prop_mooring.js';
+import prop_mushroom from '../../assets/models/prop_mushroom.js';
 
 const GEN = {
   cutlass: [cutlass, 0.0348], marine_saber: [marine_saber, 0.0295], fine_katana: [fine_katana, -0.0036], yoru: [yoru, 0.0426],
@@ -46,6 +53,8 @@ const GEN = {
   morgan_axe: [morgan_axe, 0.0976], sorcery_clima_tact: [sorcery_clima_tact, -0.0015], kuro_kabuto: [kuro_kabuto, -0.0004], wano_katana: [wano_katana, 0.0064], nb_shibireru: [nb_shibireru, 0.0019], p2_funkfreed: [p2_funkfreed, 0.014],
   // hats (centred, standing on y = 0, 1 tall: fitted to the head in chars/build.js)
   hat_straw: [hat_straw, 0], hat_tricorne: [hat_tricorne, 0], hat_captain: [hat_captain, 0], hat_cowboy: [hat_cowboy, 0], hat_pinkhat: [hat_pinkhat, 0], hat_marine: [hat_marine, 0], hat_helm: [hat_helm, 0],
+  // town props (standing on y = 0: fitted to the built prop's box in props/street.js)
+  prop_cannon: [prop_cannon, 0], prop_bench: [prop_bench, 0], prop_well: [prop_well, 0], prop_grave: [prop_grave, 0], prop_weaponRack: [prop_weaponRack, 0], prop_mooring: [prop_mooring, 0], prop_mushroom: [prop_mushroom, 0],
 };
 const CACHE = new Map();
 const dec = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));

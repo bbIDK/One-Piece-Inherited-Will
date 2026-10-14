@@ -17,9 +17,9 @@ const GEO = new Map();
  * one faces. Each is stretched to the built prop's own box, so it stands,
  * collides and lines up exactly where that one did.
  */
-const GEN_PROPS = {};
+const GEN_PROPS = { cannon: 1, bench: 0, well: 0, grave: 0, weaponrack: 0, mooring: 0, mushroom: 0 };
 function fitted(key, fn) {
-  const gen = GEN_PROPS[key] !== undefined && generatedGeo('prop_' + key);
+  const gen = GEN_PROPS[key] !== undefined && generatedGeo('prop_' + (key === 'weaponrack' ? 'weaponRack' : key));
   if (!gen) return fn;
   // (the built prop's box)
   const t = new Mesher(); fn(t);
@@ -33,7 +33,7 @@ function fitted(key, fn) {
   // (scaled in the prop's frame after the turn: a turn, then a stretch along the built prop's axes)
   return (k) => {
     k.save().translate(at[0], at[1], at[2]).scale(s[0], s[1], s[2]).rotateY(q * Math.PI / 2);
-    k.add(gen, { attrs: true, outline: 0.02 });
+    k.add(gen, { attrs: true, outline: 0.01 });
     k.restore();
   };
 }
