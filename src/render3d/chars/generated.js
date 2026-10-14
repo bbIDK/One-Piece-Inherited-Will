@@ -40,6 +40,17 @@ const GEN = {
 };
 const CACHE = new Map();
 const dec = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
+/** A packed model (tools/modelpack.mjs) as flat arrays: 9 position floats and 9 colour floats a face. */
+export function unpack(m) {
+  const q = new Uint16Array(dec(m.pos).buffer), fc = dec(m.col), [x0, y0, z0, sx, sy, sz] = m.q;
+  const pos = new Float32Array(q.length), col = new Float32Array(q.length);
+  for (let i = 0; i < q.length; i += 3) {
+    pos[i] = x0 + q[i] * sx; pos[i + 1] = y0 + q[i + 1] * sy; pos[i + 2] = z0 + q[i + 2] * sz;
+    const f = ((i / 9) | 0) * 3;
+    col[i] = fc[f] / 255; col[i + 1] = fc[f + 1] / 255; col[i + 2] = fc[f + 2] / 255;
+  }
+  return { pos, col };
+}
 /** The generated model of item `id`, or null if it has none. */
 export function generatedGeo(id) {
   const G = GEN[id];
@@ -47,12 +58,12 @@ export function generatedGeo(id) {
   let g = CACHE.get(id);
   if (g) return g;
   const [m, dy] = G;
-  const pos = new Float32Array(dec(m.pos).buffer), nor = new Float32Array(dec(m.nor).buffer), c8 = dec(m.col);
+  const { pos, col } = unpack(m);
   for (let i = 1; i < pos.length; i += 3) pos[i] -= dy;
   g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(Float32Array.from(c8, (v) => v / 255), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals(); // (unindexed: each face's own flat normal)
   g.computeBoundingSphere();
   g.computeBoundingBox();
   g.userData.shared = true;
