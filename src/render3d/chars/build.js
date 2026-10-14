@@ -684,7 +684,7 @@ const _hc = new THREE.Color();
 function genHat(hh, kind, g, col) {
   const [s, sy, x, y, z] = HAT_GEN[kind], C = g.attributes.color.array;
   const main = col && mainColour('hat_' + kind);
-  const want = col && [1, 3, 5].map((i) => parseInt(col.slice(i, i + 2), 16) / 255);
+  const L = col && lin(col), want = L && [L.r, L.g, L.b]; // (linear, like the model's colours)
   let n = 0;
   hh.addC(g, M(x, y, z, 0, 0, 0, [s, sy, s]), () => {
     const i = (n++) * 3, r = C[i], gr = C[i + 1], b = C[i + 2];

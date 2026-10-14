@@ -8,12 +8,40 @@ import * as THREE from 'three';
 import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, C, shade, hash, rng, KIT } from './kit.js';
 import { instanced, local } from './instancer.js';
 import { registerPropBuilder } from '../registry.js';
+import { generatedGeo } from '../chars/generated.js';
 
 const GEO = new Map();
+/**
+ * Props modelled from concept art (render3d/chars/generated.js, 'prop_' + key),
+ * by key: the turn (quarter turns about Y) that faces the model as the built
+ * one faces. Each is stretched to the built prop's own box, so it stands,
+ * collides and lines up exactly where that one did.
+ */
+const GEN_PROPS = {};
+function fitted(key, fn) {
+  const gen = GEN_PROPS[key] !== undefined && generatedGeo('prop_' + key);
+  if (!gen) return fn;
+  // (the built prop's box)
+  const t = new Mesher(); fn(t);
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < t.pos.length; i++) { const a = i % 3; lo[a] = Math.min(lo[a], t.pos[i]); hi[a] = Math.max(hi[a], t.pos[i]); }
+  if (!gen.boundingBox) gen.computeBoundingBox();
+  const q = GEN_PROPS[key] & 3, b = gen.boundingBox, side = q % 2;
+  const gx = side ? b.max.z - b.min.z : b.max.x - b.min.x, gz = side ? b.max.x - b.min.x : b.max.z - b.min.z, gy = b.max.y - b.min.y;
+  const s = [(hi[0] - lo[0]) / gx, (hi[1] - lo[1]) / gy, (hi[2] - lo[2]) / gz];
+  const at = [(lo[0] + hi[0]) / 2, lo[1] - b.min.y * s[1], (lo[2] + hi[2]) / 2];
+  // (scaled in the prop's frame after the turn: a turn, then a stretch along the built prop's axes)
+  return (k) => {
+    k.save().translate(at[0], at[1], at[2]).scale(s[0], s[1], s[2]).rotateY(q * Math.PI / 2);
+    k.add(gen, { attrs: true, outline: 0.02 });
+    k.restore();
+  };
+}
 /** A cached merged model: fn(k) fills a Mesher. */
 export function model(key, fn) {
   let g = GEO.get(key);
   if (!g) {
+    fn = fitted(key, fn);
     const k = new Mesher(); fn(k); g = k.build();
     // the far variant (no outlines) for distant cells
     KIT.noOutline = true;
