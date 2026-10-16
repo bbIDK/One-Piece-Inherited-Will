@@ -18,9 +18,10 @@ const GEO = new Map();
  * collides and lines up exactly where that one did.
  */
 const GEN_PROPS = { cannon: 1, bench: 0, well: 0, grave: 0, weaponrack: 0, mooring: 0, mushroom: 0, barrel: 0, sacks: 0, dummy: 0,
-  torii: 0, 'arch-stone': 0, crystal: 0, campfire: 0, stall: 0 };
+  torii: 0, 'arch-stone': 0, crystal: 0, campfire: 0, stall: 0,
+  'windmill-body': 0 };
 // model keys that aren't plain ids
-const GEN_ID = { weaponrack: 'weaponRack', 'arch-stone': 'arch' };
+const GEN_ID = { weaponrack: 'weaponRack', 'arch-stone': 'arch', 'windmill-body': 'windmill' };
 // props whose near-white cloth takes the instance colour, as the built one's did
 const GEN_TINT = { stall: true };
 function fitted(key, fn) {
