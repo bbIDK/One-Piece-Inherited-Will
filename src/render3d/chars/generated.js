@@ -57,6 +57,14 @@ import furn_counter from '../../assets/models/furn_counter.js';
 import prop_barrel from '../../assets/models/prop_barrel.js';
 import prop_sacks from '../../assets/models/prop_sacks.js';
 import prop_dummy from '../../assets/models/prop_dummy.js';
+import prop_torii from '../../assets/models/prop_torii.js';
+import prop_arch from '../../assets/models/prop_arch.js';
+import prop_crystal from '../../assets/models/prop_crystal.js';
+import prop_campfire from '../../assets/models/prop_campfire.js';
+import prop_stall from '../../assets/models/prop_stall.js';
+import furn_stool from '../../assets/models/furn_stool.js';
+import furn_roundtable from '../../assets/models/furn_roundtable.js';
+import furn_plant from '../../assets/models/furn_plant.js';
 
 const GEN = {
   cutlass: [cutlass, 0.0348], marine_saber: [marine_saber, 0.0295], fine_katana: [fine_katana, -0.0036], yoru: [yoru, 0.0426],
@@ -70,6 +78,8 @@ const GEN = {
   prop_cannon: [prop_cannon, 0], prop_bench: [prop_bench, 0], prop_well: [prop_well, 0], prop_grave: [prop_grave, 0], prop_weaponRack: [prop_weaponRack, 0], prop_mooring: [prop_mooring, 0], prop_mushroom: [prop_mushroom, 0],
   furn_bed: [furn_bed, 0], furn_table: [furn_table, 0], furn_chair: [furn_chair, 0], furn_cupboard: [furn_cupboard, 0], furn_books: [furn_books, 0], furn_stove: [furn_stove, 0], furn_fireplace: [furn_fireplace, 0], furn_desk: [furn_desk, 0], furn_chest: [furn_chest, 0], furn_counter: [furn_counter, 0],
   prop_barrel: [prop_barrel, 0], prop_sacks: [prop_sacks, 0], prop_dummy: [prop_dummy, 0],
+  prop_torii: [prop_torii, 0], prop_arch: [prop_arch, 0], prop_crystal: [prop_crystal, 0], prop_campfire: [prop_campfire, 0], prop_stall: [prop_stall, 0],
+  furn_stool: [furn_stool, 0], furn_roundtable: [furn_roundtable, 0], furn_plant: [furn_plant, 0],
   furn_barrel: [prop_barrel, 0], furn_sacks: [prop_sacks, 0],
 };
 const CACHE = new Map();

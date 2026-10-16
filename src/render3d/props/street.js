@@ -17,12 +17,19 @@ const GEO = new Map();
  * one faces. Each is stretched to the built prop's own box, so it stands,
  * collides and lines up exactly where that one did.
  */
-const GEN_PROPS = { cannon: 1, bench: 0, well: 0, grave: 0, weaponrack: 0, mooring: 0, mushroom: 0, barrel: 0, sacks: 0, dummy: 0 };
+const GEN_PROPS = { cannon: 1, bench: 0, well: 0, grave: 0, weaponrack: 0, mooring: 0, mushroom: 0, barrel: 0, sacks: 0, dummy: 0,
+  torii: 0, 'arch-stone': 0, crystal: 0, campfire: 0, stall: 0 };
+// model keys that aren't plain ids
+const GEN_ID = { weaponrack: 'weaponRack', 'arch-stone': 'arch' };
+// props whose near-white cloth takes the instance colour, as the built one's did
+const GEN_TINT = { stall: true };
 function fitted(key, fn) {
-  const gen = GEN_PROPS[key] !== undefined && generatedGeo('prop_' + (key === 'weaponrack' ? 'weaponRack' : key));
+  const gen = GEN_PROPS[key] !== undefined && generatedGeo('prop_' + (GEN_ID[key] || key));
   if (!gen) return fn;
   const t = new Mesher(); fn(t);
-  return (k) => fitInto(k, gen, t, GEN_PROPS[key]);
+  const c = gen.attributes.color;
+  const tint = GEN_TINT[key] ? (v, n, i) => (Math.min(c.getX(i), c.getY(i), c.getZ(i)) > 0.55 ? 1 : 0) : undefined;
+  return (k) => fitInto(k, gen, t, GEN_PROPS[key], 0.01, tint);
 }
 /** A cached merged model: fn(k) fills a Mesher. */
 export function model(key, fn) {

@@ -176,7 +176,7 @@ export function slab(points, depth, bevel = 0) {
  * Mesher `t`) takes up, after `q` quarter turns about Y, so it stands, collides
  * and lines up just where that one did.
  */
-export function fitInto(k, gen, t, q = 0, outline = 0.01) {
+export function fitInto(k, gen, t, q = 0, outline = 0.01, tint = undefined) {
   const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < t.pos.length; i++) { const a = i % 3; lo[a] = Math.min(lo[a], t.pos[i]); hi[a] = Math.max(hi[a], t.pos[i]); }
   if (!gen.boundingBox) gen.computeBoundingBox();
@@ -185,7 +185,7 @@ export function fitInto(k, gen, t, q = 0, outline = 0.01) {
   const s = [(hi[0] - lo[0]) / gx, (hi[1] - lo[1]) / gy, (hi[2] - lo[2]) / gz];
   // (a turn, then a stretch along the built one's axes)
   k.save().translate((lo[0] + hi[0]) / 2, lo[1] - b.min.y * s[1], (lo[2] + hi[2]) / 2).scale(s[0], s[1], s[2]).rotateY((q & 3) * Math.PI / 2);
-  k.add(gen, { attrs: true, outline });
+  k.add(gen, { attrs: true, outline, tint });
   k.restore();
 }
 

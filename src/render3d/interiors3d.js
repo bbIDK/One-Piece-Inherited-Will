@@ -347,7 +347,7 @@ function shelves(k, w, d, h, n, P, fill, R) {
  * by kind: quarter turns about Y facing it as the built piece faces. Each fills
  * the box the built piece takes up (props/kit.js fitInto).
  */
-const GEN_FURN = { bed: 0, table: 0, chair: 0, cupboard: 0, books: 0, stove: 0, fireplace: 0, desk: 0, chest: 0, counter: 0, barrel: 0, sacks: 0 };
+const GEN_FURN = { bed: 0, table: 0, chair: 0, cupboard: 0, books: 0, stove: 0, fireplace: 0, desk: 0, chest: 0, counter: 0, barrel: 0, sacks: 0, stool: 0, roundtable: 0, plant: 0 };
 function piece(k, it, P, cloth, R, ceilH) {
   const gen = GEN_FURN[it.k] !== undefined && !it.built && generatedGeo('furn_' + it.k);
   if (gen) {
