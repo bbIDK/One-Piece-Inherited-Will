@@ -17,7 +17,7 @@ const GEO = new Map();
  * one faces. Each is stretched to the built prop's own box, so it stands,
  * collides and lines up exactly where that one did.
  */
-const GEN_PROPS = { cannon: 1, bench: 0, well: 0, grave: 0, weaponrack: 0, mooring: 0, mushroom: 0 };
+const GEN_PROPS = { cannon: 1, bench: 0, well: 0, grave: 0, weaponrack: 0, mooring: 0, mushroom: 0, barrel: 0, sacks: 0, dummy: 0 };
 function fitted(key, fn) {
   const gen = GEN_PROPS[key] !== undefined && generatedGeo('prop_' + (key === 'weaponrack' ? 'weaponRack' : key));
   if (!gen) return fn;
