@@ -7,7 +7,8 @@
 // Rooms are lit without shadows (the roof would otherwise leave them dark)
 // and their lamps and fires glow at night.
 import * as THREE from 'three';
-import { Mesher, box, cyl, blob, lathe, extrude, shade, hash, rng } from './props/kit.js';
+import { Mesher, fitInto, box, cyl, blob, lathe, extrude, shade, hash, rng } from './props/kit.js';
+import { generatedGeo } from './chars/generated.js';
 import { vcMat } from './props/mats.js';
 import { registerFrameHook } from './registry.js';
 import { layoutOf, doorOf, groundWindows, WALL_T, lowStyle } from '../world/interiors.js';
@@ -341,7 +342,23 @@ function shelves(k, w, d, h, n, P, fill, R) {
   void R;
 }
 
+/**
+ * Furniture modelled from concept art (render3d/chars/generated.js, 'furn_' + kind),
+ * by kind: quarter turns about Y facing it as the built piece faces. Each fills
+ * the box the built piece takes up (props/kit.js fitInto).
+ */
+const GEN_FURN = { bed: 0, table: 0, chair: 0, cupboard: 0, books: 0, stove: 0, fireplace: 0, desk: 0, chest: 0, counter: 0 };
 function piece(k, it, P, cloth, R, ceilH) {
+  const gen = GEN_FURN[it.k] !== undefined && !it.built && generatedGeo('furn_' + it.k);
+  if (gen) {
+    const t = new Mesher();
+    piece(t, { ...it, built: true }, P, cloth, R, ceilH);
+    fitInto(k, gen, t, GEN_FURN[it.k]);
+    // (its fire still lights the room: the built piece's lamps, in the room's frame)
+    const v = new THREE.Vector3();
+    for (let i = 0; i < t.lamps.length; i += 3) { v.set(t.lamps[i], t.lamps[i + 1], t.lamps[i + 2]).applyMatrix4(k.m); k.lamps.push(v.x, v.y, v.z); }
+    return;
+  }
   const { w, d, h } = it;
   const wood = P.wood, woodL = P.woodL, woodD = P.woodD;
   switch (it.k) {

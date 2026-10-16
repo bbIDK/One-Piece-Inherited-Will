@@ -44,6 +44,16 @@ import prop_grave from '../../assets/models/prop_grave.js';
 import prop_weaponRack from '../../assets/models/prop_weaponRack.js';
 import prop_mooring from '../../assets/models/prop_mooring.js';
 import prop_mushroom from '../../assets/models/prop_mushroom.js';
+import furn_bed from '../../assets/models/furn_bed.js';
+import furn_table from '../../assets/models/furn_table.js';
+import furn_chair from '../../assets/models/furn_chair.js';
+import furn_cupboard from '../../assets/models/furn_cupboard.js';
+import furn_books from '../../assets/models/furn_books.js';
+import furn_stove from '../../assets/models/furn_stove.js';
+import furn_fireplace from '../../assets/models/furn_fireplace.js';
+import furn_desk from '../../assets/models/furn_desk.js';
+import furn_chest from '../../assets/models/furn_chest.js';
+import furn_counter from '../../assets/models/furn_counter.js';
 
 const GEN = {
   cutlass: [cutlass, 0.0348], marine_saber: [marine_saber, 0.0295], fine_katana: [fine_katana, -0.0036], yoru: [yoru, 0.0426],
@@ -55,6 +65,7 @@ const GEN = {
   hat_straw: [hat_straw, 0], hat_tricorne: [hat_tricorne, 0], hat_captain: [hat_captain, 0], hat_cowboy: [hat_cowboy, 0], hat_pinkhat: [hat_pinkhat, 0], hat_marine: [hat_marine, 0], hat_helm: [hat_helm, 0],
   // town props (standing on y = 0: fitted to the built prop's box in props/street.js)
   prop_cannon: [prop_cannon, 0], prop_bench: [prop_bench, 0], prop_well: [prop_well, 0], prop_grave: [prop_grave, 0], prop_weaponRack: [prop_weaponRack, 0], prop_mooring: [prop_mooring, 0], prop_mushroom: [prop_mushroom, 0],
+  furn_bed: [furn_bed, 0], furn_table: [furn_table, 0], furn_chair: [furn_chair, 0], furn_cupboard: [furn_cupboard, 0], furn_books: [furn_books, 0], furn_stove: [furn_stove, 0], furn_fireplace: [furn_fireplace, 0], furn_desk: [furn_desk, 0], furn_chest: [furn_chest, 0], furn_counter: [furn_counter, 0],
 };
 const CACHE = new Map();
 const dec = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
