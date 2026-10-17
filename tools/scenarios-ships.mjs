@@ -45,6 +45,9 @@ export const scenarios = {
         console.log('ship', JSON.stringify(info));
         const look = async (name, fn) => {
           await page.evaluate(fn);
+          // (the clock is local: set it again now she's out here, a time zone or more from the start)
+          await step(page, 0.05);
+          await page.evaluate((clock) => { window.OP.game.env.clock = clock; }, +(args.clock || 10.5));
           for (let i = 0; i < 4; i++) { await step(page, 0.05); await frames(page, 1); }
           await snap(`${type}-${name}`);
         };
