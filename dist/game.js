@@ -99252,6 +99252,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var CONE3 = new ConeGeometry(1, 1, 8);
   CONE3.translate(0, 0.5, 0);
   function finGeo(b0, b1, t, th = 0.03) {
+    if ((b1[0] - b0[0]) * (t[1] - b0[1]) - (b1[1] - b0[1]) * (t[0] - b0[0]) < 0) [b0, b1] = [b1, b0];
     const pos = [];
     const f = [[...b0, th], [...b1, th], [...t, 0]], k = [[...b0, -th], [...t, 0], [...b1, -th]];
     pos.push(...f.flat(), ...k.flat());
