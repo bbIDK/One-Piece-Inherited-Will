@@ -104105,28 +104105,80 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     return colored2(g, (c, x, y) => c.setScalar(0.85 + y * 5));
   }
   function clamGeo() {
-    const parts = [];
-    for (const s of [-1, 1]) {
-      const shell2 = new SphereGeometry(0.42, 10, 4, 0, Math.PI, 0, Math.PI / 2);
-      shell2.scale(1, 0.55, 0.62);
-      const p = shell2.attributes.position;
-      for (let i = 0; i < p.count; i++) {
-        const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-        const flute = 1 + 0.1 * Math.max(0, Math.cos(Math.atan2(z, x) * 5)) * (1 - y * 2);
-        p.setXYZ(i, x * flute, y, z * flute);
+    const R5 = 0.46, H5 = 0.36, D4 = 0.3, GAPE = 0.4, NT = 30, NF = 9, FOLDS = 5;
+    const pos = [], col6 = [], idx = [];
+    const grid2 = (rows, cols, at5, paint2, want) => {
+      const base2 = pos.length / 3;
+      const c = new Color();
+      for (let i = 0; i <= rows; i++) for (let j = 0; j <= cols; j++) {
+        const p = at5(i / rows, j / cols);
+        pos.push(p[0], p[1], p[2]);
+        paint2(c, i / rows, j / cols, p);
+        col6.push(c.r, c.g, c.b);
       }
-      shell2.rotateX(s * (Math.PI / 2 - 0.28));
-      shell2.translate(0, 0.2, 0);
-      parts.push(shell2);
+      const P6 = (k2) => new Vector3(pos[k2 * 3], pos[k2 * 3 + 1], pos[k2 * 3 + 2]);
+      const i0 = rows >> 1, j0 = cols >> 1, k = (i, j) => base2 + i * (cols + 1) + j;
+      const n = new Vector3().subVectors(P6(k(i0 + 1, j0)), P6(k(i0, j0))).cross(new Vector3().subVectors(P6(k(i0, j0 + 1)), P6(k(i0, j0))));
+      const flip = n.dot(want(P6(k(i0, j0)))) < 0;
+      for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) {
+        const a = k(i, j), b = k(i + 1, j), c2 = k(i + 1, j + 1), d = k(i, j + 1);
+        if (flip) idx.push(a, d, c2, a, c2, b);
+        else idx.push(a, b, c2, a, c2, d);
+      }
+    };
+    for (const s of [-1, 1]) {
+      const fold = (t) => {
+        const u = t / Math.PI * FOLDS + (s > 0 ? 0 : 0.5);
+        return Math.abs(u % 1 - 0.5) * 4 - 1;
+      };
+      const shell2 = (t, f, k) => {
+        const ct = Math.cos(t), st = Math.sin(t);
+        let x = R5 * k * ct, y = H5 * k * st * Math.cos(f), z = s * D4 * k * st * Math.sin(f);
+        const r4 = Math.hypot(y, z) || 1, amp = 0.075 * st * (0.55 + 0.45 * Math.cos(f)) * fold(t);
+        y += y / r4 * amp;
+        z += z / r4 * amp;
+        const cg = Math.cos(GAPE), sg = Math.sin(GAPE);
+        return [x, y * cg - s * z * sg + 0.13, s * y * sg + z * cg];
+      };
+      const ridge = (t, f) => 0.86 + 0.1 * fold(t) + 0.05 * Math.sin(f * 22);
+      grid2(
+        NT,
+        NF,
+        (u, v) => shell2(u * Math.PI, v * Math.PI / 2, 1),
+        (c, u, v) => c.setScalar(ridge(u * Math.PI, v * Math.PI / 2) * (0.82 + 0.25 * (1 - v))),
+        (p) => new Vector3(0, p.y - 0.13, p.z)
+      );
+      grid2(
+        NT,
+        NF,
+        (u, v) => shell2(u * Math.PI, v * Math.PI / 2, 0.88),
+        (c, u, v) => c.setScalar(1.12 - v * 0.25),
+        (p) => new Vector3(0, 0.13 - p.y, -p.z)
+      );
+      grid2(NT, 1, (u, v) => shell2(u * Math.PI, 0, 1 - v * 0.12), (c) => c.setScalar(1.15), () => new Vector3(0, 1, 0));
     }
-    const mantle2 = new SphereGeometry(0.34, 10, 3);
-    mantle2.scale(1, 0.3, 0.2);
-    mantle2.translate(0, 0.28, 0);
-    parts.push(mantle2);
-    return colored2(merge3(parts), (c, x, y, z) => {
-      if (Math.abs(z) < 0.075 && y > 0.18) c.setRGB(0.25, 0.55, 1.6);
-      else c.setScalar(0.8 + y * 0.4);
-    });
+    const spot = (x, z) => {
+      const a = Math.sin(x * 61 + Math.sin(z * 47) * 2) * Math.sin(z * 53 + Math.sin(x * 43) * 2);
+      return a > 0.55;
+    };
+    grid2(NT, 8, (u, v) => {
+      const t = u * Math.PI, q2 = v * 2 - 1, st = Math.sin(t);
+      const half2 = H5 * st * Math.sin(GAPE) * 0.95 + 0.012;
+      const y = 0.13 + H5 * st * Math.cos(GAPE) * 0.9 + 0.07 * st * (1 - q2 * q2) + 0.02 * Math.sin(t * 16) * q2 * q2;
+      return [R5 * 0.9 * Math.cos(t), y, q2 * half2 * (1 + 0.08 * Math.sin(t * 13))];
+    }, (c, u, v, p) => {
+      const q2 = Math.abs(v * 2 - 1);
+      if (q2 > 0.78) c.setRGB(1.25, 1.15, 0.45);
+      else if (Math.abs(u - 0.5) < 0.07 && q2 < 0.25) c.setRGB(0.08, 0.12, 0.3);
+      else if (spot(p[0], p[2])) c.setRGB(1, 0.6, 1.6);
+      else c.setRGB(0.18 + q2 * 0.2, 0.75 + q2 * 0.3, 1.55);
+    }, () => new Vector3(0, 1, 0));
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setAttribute("color", new Float32BufferAttribute(col6, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g.toNonIndexed();
   }
   var uTime2 = { value: 0 };
   var uOrigin = { value: new Vector2() };

@@ -244,31 +244,74 @@ function starGeo() {
   return colored(g, (c, x, y) => c.setScalar(0.85 + y * 5));
 }
 
-/** A giant clam, gaping, its mantle bright blue-violet between fluted shells. */
+/**
+ * A giant clam (Tridacna), gaping: two thick valves with deep radial folds
+ * that make the lips zig-zag, porcelain-white inside, and the bright mantle
+ * bulging up through the gape — blue-green with violet spots, a frilled gold
+ * edge and a dark siphon — tinted the same whatever the shell.
+ */
 function clamGeo() {
-  const parts = [];
-  for (const s of [-1, 1]) {
-    const shell = new THREE.SphereGeometry(0.42, 10, 4, 0, Math.PI, 0, Math.PI / 2);
-    shell.scale(1, 0.55, 0.62);
-    const p = shell.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const flute = 1 + 0.1 * Math.max(0, Math.cos(Math.atan2(z, x) * 5)) * (1 - y * 2);
-      p.setXYZ(i, x * flute, y, z * flute);
+  const R = 0.46, H = 0.36, D = 0.3, GAPE = 0.4, NT = 30, NF = 9, FOLDS = 5;
+  const pos = [], col = [], idx = [];
+  // a grid of points (rows × cols) → indexed triangles, wound to face `want(p)`
+  const grid = (rows, cols, at, paint, want) => {
+    const base = pos.length / 3;
+    const c = new THREE.Color();
+    for (let i = 0; i <= rows; i++) for (let j = 0; j <= cols; j++) {
+      const p = at(i / rows, j / cols);
+      pos.push(p[0], p[1], p[2]);
+      paint(c, i / rows, j / cols, p);
+      col.push(c.r, c.g, c.b);
     }
-    shell.rotateX(s * (Math.PI / 2 - 0.28));
-    shell.translate(0, 0.2, 0);
-    parts.push(shell);
+    const P = (k) => new THREE.Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]);
+    // pick the winding from a quad in the middle
+    const i0 = rows >> 1, j0 = cols >> 1, k = (i, j) => base + i * (cols + 1) + j;
+    const n = new THREE.Vector3().subVectors(P(k(i0 + 1, j0)), P(k(i0, j0))).cross(new THREE.Vector3().subVectors(P(k(i0, j0 + 1)), P(k(i0, j0))));
+    const flip = n.dot(want(P(k(i0, j0)))) < 0;
+    for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) {
+      const a = k(i, j), b = k(i + 1, j), c2 = k(i + 1, j + 1), d = k(i, j + 1);
+      if (flip) idx.push(a, d, c2, a, c2, b); else idx.push(a, b, c2, a, c2, d);
+    }
+  };
+  for (const s of [-1, 1]) {
+    // a valve: an ellipsoid quarter (t along the lip, f from the lip down to the keel), folded, then swung open about the hinge
+    const fold = (t) => { const u = (t / Math.PI) * FOLDS + (s > 0 ? 0 : 0.5); return Math.abs((u % 1) - 0.5) * 4 - 1; };
+    const shell = (t, f, k) => {
+      const ct = Math.cos(t), st = Math.sin(t);
+      let x = R * k * ct, y = H * k * st * Math.cos(f), z = s * D * k * st * Math.sin(f);
+      const r = Math.hypot(y, z) || 1, amp = 0.075 * st * (0.55 + 0.45 * Math.cos(f)) * fold(t);
+      y += (y / r) * amp; z += (z / r) * amp;
+      const cg = Math.cos(GAPE), sg = Math.sin(GAPE);
+      return [x, y * cg - s * z * sg + 0.13, s * y * sg + z * cg];
+    };
+    const ridge = (t, f) => 0.86 + 0.1 * fold(t) + 0.05 * Math.sin(f * 22);
+    grid(NT, NF, (u, v) => shell(u * Math.PI, v * Math.PI / 2, 1), (c, u, v) => c.setScalar(ridge(u * Math.PI, v * Math.PI / 2) * (0.82 + 0.25 * (1 - v))),
+      (p) => new THREE.Vector3(0, p.y - 0.13, p.z));
+    grid(NT, NF, (u, v) => shell(u * Math.PI, v * Math.PI / 2, 0.88), (c, u, v) => c.setScalar(1.12 - v * 0.25),
+      (p) => new THREE.Vector3(0, 0.13 - p.y, -p.z));
+    // the thick lip joining the two
+    grid(NT, 1, (u, v) => shell(u * Math.PI, 0, 1 - v * 0.12), (c) => c.setScalar(1.15), () => new THREE.Vector3(0, 1, 0));
   }
-  const mantle = new THREE.SphereGeometry(0.34, 10, 3);
-  mantle.scale(1, 0.3, 0.2);
-  mantle.translate(0, 0.28, 0);
-  parts.push(mantle);
-  // (the mantle is picked out by colour: see below)
-  return colored(merge(parts), (c, x, y, z) => {
-    if (Math.abs(z) < 0.075 && y > 0.18) c.setRGB(0.25, 0.55, 1.6); // the glowing mantle (tinted blue whatever the shell)
-    else c.setScalar(0.8 + y * 0.4);
-  });
+  // the mantle, bulging up out of the gape
+  const spot = (x, z) => { const a = Math.sin(x * 61 + Math.sin(z * 47) * 2) * Math.sin(z * 53 + Math.sin(x * 43) * 2); return a > 0.55; };
+  grid(NT, 8, (u, v) => {
+    const t = u * Math.PI, q = v * 2 - 1, st = Math.sin(t);
+    const half = H * st * Math.sin(GAPE) * 0.95 + 0.012;
+    const y = 0.13 + H * st * Math.cos(GAPE) * 0.9 + 0.07 * st * (1 - q * q) + 0.02 * Math.sin(t * 16) * q * q;
+    return [R * 0.9 * Math.cos(t), y, q * half * (1 + 0.08 * Math.sin(t * 13))];
+  }, (c, u, v, p) => {
+    const q = Math.abs(v * 2 - 1);
+    if (q > 0.78) c.setRGB(1.25, 1.15, 0.45); // the frilled gold edge
+    else if (Math.abs(u - 0.5) < 0.07 && q < 0.25) c.setRGB(0.08, 0.12, 0.3); // the siphon
+    else if (spot(p[0], p[2])) c.setRGB(1.0, 0.6, 1.6); // violet spots
+    else c.setRGB(0.18 + q * 0.2, 0.75 + q * 0.3, 1.55);
+  }, () => new THREE.Vector3(0, 1, 0));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g.toNonIndexed();
 }
 
 // ---------------------------------------------------------------- materials
