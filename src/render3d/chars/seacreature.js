@@ -13,6 +13,8 @@ CONE.translate(0, 0.5, 0);
 
 /** A flat fin: a triangle (base from b0 to b1, tip at t) with a little thickness, in the xy plane. */
 function finGeo(b0, b1, t, th = 0.03) {
+  // wind it the same way whatever order the base is given in, or the faces point inward and the outline shell shows instead of the fin
+  if ((b1[0] - b0[0]) * (t[1] - b0[1]) - (b1[1] - b0[1]) * (t[0] - b0[0]) < 0) [b0, b1] = [b1, b0];
   const pos = [];
   const f = [[...b0, th], [...b1, th], [...t, 0]], k = [[...b0, -th], [...t, 0], [...b1, -th]];
   pos.push(...f.flat(), ...k.flat());
