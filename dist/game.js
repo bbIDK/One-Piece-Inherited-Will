@@ -70645,6 +70645,10 @@ vec2 scell(vec3 p) {
     g.setIndex(idx);
     g.computeVertexNormals();
     k.add(g, { split: true, color: (p, n, i) => triCol[Math.floor(i / 3)], outline: 0.06 });
+    for (let y = 0.42; y < d.deckY + 0.8; y += 0.46) {
+      if (Math.abs(y - (d.deckY - 0.18)) < 0.16 || Math.abs(y - (d.deckY + 1.02)) < 0.16) continue;
+      hullBand(k, d, y, 0.03, 6e-3, shade2(y > d.deckY - 0.1 ? P6.upper : P6.plank, -0.28), 0.03, 0.98);
+    }
     for (const y of [d.deckY - 0.25, d.deckY + 0.95]) hullBand(k, d, y, 0.14, 0.05, y > d.deckY ? P6.cap : P6.dark, 0.04, 0.985);
     hullBand(k, d, 0.02, 0.1, 0.03, shade2(P6.bottom, 0.2), 0.02, 0.99);
   }

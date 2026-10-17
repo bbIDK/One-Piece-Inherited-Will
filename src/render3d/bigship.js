@@ -226,6 +226,12 @@ function shell(k, d, P) {
   g.setIndex(idx);
   g.computeVertexNormals();
   k.add(g, { split: true, color: (p, n, i) => triCol[Math.floor(i / 3)], outline: 0.06 });
+  // the seams between the strakes: thin dark lines along her sides, so she reads planked, not painted
+  // (clear of the wales; the gunports and their lids stand proud of them)
+  for (let y = 0.42; y < d.deckY + 0.8; y += 0.46) {
+    if (Math.abs(y - (d.deckY - 0.18)) < 0.16 || Math.abs(y - (d.deckY + 1.02)) < 0.16) continue;
+    hullBand(k, d, y, 0.03, 0.006, shade(y > d.deckY - 0.1 ? P.upper : P.plank, -0.28), 0.03, 0.98);
+  }
   // wales: heavy mouldings along the sides, in the trim colour
   for (const y of [d.deckY - 0.25, d.deckY + 0.95]) hullBand(k, d, y, 0.14, 0.05, y > d.deckY ? P.cap : P.dark, 0.04, 0.985);
   hullBand(k, d, 0.02, 0.1, 0.03, shade(P.bottom, 0.2), 0.02, 0.99);
