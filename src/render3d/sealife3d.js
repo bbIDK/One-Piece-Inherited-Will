@@ -6,7 +6,7 @@
 // drifting in the water and shafts of sunlight slanting down from the surface.
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
-import { toon, addOutline, toonGradient } from './materials.js';
+import { toon, addOutline, toonGradient, outlineMaterial } from './materials.js';
 import { FOG } from './fog.js';
 
 const TAU = Math.PI * 2;
@@ -182,21 +182,75 @@ function serpentView(col) {
     piece(head, SPH, toon('#ffffff'), [0.035, 0.035, 0.025], [0.1, 0.05, s * 0.09], 0.01);
     piece(head, SPH, red, [0.016, 0.028, 0.012], [0.115, 0.05, s * 0.105], 0);
   }
-  const segs = [];
-  for (let i = 0; i < 8; i++) {
-    const r = 0.1 * (1 - i * 0.085);
-    const g = new THREE.Group();
-    root.add(g);
-    piece(g, SPH, body, [r * 1.25, r, r], [0, 0, 0], 0.015);
-    if (i % 2 === 0 && i < 7) piece(g, CON, i % 4 ? body : red, [r * 0.3, r * 1.1, r * 0.12], [0, r * 0.7, 0], 0);
-    segs.push(g);
+  // the body: one smooth tapering tube (and an ink-line shell round it) that the swimming wave runs down,
+  // dark above and pale-bellied, with a row of spines (every other one red) and a finned tail tip
+  const N = 26, M = 10, L = 1.42, X0 = -0.1;
+  const radius = (u) => 0.105 * (1 - 0.88 * u) * (u < 0.06 ? 0.85 + u * 2.5 : 1) + 0.008;
+  const tube = () => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * M * 3), 3));
+    const idx = [];
+    for (let i = 0; i < N - 1; i++) for (let j = 0; j < M; j++) {
+      const a = i * M + j, b = i * M + (j + 1) % M, c = (i + 1) * M + (j + 1) % M, d = (i + 1) * M + j;
+      idx.push(a, b, c, a, c, d);
+    }
+    g.setIndex(idx);
+    return g;
+  };
+  const skinGeo = tube(), inkGeo = tube();
+  const cols = new Float32Array(N * M * 3), cBody = new THREE.Color(col), cBelly = new THREE.Color('#f3e7c9');
+  for (let i = 0; i < N; i++) for (let j = 0; j < M; j++) {
+    const y = Math.cos((j / M) * TAU), k = (i * M + j) * 3;
+    const c = y < -0.35 ? cBelly : cBody;
+    cols[k] = c.r; cols[k + 1] = c.g; cols[k + 2] = c.b;
   }
+  skinGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  const skin = new THREE.Mesh(skinGeo, new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() }));
+  const ink = new THREE.Mesh(inkGeo, outlineMaterial());
+  skin.frustumCulled = ink.frustumCulled = false;
+  root.add(skin, ink);
+  const spines = [];
+  for (let i = 0; i < 6; i++) {
+    const u = 0.1 + i * 0.13, r = radius(u);
+    const sp = piece(root, CON, i % 2 ? body : red, [r * 0.32, r * 1.3, r * 0.12], [0, 0, 0], 0);
+    spines.push([sp, u, r]);
+  }
+  const tail = piece(root, CON, red, [0.05, 0.16, 0.012], [0, 0, 0], 0.008);
+  // the centre line: the same travelling wave as before, but continuous
+  const line = (u, t, out) => {
+    const x = X0 - u * L, i = (u * L - 0.07) / 0.16;
+    out[0] = x;
+    out[1] = Math.sin(t * 1.3 - i * 0.4) * 0.02;
+    out[2] = Math.sin(t * 3 - (i + 1) * 0.75) * 0.08 * (0.6 + Math.max(0, i) * 0.12);
+    return out;
+  };
+  const P = [0, 0, 0], Q = [0, 0, 0];
+  const fill = (g, extra, t) => {
+    const a = g.attributes.position.array;
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1);
+      line(u, t, P); line(Math.min(1, u + 0.02), t, Q);
+      // the sideways direction (perpendicular to the line, in the horizontal)
+      const dx = Q[0] - P[0], dz = Q[2] - P[2], dl = Math.hypot(dx, dz) || 1, nx = -dz / dl, nz = dx / dl;
+      const r = radius(u) + extra;
+      for (let j = 0; j < M; j++) {
+        const th = (j / M) * TAU, cy = Math.cos(th) * r * 0.92, cz = Math.sin(th) * r, k = (i * M + j) * 3;
+        a[k] = P[0] + nx * cz; a[k + 1] = P[1] + cy; a[k + 2] = P[2] + nz * cz;
+      }
+    }
+    g.attributes.position.needsUpdate = true;
+  };
   return {
     root,
     update(t) {
       // a travelling wave down the body
       head.position.set(0.02, Math.sin(t * 1.3) * 0.02, Math.sin(t * 3) * 0.05);
-      for (let i = 0; i < segs.length; i++) segs[i].position.set(-0.17 - i * 0.16, Math.sin(t * 1.3 - i * 0.4) * 0.02, Math.sin(t * 3 - (i + 1) * 0.75) * 0.08 * (0.6 + i * 0.12));
+      fill(skinGeo, 0, t); skinGeo.computeVertexNormals();
+      fill(inkGeo, 0.014, t);
+      for (const [sp, u, r] of spines) { line(u, t, P); sp.position.set(P[0], P[1] + r * 0.75, P[2]); }
+      line(1, t, P); line(0.97, t, Q);
+      tail.position.set(P[0], P[1], P[2]);
+      tail.rotation.set(0, Math.atan2(P[2] - Q[2], Q[0] - P[0]), Math.PI / 2);
     },
   };
 }

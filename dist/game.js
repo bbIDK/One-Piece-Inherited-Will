@@ -104888,20 +104888,80 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       piece2(head, SPH7, toon("#ffffff"), [0.035, 0.035, 0.025], [0.1, 0.05, s * 0.09], 0.01);
       piece2(head, SPH7, red, [0.016, 0.028, 0.012], [0.115, 0.05, s * 0.105], 0);
     }
-    const segs = [];
-    for (let i = 0; i < 8; i++) {
-      const r4 = 0.1 * (1 - i * 0.085);
-      const g = new Group();
-      root4.add(g);
-      piece2(g, SPH7, body, [r4 * 1.25, r4, r4], [0, 0, 0], 0.015);
-      if (i % 2 === 0 && i < 7) piece2(g, CON, i % 4 ? body : red, [r4 * 0.3, r4 * 1.1, r4 * 0.12], [0, r4 * 0.7, 0], 0);
-      segs.push(g);
+    const N8 = 26, M3 = 10, L3 = 1.42, X0 = -0.1;
+    const radius = (u) => 0.105 * (1 - 0.88 * u) * (u < 0.06 ? 0.85 + u * 2.5 : 1) + 8e-3;
+    const tube3 = () => {
+      const g = new BufferGeometry();
+      g.setAttribute("position", new BufferAttribute(new Float32Array(N8 * M3 * 3), 3));
+      const idx = [];
+      for (let i = 0; i < N8 - 1; i++) for (let j = 0; j < M3; j++) {
+        const a = i * M3 + j, b = i * M3 + (j + 1) % M3, c = (i + 1) * M3 + (j + 1) % M3, d = (i + 1) * M3 + j;
+        idx.push(a, b, c, a, c, d);
+      }
+      g.setIndex(idx);
+      return g;
+    };
+    const skinGeo = tube3(), inkGeo = tube3();
+    const cols = new Float32Array(N8 * M3 * 3), cBody = new Color(col6), cBelly = new Color("#f3e7c9");
+    for (let i = 0; i < N8; i++) for (let j = 0; j < M3; j++) {
+      const y = Math.cos(j / M3 * TAU23), k = (i * M3 + j) * 3;
+      const c = y < -0.35 ? cBelly : cBody;
+      cols[k] = c.r;
+      cols[k + 1] = c.g;
+      cols[k + 2] = c.b;
     }
+    skinGeo.setAttribute("color", new BufferAttribute(cols, 3));
+    const skin = new Mesh(skinGeo, new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() }));
+    const ink3 = new Mesh(inkGeo, outlineMaterial());
+    skin.frustumCulled = ink3.frustumCulled = false;
+    root4.add(skin, ink3);
+    const spines = [];
+    for (let i = 0; i < 6; i++) {
+      const u = 0.1 + i * 0.13, r4 = radius(u);
+      const sp = piece2(root4, CON, i % 2 ? body : red, [r4 * 0.32, r4 * 1.3, r4 * 0.12], [0, 0, 0], 0);
+      spines.push([sp, u, r4]);
+    }
+    const tail2 = piece2(root4, CON, red, [0.05, 0.16, 0.012], [0, 0, 0], 8e-3);
+    const line2 = (u, t, out) => {
+      const x = X0 - u * L3, i = (u * L3 - 0.07) / 0.16;
+      out[0] = x;
+      out[1] = Math.sin(t * 1.3 - i * 0.4) * 0.02;
+      out[2] = Math.sin(t * 3 - (i + 1) * 0.75) * 0.08 * (0.6 + Math.max(0, i) * 0.12);
+      return out;
+    };
+    const P6 = [0, 0, 0], Q2 = [0, 0, 0];
+    const fill2 = (g, extra, t) => {
+      const a = g.attributes.position.array;
+      for (let i = 0; i < N8; i++) {
+        const u = i / (N8 - 1);
+        line2(u, t, P6);
+        line2(Math.min(1, u + 0.02), t, Q2);
+        const dx = Q2[0] - P6[0], dz = Q2[2] - P6[2], dl = Math.hypot(dx, dz) || 1, nx = -dz / dl, nz = dx / dl;
+        const r4 = radius(u) + extra;
+        for (let j = 0; j < M3; j++) {
+          const th = j / M3 * TAU23, cy = Math.cos(th) * r4 * 0.92, cz = Math.sin(th) * r4, k = (i * M3 + j) * 3;
+          a[k] = P6[0] + nx * cz;
+          a[k + 1] = P6[1] + cy;
+          a[k + 2] = P6[2] + nz * cz;
+        }
+      }
+      g.attributes.position.needsUpdate = true;
+    };
     return {
       root: root4,
       update(t) {
         head.position.set(0.02, Math.sin(t * 1.3) * 0.02, Math.sin(t * 3) * 0.05);
-        for (let i = 0; i < segs.length; i++) segs[i].position.set(-0.17 - i * 0.16, Math.sin(t * 1.3 - i * 0.4) * 0.02, Math.sin(t * 3 - (i + 1) * 0.75) * 0.08 * (0.6 + i * 0.12));
+        fill2(skinGeo, 0, t);
+        skinGeo.computeVertexNormals();
+        fill2(inkGeo, 0.014, t);
+        for (const [sp, u, r4] of spines) {
+          line2(u, t, P6);
+          sp.position.set(P6[0], P6[1] + r4 * 0.75, P6[2]);
+        }
+        line2(1, t, P6);
+        line2(0.97, t, Q2);
+        tail2.position.set(P6[0], P6[1], P6[2]);
+        tail2.rotation.set(0, Math.atan2(P6[2] - Q2[2], Q2[0] - P6[0]), Math.PI / 2);
       }
     };
   }
