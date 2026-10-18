@@ -145,6 +145,29 @@ export function hullGeometry(def) {
   shell.setIndex(idx);
   shell.computeVertexNormals();
   k.add(shell, { split: true, color: (p, n, i) => triCol[Math.floor(i / 3)], outline: 0.045 });
+  // the seams between the strakes: a thin dark line along each, standing just proud of the skin,
+  // so the sides read planked (a rowboat's lapped strakes), not one flat slab
+  for (const jf of [2, 3, 3.5, 4, 4.5, 5, 5.5]) {
+    const j = Math.floor(jf), f = jf - j;
+    for (let s = 0; s < 2; s++) {
+      const sp = [], si = [];
+      for (let i = 0; i <= N; i++) {
+        const v = vid(i, s, j) * 3, u = vid(i, s, j + 1) * 3;
+        const x = pos[v] + (pos[u] - pos[v]) * f, y = pos[v + 1] + (pos[u + 1] - pos[v + 1]) * f, z = pos[v + 2] + (pos[u + 2] - pos[v + 2]) * f;
+        const out = Math.abs(z) < 0.05 ? 0 : 0.008 * Math.sign(z);
+        sp.push(x, y + 0.012, z + out, x, y - 0.012, z + out);
+      }
+      for (let i = 0; i < N; i++) {
+        const a = i * 2;
+        if (s === 0) si.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); else si.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+      const sg = new THREE.BufferGeometry();
+      sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+      sg.setIndex(si);
+      sg.computeVertexNormals();
+      k.add(sg, { color: shade(band[j], -0.35) });
+    }
+  }
 
   // ---- bulwark inside, rail cap and deck planking
   const inset = d.open ? 0.06 : 0.09;

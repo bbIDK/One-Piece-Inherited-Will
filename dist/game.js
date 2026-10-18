@@ -72253,6 +72253,28 @@ vec3 paneView(vec3 dir, float night) {
     shell2.setIndex(idx);
     shell2.computeVertexNormals();
     k.add(shell2, { split: true, color: (p, n, i) => triCol[Math.floor(i / 3)], outline: 0.045 });
+    for (const jf of [2, 3, 3.5, 4, 4.5, 5, 5.5]) {
+      const j = Math.floor(jf), f = jf - j;
+      for (let s = 0; s < 2; s++) {
+        const sp = [], si = [];
+        for (let i = 0; i <= N8; i++) {
+          const v = vid(i, s, j) * 3, u = vid(i, s, j + 1) * 3;
+          const x = pos[v] + (pos[u] - pos[v]) * f, y = pos[v + 1] + (pos[u + 1] - pos[v + 1]) * f, z = pos[v + 2] + (pos[u + 2] - pos[v + 2]) * f;
+          const out = Math.abs(z) < 0.05 ? 0 : 8e-3 * Math.sign(z);
+          sp.push(x, y + 0.012, z + out, x, y - 0.012, z + out);
+        }
+        for (let i = 0; i < N8; i++) {
+          const a = i * 2;
+          if (s === 0) si.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+          else si.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+        }
+        const sg = new BufferGeometry();
+        sg.setAttribute("position", new Float32BufferAttribute(sp, 3));
+        sg.setIndex(si);
+        sg.computeVertexNormals();
+        k.add(sg, { color: shade2(band3[j], -0.35) });
+      }
+    }
     const inset = d.open ? 0.06 : 0.09;
     const strip2 = (pts, col6, flip = false) => {
       const sp = [], si = [];
