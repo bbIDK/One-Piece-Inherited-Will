@@ -14,21 +14,23 @@ import { sunSelf } from '../sunshadow.js';
 import { detailTexture } from './detail.js';
 
 const BODY_KEY = 'op-char-body-7';
-const INK = 0x24160f;
+const INK = 0x45291b;
 
 let GRAD = null;
 /**
- * Characters' cel ramp: anime two-tone, the shadow side clearly darker (so
- * the form reads: the underside of the pecs, the nose's shadow, the far side
- * of an arm), deepening a little where the surface turns right away.
+ * Characters' shading ramp, as the console One Piece games paint them: still
+ * two-tone at heart (a clear lit side and a shadow side), but the terminator
+ * between them is soft — the light rolls round the cheek, the pecs and the arm
+ * instead of snapping — and the shadow deepens gently where the surface turns
+ * right away.
  */
 export function charGradient() {
   if (GRAD) return GRAD;
-  const v = [128, 132, 138, 150, 255, 255, 255, 255];
+  const v = [126, 130, 138, 156, 196, 234, 252, 255];
   const data = new Uint8Array(v.flatMap((x) => [x, x, x, 255]));
   GRAD = new THREE.DataTexture(data, v.length, 1, THREE.RGBAFormat);
-  GRAD.minFilter = THREE.NearestFilter;
-  GRAD.magFilter = THREE.NearestFilter;
+  GRAD.minFilter = THREE.LinearFilter;
+  GRAD.magFilter = THREE.LinearFilter;
   GRAD.generateMipmaps = false;
   GRAD.needsUpdate = true;
   return GRAD;
@@ -197,8 +199,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`)
   return m;
 }
 
-/** Ink outline for skinned or plain meshes. `width` in metres at ~3 m (scaled by view depth). */
-export function outlineMaterial(width = 0.0105, color = INK, opts = {}) {
+/**
+ * Ink outline for skinned or plain meshes. `width` in metres at ~3 m (scaled by
+ * view depth): a fine, warm dark-brown line that holds the silhouette without
+ * the heavy black of a cartoon.
+ */
+export function outlineMaterial(width = 0.0072, color = INK, opts = {}) {
   const u = { uOutline: { value: width } };
   const m = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, fog: opts.fog ?? true });
   m.userData.u = u;
@@ -216,7 +222,7 @@ export function outlineMaterial(width = 0.0105, color = INK, opts = {}) {
 #endif
   vec4 mvq = modelViewMatrix * vec4( transformed, 1.0 );
   float sc = length( modelMatrix[ 1 ].xyz );
-  transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.75, 5.0 ) / max( sc, 0.2 );
+  transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.5, 5.0 ) / max( sc, 0.2 );
 }`);
   };
   m.customProgramCacheKey = () => 'op-char-outline-2';

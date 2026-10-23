@@ -3,7 +3,7 @@
 // on the creator's lit stage, the head held still (no glancing at you).
 // Much quicker than booting the game for a look at faces and profiles.
 //
-//   node tools/heads3d-sheet.mjs [--only=man,woman,...] [--views=front,34,side,back] [--size=300] [--dist=1.15] [--tag=name]
+//   node tools/heads3d-sheet.mjs [--only=man,woman,...] [--views=front,34,side,back] [--size=300] [--dist=1.15] [--tag=name] [--body=1 --dist=4.6 (the whole figure)]
 //                                [--hairs=short,spiky,... (on a man)] [--fhairs=bob,long,... (on a woman)] [--races=mink,fishman,...] [--lod=2|1] [--light=noon (the game's midday sun) [--sun=x,y,z]]
 //
 // Writes shots/heads3d-sheet.{html,js} and shots/heads3d[-tag].png.
@@ -98,8 +98,14 @@ only.forEach((name, r) => {
       const p = new THREE.Vector3();
       (v.model.face || v.root).getWorldPosition(p);
       const dist = Number(q.get('dist') || 1.15);
-      camera.position.set(p.x, p.y + 0.02, p.z + dist);
-      camera.lookAt(p.x, p.y - 0.09, p.z);
+      if (q.get('body')) {
+        // (the whole figure, head to feet: the proportions)
+        camera.position.set(p.x, p.y * 0.52, p.z + dist);
+        camera.lookAt(p.x, p.y * 0.5, p.z);
+      } else {
+        camera.position.set(p.x, p.y + 0.02, p.z + dist);
+        camera.lookAt(p.x, p.y - 0.09, p.z);
+      }
       camera.updateProjectionMatrix();
       renderer.render(scene, camera);
       g.drawImage(renderer.domElement, c * S, r * S);
@@ -134,7 +140,7 @@ const page = await browser.newPage({ viewport: { width: 1600, height: 1200 } });
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { errors.push(m.text()); console.log('[error]', m.text()); } });
 page.on('pageerror', (e) => { errors.push(e.message); console.log('[pageerror]', e.stack || e.message); });
-const qs = new URLSearchParams(); for (const k of ['only', 'views', 'size', 'dist', 'hairs', 'fhairs', 'races', 'light', 'sun', 'lod']) if (args[k]) qs.set(k, args[k]);
+const qs = new URLSearchParams(); for (const k of ['only', 'views', 'size', 'dist', 'body', 'hairs', 'fhairs', 'races', 'light', 'sun', 'lod']) if (args[k]) qs.set(k, args[k]);
 await page.goto(`http://localhost:${port}/shots/heads3d-sheet.html?${qs}`, { waitUntil: 'commit', timeout: 0 });
 try {
   await page.waitForFunction(() => window.SHEET && window.SHEET.done, null, { timeout: 600000 });

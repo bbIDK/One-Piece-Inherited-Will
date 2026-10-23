@@ -25,7 +25,9 @@ export const EYE_Y = 0.11;
 // (the brows, scars, shades and patches round the eyes were laid out for eyes
 // at 0.17 and go with them)
 const EYE_LIFT = EYE_Y - 0.17;
-const eyeScale = (look) => (look.fem ? 1.14 : 1.1); // (big, clear eyes: the anime look)
+// (clear eyes that read from across a street, but in proportion: almond-shaped
+// under a heavy lid, as the console One Piece games draw grown men and women)
+const eyeScale = (look) => (look.fem ? 1.04 : 0.97);
 export const FACE_W = 192, FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S);
 
 const TAU = Math.PI * 2;
@@ -96,7 +98,7 @@ const BROW_SHAPES = { natural: { arch: 1, w: 1 }, arched: { arch: 1.9, w: 0.95 }
 const BROWS_M = {
   fierce: 'M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27',
   worried: 'M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14',
-  neutral: 'M0.16 -0.16 Q0.4 -0.24 0.64 -0.19 M-0.16 -0.16 Q-0.4 -0.24 -0.64 -0.19',
+  neutral: 'M0.15 -0.13 Q0.4 -0.24 0.64 -0.2 M-0.15 -0.13 Q-0.4 -0.24 -0.64 -0.2',
   stern: 'M0.14 -0.11 Q0.38 -0.21 0.64 -0.24 M-0.14 -0.11 Q-0.38 -0.21 -0.64 -0.24',
 };
 const BROWS_F = {
@@ -173,14 +175,14 @@ export function expression(look, pose, P, t) {
 // the lower lash line, hl is the number of catch-lights.
 export const EYE_STYLES = {
   // men: smaller irises, a heavy upper line, no lash flicks
-  bold: { w: 1.0, h: 0.84, tilt: 0.02, iris: 0.84, lid: 0.085, drop: 0.12, flick: 0, lashes: 0, lower: 0.3, hl: 1 },
+  bold: { w: 1.04, h: 0.72, tilt: 0.0, iris: 0.86, lid: 0.095, drop: 0.2, flick: 0, lashes: 0, lower: 0.3, hl: 1 },
   sharp: { w: 1.1, h: 0.64, tilt: -0.15, iris: 0.78, lid: 0.09, drop: 0.24, flick: 0, lashes: 0, lower: 0.5, hl: 1 },
   narrow: { w: 1.08, h: 0.4, tilt: -0.05, iris: 0.72, lid: 0.085, drop: 0.46, flick: 0, lashes: 0, lower: 0.65, hl: 0 },
   beady: { w: 0.84, h: 0.8, tilt: 0, iris: 0.36, lid: 0.07, drop: 0.04, flick: 0, lashes: 0, lower: 0, hl: 0, beady: true },
   tired: { w: 1.02, h: 0.62, tilt: 0.1, iris: 0.82, lid: 0.095, drop: 0.42, flick: 0, lashes: 0, lower: 0.45, hl: 1, bags: true },
   // women: bigger irises, lashes flicking out at the corners
-  bright: { w: 1.02, h: 0.94, tilt: 0, iris: 1.0, lid: 0.085, drop: 0.04, flick: 1, lashes: 2, lower: 1, hl: 2 },
-  soft: { w: 1.04, h: 0.86, tilt: 0.1, iris: 0.96, lid: 0.08, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
+  bright: { w: 1.06, h: 0.84, tilt: -0.04, iris: 0.98, lid: 0.09, drop: 0.1, flick: 1, lashes: 2, lower: 1, hl: 2 },
+  soft: { w: 1.06, h: 0.8, tilt: 0.08, iris: 0.94, lid: 0.085, drop: 0.14, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
   cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.085, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
   cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.085, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
   // Fish-Men
@@ -308,6 +310,12 @@ function drawEyes(g, look, X) {
       g.lineWidth = st.lid * 0.8;
       g.beginPath(); g.moveTo(E.ox - 0.03, E.oy - 0.01); g.lineTo(E.ox + 0.045, E.oy + 0.012); g.stroke();
     }
+    // the fold of the lid above it, a fine soft line following the upper lid
+    if (!st.beady && id !== 'fish') {
+      g.save(); g.translate(0.01, -0.075 - st.h * 0.02); g.scale(0.86, 0.9);
+      g.lineWidth = 0.02; g.strokeStyle = 'rgba(70,30,30,0.42)'; g.stroke(E.lid);
+      g.restore();
+    }
     if (st.lower > 0) { g.lineWidth = 0.026; g.stroke(E.lower); }
     if (st.bags) { g.lineWidth = 0.022; g.strokeStyle = 'rgba(60,30,30,0.7)'; g.beginPath(); g.moveTo(-0.08, E.bot + 0.07); g.quadraticCurveTo(0.04, E.bot + 0.11, 0.15, E.bot + 0.04); g.stroke(); }
     g.restore();
@@ -346,6 +354,11 @@ function drawMouth(g, look, X) {
   if (look.muzzle) { g.save(); g.translate(0, 0.015); }
   if (typeof MOUTHS[kind] === 'string') {
     g.lineWidth = look.fem ? 0.058 : 0.05; g.strokeStyle = look.fem && (kind === 'smile' || kind === 'flat') ? '#b8405a' : MOUTH_COL; g.lineCap = 'round'; g.stroke(pp(MOUTHS[kind]));
+    // (the lower lip: a short soft shade under the line)
+    if (kind === 'smile' || kind === 'flat') {
+      g.globalAlpha = look.fem ? 0.22 : 0.12; g.lineWidth = look.fem ? 0.045 : 0.03;
+      g.beginPath(); g.moveTo(-0.07, 0.715); g.quadraticCurveTo(0, 0.745, 0.07, 0.715); g.stroke(); g.globalAlpha = 1;
+    }
   } else {
     const [d, teeth, tongue, lines] = MOUTHS[kind];
     const mp = pp(d);
@@ -384,7 +397,18 @@ export function paintFace(g, look, X) {
     g.globalAlpha = 1;
   }
   // (the nose is sculpted on the head; the line down its shadowed side reads it from any distance)
-  if (!look.muzzle && look.race !== 'mink') { g.lineWidth = 0.032; g.strokeStyle = skin.line; g.globalAlpha = 0.75; g.stroke(pp(NOSE_HINT)); g.globalAlpha = 1; }
+  // (a soft shadow down its far side and under the tip, as the games paint a
+  // nose: shaded, not drawn)
+  if (!look.muzzle && look.race !== 'mink') {
+    const sg = g.createRadialGradient(0.07, 0.43, 0, 0.07, 0.43, 0.13);
+    sg.addColorStop(0, skin.shadow); sg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 0.24; g.fillStyle = sg; g.beginPath(); g.ellipse(0.07, 0.43, 0.08, 0.13, 0, 0, TAU); g.fill();
+    const tg = g.createRadialGradient(0, 0.52, 0, 0, 0.52, 0.12);
+    tg.addColorStop(0, skin.shadow); tg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 0.2; g.fillStyle = tg; g.beginPath(); g.ellipse(0, 0.52, 0.13, 0.05, 0, 0, TAU); g.fill();
+    g.globalAlpha = 0.75; g.lineWidth = 0.03; g.strokeStyle = skin.line; g.stroke(pp(NOSE_HINT));
+    g.globalAlpha = 1;
+  }
   drawMouth(g, look, X);
   const BR = look.fem ? BROWS_F : BROWS_M;
   g.save(); g.translate(0, EYE_LIFT);

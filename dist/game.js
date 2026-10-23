@@ -94453,15 +94453,15 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
 
   // src/render3d/chars/mats.js
   var BODY_KEY = "op-char-body-7";
-  var INK5 = 2364943;
+  var INK5 = 4532507;
   var GRAD = null;
   function charGradient() {
     if (GRAD) return GRAD;
-    const v = [128, 132, 138, 150, 255, 255, 255, 255];
+    const v = [126, 130, 138, 156, 196, 234, 252, 255];
     const data = new Uint8Array(v.flatMap((x) => [x, x, x, 255]));
     GRAD = new DataTexture(data, v.length, 1, RGBAFormat);
-    GRAD.minFilter = NearestFilter;
-    GRAD.magFilter = NearestFilter;
+    GRAD.minFilter = LinearFilter;
+    GRAD.magFilter = LinearFilter;
     GRAD.generateMipmaps = false;
     GRAD.needsUpdate = true;
     return GRAD;
@@ -94616,7 +94616,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     m.customProgramCacheKey = () => BODY_KEY;
     return m;
   }
-  function outlineMaterial2(width = 0.0105, color = INK5, opts = {}) {
+  function outlineMaterial2(width = 72e-4, color = INK5, opts = {}) {
     const u = { uOutline: { value: width } };
     const m = new MeshBasicMaterial({ color, side: BackSide, fog: opts.fog ?? true });
     m.userData.u = u;
@@ -94632,7 +94632,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 #endif
   vec4 mvq = modelViewMatrix * vec4( transformed, 1.0 );
   float sc = length( modelMatrix[ 1 ].xyz );
-  transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.75, 5.0 ) / max( sc, 0.2 );
+  transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.5, 5.0 ) / max( sc, 0.2 );
 }`);
     };
     m.customProgramCacheKey = () => "op-char-outline-2";
@@ -94690,7 +94690,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var FACE_ANCHOR = 0.05;
   var EYE_Y = 0.11;
   var EYE_LIFT = EYE_Y - 0.17;
-  var eyeScale = (look) => look.fem ? 1.14 : 1.1;
+  var eyeScale = (look) => look.fem ? 1.04 : 0.97;
   var FACE_W = 192;
   var FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S2);
   var TAU18 = Math.PI * 2;
@@ -94761,7 +94761,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var BROWS_M = {
     fierce: "M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27",
     worried: "M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14",
-    neutral: "M0.16 -0.16 Q0.4 -0.24 0.64 -0.19 M-0.16 -0.16 Q-0.4 -0.24 -0.64 -0.19",
+    neutral: "M0.15 -0.13 Q0.4 -0.24 0.64 -0.2 M-0.15 -0.13 Q-0.4 -0.24 -0.64 -0.2",
     stern: "M0.14 -0.11 Q0.38 -0.21 0.64 -0.24 M-0.14 -0.11 Q-0.38 -0.21 -0.64 -0.24"
   };
   var BROWS_F = {
@@ -94842,14 +94842,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   var EYE_STYLES = {
     // men: smaller irises, a heavy upper line, no lash flicks
-    bold: { w: 1, h: 0.84, tilt: 0.02, iris: 0.84, lid: 0.085, drop: 0.12, flick: 0, lashes: 0, lower: 0.3, hl: 1 },
+    bold: { w: 1.04, h: 0.72, tilt: 0, iris: 0.86, lid: 0.095, drop: 0.2, flick: 0, lashes: 0, lower: 0.3, hl: 1 },
     sharp: { w: 1.1, h: 0.64, tilt: -0.15, iris: 0.78, lid: 0.09, drop: 0.24, flick: 0, lashes: 0, lower: 0.5, hl: 1 },
     narrow: { w: 1.08, h: 0.4, tilt: -0.05, iris: 0.72, lid: 0.085, drop: 0.46, flick: 0, lashes: 0, lower: 0.65, hl: 0 },
     beady: { w: 0.84, h: 0.8, tilt: 0, iris: 0.36, lid: 0.07, drop: 0.04, flick: 0, lashes: 0, lower: 0, hl: 0, beady: true },
     tired: { w: 1.02, h: 0.62, tilt: 0.1, iris: 0.82, lid: 0.095, drop: 0.42, flick: 0, lashes: 0, lower: 0.45, hl: 1, bags: true },
     // women: bigger irises, lashes flicking out at the corners
-    bright: { w: 1.02, h: 0.94, tilt: 0, iris: 1, lid: 0.085, drop: 0.04, flick: 1, lashes: 2, lower: 1, hl: 2 },
-    soft: { w: 1.04, h: 0.86, tilt: 0.1, iris: 0.96, lid: 0.08, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
+    bright: { w: 1.06, h: 0.84, tilt: -0.04, iris: 0.98, lid: 0.09, drop: 0.1, flick: 1, lashes: 2, lower: 1, hl: 2 },
+    soft: { w: 1.06, h: 0.8, tilt: 0.08, iris: 0.94, lid: 0.085, drop: 0.14, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
     cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.085, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
     cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.085, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
     // Fish-Men
@@ -94993,6 +94993,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.lineTo(E.ox + 0.045, E.oy + 0.012);
         g.stroke();
       }
+      if (!st.beady && id !== "fish") {
+        g.save();
+        g.translate(0.01, -0.075 - st.h * 0.02);
+        g.scale(0.86, 0.9);
+        g.lineWidth = 0.02;
+        g.strokeStyle = "rgba(70,30,30,0.42)";
+        g.stroke(E.lid);
+        g.restore();
+      }
       if (st.lower > 0) {
         g.lineWidth = 0.026;
         g.stroke(E.lower);
@@ -95055,6 +95064,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.strokeStyle = look.fem && (kind === "smile" || kind === "flat") ? "#b8405a" : MOUTH_COL2;
       g.lineCap = "round";
       g.stroke(pp2(MOUTHS2[kind]));
+      if (kind === "smile" || kind === "flat") {
+        g.globalAlpha = look.fem ? 0.22 : 0.12;
+        g.lineWidth = look.fem ? 0.045 : 0.03;
+        g.beginPath();
+        g.moveTo(-0.07, 0.715);
+        g.quadraticCurveTo(0, 0.745, 0.07, 0.715);
+        g.stroke();
+        g.globalAlpha = 1;
+      }
     } else {
       const [d, teeth, tongue, lines2] = MOUTHS2[kind];
       const mp = pp2(d);
@@ -95127,9 +95145,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.globalAlpha = 1;
     }
     if (!look.muzzle && look.race !== "mink") {
-      g.lineWidth = 0.032;
-      g.strokeStyle = skin.line;
+      const sg = g.createRadialGradient(0.07, 0.43, 0, 0.07, 0.43, 0.13);
+      sg.addColorStop(0, skin.shadow);
+      sg.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalAlpha = 0.24;
+      g.fillStyle = sg;
+      g.beginPath();
+      g.ellipse(0.07, 0.43, 0.08, 0.13, 0, 0, TAU18);
+      g.fill();
+      const tg = g.createRadialGradient(0, 0.52, 0, 0, 0.52, 0.12);
+      tg.addColorStop(0, skin.shadow);
+      tg.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalAlpha = 0.2;
+      g.fillStyle = tg;
+      g.beginPath();
+      g.ellipse(0, 0.52, 0.13, 0.05, 0, 0, TAU18);
+      g.fill();
       g.globalAlpha = 0.75;
+      g.lineWidth = 0.03;
+      g.strokeStyle = skin.line;
       g.stroke(pp2(NOSE_HINT));
       g.globalAlpha = 1;
     }
