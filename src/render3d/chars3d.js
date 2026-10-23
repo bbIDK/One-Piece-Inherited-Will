@@ -21,6 +21,7 @@ import { KrakenView } from './chars/kraken.js';
 import { SeaMonkeyView } from './chars/seamonkey.js';
 import { DugongView } from './chars/dugong.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
+import { AnimalView, ANIMALS } from './chars/animal.js';
 import { Trail } from './chars/trail.js';
 import { BackFlame, PhoenixWings, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
@@ -789,6 +790,9 @@ registerActorView((a, ctx, opts) => {
     if (a.look && a.look.race === 'dugong') return new DugongView(a);
     if (a.look && a.look.race === 'beast_seacow') return new SeaCowView(a);
     if (a.look && a.look.race === 'beast_fightfish') return new FightingFishView(a);
+    // the island beasts: real animals (a boar, a tiger…), not a furry person
+    const beast = a.look?.animal || a.def?.beast;
+    if (beast && ANIMALS[beast] && !a.isPlayer) return new AnimalView(a, beast);
     if (a.draw !== baseDraw) return null; // custom-drawn creatures keep their sprite
     return new ActorView(a, ctx, opts);
   } catch (e) {
