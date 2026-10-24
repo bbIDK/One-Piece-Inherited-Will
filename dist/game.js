@@ -137131,7 +137131,6 @@ Trains by: ${TRAINS_BY[k]}` },
         }, () => `${Math.round((s.resScale ?? 1) * 100)}%`),
         h("h3", "Sound & feel"),
         slider2("Sound effects", "volume"),
-        slider2("Music", "music"),
         slider2("Screen shake", "shake"),
         check("Show tutorial hints", "showHints"),
         check("Survival needs: hunger and body temperature", "survival"),
@@ -179504,6 +179503,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/audio/director.js
+  var MUSIC = false;
   var HOLD = { title: 0, under: 0.6, surface: 1.5, rm: 0.3, zone: 0.5, town: 2, isl: 3, sea: 4, holy: 3 };
   var LAYERS2 = [["perc", 0], ["bass", 0.15], ["pad", 0.2], ["arp", 0.3], ["perc2", 0.4], ["lead", 0.5], ["brass", 0.72]];
   var smooth14 = (a, b, x) => {
@@ -179642,6 +179642,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         }
       } else this.cand = null;
       this.w = w;
+      if (!MUSIC) {
+        this.theme = null;
+        return;
+      }
       const cb = game?.player ? this.combat(game) : { on: false, intensity: 0, boss: false };
       const F4 = this.fight;
       const down2 = game?.player?.state === "knocked";

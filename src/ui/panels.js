@@ -768,7 +768,7 @@ export function openSettings(game) {
       check('Bloom (glow round the sun, lamps and fire)', 'bloom'),
       row('Resolution', 0.5, 1, 0.05, () => s.resScale ?? 1, (v) => { s.resScale = v; }, () => `${Math.round((s.resScale ?? 1) * 100)}%`),
       h('h3', 'Sound & feel'),
-      slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
+      slider('Sound effects', 'volume'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),
       check('Survival needs: hunger and body temperature', 'survival'),
       controlsSection(game, render),

@@ -21,6 +21,9 @@ import { Deck } from './music.js';
 import { placeTheme, battleOf, THEMES } from './themes.js';
 import { regionAt, REGION_INFO, REGION, RM_X, W } from '../world/constants.js';
 
+/** Whether the game plays background music at all (it doesn't, for now). */
+export const MUSIC = false;
+
 // how long a new place must hold before the music follows it (seconds)
 const HOLD = { title: 0, under: 0.6, surface: 1.5, rm: 0.3, zone: 0.5, town: 2, isl: 3, sea: 4, holy: 3 };
 // battle layers come in as a fight heats up: [stem, intensity at which it's half in]
@@ -146,6 +149,9 @@ export class Director {
       if (now - this.candT >= hold) { this.prevPlace = this.place; this.place = pk; this.cand = null; this.onPlace(w, now, game); }
     } else this.cand = null;
     this.w = w;
+    // (no background music in the game for now: the director still follows where
+    // you are, for the ambience, but never starts a piece, a fight's music or a sting)
+    if (!MUSIC) { this.theme = null; return; }
 
     const cb = game?.player ? this.combat(game) : { on: false, intensity: 0, boss: false };
     const F = this.fight;
